@@ -2,7 +2,8 @@
     "name": "Game.Core",
     "rootNamespace": "Game.Core",
     "references": [
-        "UniTask"
+        "UniTask",
+        "PurrNet.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

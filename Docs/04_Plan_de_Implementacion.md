@@ -26,7 +26,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | **01** | Infraestructura Core, Asmdefs y PurrNet Setup | PurrNet, VContainer, Tri-Inspector | Conexión local de 2 clientes con `NetworkManager` y Root Scope. `[COMPLETADA]` |
 | **02** | Capa Global: GameManager y LevelManager | VContainer, UniTask, PurrNet SceneModule | Carga asíncrona de escenas con UniTask y gestión de estados de partida. `[COMPLETADA]` |
 | **03** | Capa de Sala: RoomController y State Pattern | VContainer, PurrNet SyncVar, Tri-Inspector | Ciclo de vida determinista de sala con spawning sincronizado. `[COMPLETADA]` |
-| **04** | Jugador 1: Locomoción y Habilidades (Piernas) | InputSystem, PurrNet Physics, Tri-Inspector | Piernas camina, salta, patea y empuja cajas con física autoritativa. |
+| **04** | Jugador 1: Locomoción y Habilidades (Piernas) | InputSystem, PurrNet Physics, Tri-Inspector | Piernas camina, salta, patea y empuja cajas con física autoritativa. `[COMPLETADA]` |
 | **05** | Jugador 2: Manipulación y Habilidades (Torso) | InputSystem, PurrNet Physics, DOTween | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. |
 | **06** | Sistema de Comandos (Command Pattern) | C# Structs (Zero GC), PurrNet ServerRpc | Comandos polimórficos de jugador desacoplados de la red. |
 | **07** | Fusión y Separación del Robot | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween | Alternancia fluida entre 1 y 2 avatares físicos en red. |
@@ -86,7 +86,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 4: Jugador 1: Locomoción y Habilidades (Piernas)
+### 🔹 Fase 4: Jugador 1: Locomoción y Habilidades (Piernas) `[COMPLETADA]`
 * **Objetivo:** Implementar el control físico autoritativo del Jugador 1.
 * **Integración de Addons:**
   * **Input System:** Lectura de ejes analógicos y botones de salto/patada con eventos dumb.

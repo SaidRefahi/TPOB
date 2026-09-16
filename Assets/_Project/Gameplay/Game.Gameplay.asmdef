@@ -7,7 +7,8 @@
         "PurrNet.Runtime",
         "VContainer",
         "UniTask",
-        "TriInspector"
+        "TriInspector",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
