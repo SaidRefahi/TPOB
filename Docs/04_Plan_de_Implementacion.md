@@ -24,7 +24,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | Fase | Título | Stack / Addons Protagonistas | Entregable Principal |
 | :---: | :--- | :--- | :--- |
 | **01** | Infraestructura Core, Asmdefs y PurrNet Setup | PurrNet, VContainer, Tri-Inspector | Conexión local de 2 clientes con `NetworkManager` y Root Scope. `[COMPLETADA]` |
-| **02** | Capa Global: GameManager y LevelManager | VContainer, UniTask, PurrNet SceneModule | Carga asíncrona de escenas con UniTask y gestión de estados de partida. |
+| **02** | Capa Global: GameManager y LevelManager | VContainer, UniTask, PurrNet SceneModule | Carga asíncrona de escenas con UniTask y gestión de estados de partida. `[COMPLETADA]` |
 | **03** | Capa de Sala: RoomController y State Pattern | VContainer, PurrNet SyncVar, Tri-Inspector | Ciclo de vida determinista de sala con spawning sincronizado. |
 | **04** | Jugador 1: Locomoción y Habilidades (Piernas) | InputSystem, PurrNet Physics, Tri-Inspector | Piernas camina, salta, patea y empuja cajas con física autoritativa. |
 | **05** | Jugador 2: Manipulación y Habilidades (Torso) | InputSystem, PurrNet Physics, DOTween | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. |

@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using Game.Core.Enums;
 using Game.Core.Interfaces;
 using UnityEngine;
@@ -13,20 +14,31 @@ namespace Game.Network.UI
 
         private INetworkService _networkService;
         private IPlayerRegistry _playerRegistry;
+        private ILevelManager _levelManager;
+        private IGameManager _gameManager;
 
         [Inject]
-        public void Construct(INetworkService networkService, IPlayerRegistry playerRegistry)
+        public void Construct(
+            INetworkService networkService, 
+            IPlayerRegistry playerRegistry,
+            ILevelManager levelManager,
+            IGameManager gameManager)
         {
             _networkService = networkService;
             _playerRegistry = playerRegistry;
+            _levelManager = levelManager;
+            _gameManager = gameManager;
         }
 
         private void OnGUI()
         {
             if (!_showGUI) return;
 
-            GUILayout.BeginArea(new Rect(_guiPosition.x, _guiPosition.y, 300, 320), GUI.skin.box);
-            GUILayout.Label("<b>TPOB — Network Connection</b>");
+            GUILayout.BeginArea(new Rect(_guiPosition.x, _guiPosition.y, 320, 420), GUI.skin.box);
+            GUILayout.Label("<b>TPOB — Control Global</b>");
+
+            string gameStateStr = _gameManager != null ? _gameManager.CurrentState.ToString() : "Unknown";
+            GUILayout.Label($"Estado de Juego: <b>{gameStateStr}</b>");
 
             bool isConnected = _networkService != null && _networkService.IsConnected;
 
@@ -45,7 +57,7 @@ namespace Game.Network.UI
             else
             {
                 string mode = _networkService.IsServer ? "Host (Server)" : "Client";
-                GUILayout.Label($"Status: <color=green>Connected as {mode}</color>");
+                GUILayout.Label($"Conexión: <color=green>Conectado como {mode}</color>");
 
                 PlayerRole role = _playerRegistry != null ? _playerRegistry.LocalRole : PlayerRole.None;
                 string roleColor = role switch
@@ -54,23 +66,56 @@ namespace Game.Network.UI
                     PlayerRole.Torso => "orange",
                     _ => "white"
                 };
-                GUILayout.Label($"Assigned Role: <color={roleColor}><b>{role}</b></color>");
+                GUILayout.Label($"Rol Asignado: <color={roleColor}><b>{role}</b></color>");
 
-                GUILayout.Space(10);
-                GUILayout.Label("Connected Players:");
+                if (_levelManager != null)
+                {
+                    string roomStr = string.IsNullOrEmpty(_levelManager.CurrentRoomName) ? "Ninguna (Lobby)" : _levelManager.CurrentRoomName;
+                    GUILayout.Label($"Sala Actual: <b>{roomStr}</b>");
+                }
+
+                GUILayout.Space(8);
+                GUILayout.Label("Jugadores en Sesión:");
                 if (_playerRegistry != null)
                 {
                     var players = _playerRegistry.ConnectedPlayers;
                     for (int i = 0; i < players.Count; i++)
                     {
                         var p = players[i];
-                        string localMarker = p.IsLocal ? " (You)" : "";
-                        GUILayout.Label($" • Player {p.PlayerId}: {p.Role}{localMarker}");
+                        string localMarker = p.IsLocal ? " (Tú)" : "";
+                        GUILayout.Label($" • Jugador {p.PlayerId}: {p.Role}{localMarker}");
                     }
                 }
 
-                GUILayout.Space(10);
-                if (GUILayout.Button("Disconnect", GUILayout.Height(30)))
+                GUILayout.Space(8);
+                // Host controls for level sequencing
+                if (_networkService != null && _networkService.IsServer && _levelManager != null)
+                {
+                    if (_levelManager.IsLoading)
+                    {
+                        GUILayout.Label("<color=yellow>Cargando sala en red...</color>");
+                    }
+                    else
+                    {
+                        if (_levelManager.CurrentRoomIndex < 0)
+                        {
+                            if (GUILayout.Button("Iniciar Partida (Cargar Sala 1)", GUILayout.Height(32)))
+                            {
+                                _levelManager.LoadRoomAsync(0, this.GetCancellationTokenOnDestroy()).Forget();
+                            }
+                        }
+                        else
+                        {
+                            if (GUILayout.Button("Avanzar a Siguiente Sala", GUILayout.Height(32)))
+                            {
+                                _levelManager.AdvanceToNextRoomAsync(this.GetCancellationTokenOnDestroy()).Forget();
+                            }
+                        }
+                    }
+                }
+
+                GUILayout.Space(8);
+                if (GUILayout.Button("Desconectar", GUILayout.Height(28)))
                 {
                     _networkService?.Disconnect();
                 }

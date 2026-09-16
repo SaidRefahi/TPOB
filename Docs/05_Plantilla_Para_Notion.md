@@ -8,7 +8,7 @@
 ## 📊 Dashboard de Fases y Progreso
 
 - [x] **Fase 1:** Configuración inicial del proyecto e integración de PurrNet & VContainer (Completada)
-- [ ] **Fase 2:** Capa Global: GameManager y LevelManager con UniTask
+- [x] **Fase 2:** Capa Global: GameManager y LevelManager con UniTask (Completada)
 - [ ] **Fase 3:** Capa de Sala: RoomController, Spawning y State Pattern
 - [ ] **Fase 4:** Movimiento y habilidades Jugador 1 (Piernas: Locomoción y Patada)
 - [ ] **Fase 5:** Movimiento y habilidades Jugador 2 (Torso: Agarre, Imán y Palancas)
