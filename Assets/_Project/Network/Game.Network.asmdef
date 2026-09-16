@@ -1,0 +1,20 @@
+{
+    "name": "Game.Network",
+    "rootNamespace": "Game.Network",
+    "references": [
+        "Game.Core",
+        "PurrNet.Runtime",
+        "VContainer",
+        "UniTask",
+        "TriInspector"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
