@@ -10,5 +10,7 @@ namespace Game.Core.Commands
         public const byte Climb = 6;
         public const byte Magnet = 7;
         public const byte Interact = 8;
+        public const byte Fuse = 9;
+        public const byte Separate = 10;
     }
 }

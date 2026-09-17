@@ -9,7 +9,8 @@
         "PurrNet.Editor",
         "VContainer",
         "Unity.InputSystem",
-        "TriInspector"
+        "TriInspector",
+        "TriInspector.Editor"
     ],
     "includePlatforms": [
         "Editor"

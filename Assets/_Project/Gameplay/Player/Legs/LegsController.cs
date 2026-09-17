@@ -3,6 +3,7 @@ using Game.Core.Commands;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
+using Game.Gameplay.Player.Robot;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
@@ -16,10 +17,17 @@ namespace Game.Gameplay.Player.Legs
     [DeclareBoxGroup("Locomoción")]
     [DeclareBoxGroup("Ground Check")]
     [DeclareBoxGroup("Patada")]
-    public sealed class LegsController : NetworkBehaviour, IMoveable, IKicker
+    [DeclareBoxGroup("Fusión")]
+    public sealed class LegsController : NetworkBehaviour, IMoveable, IKicker, IFusionOperator
     {
         [Group("Componentes")]
         [SerializeField] private Rigidbody _rigidbody;
+
+        [Group("Componentes")]
+        [SerializeField] private FusionSocket _fusionSocket;
+
+        [Group("Componentes")]
+        [SerializeField] private RobotCoordinator _coordinator;
 
         [Group("Componentes")]
         [SerializeField] private LegsInputReader _inputReader;
@@ -41,6 +49,9 @@ namespace Game.Gameplay.Player.Legs
 
         [Group("Locomoción")]
         [SerializeField] private float _acceleration = 25f;
+
+        [Group("Locomoción")]
+        [SerializeField] private float _baseMass = 70f;
 
         [Group("Locomoción")]
         [SerializeField] private float _rotationSpeed = 12f;
@@ -75,6 +86,7 @@ namespace Game.Gameplay.Player.Legs
         private LegsInputData _pendingInput;
         private bool _isGrounded;
         private float _nextKickTime;
+        private bool _isFused;
 
         public Vector2 MoveInput => _pendingInput.MoveDirection;
         public bool IsGrounded => _isGrounded;
@@ -100,6 +112,16 @@ namespace Game.Gameplay.Player.Legs
                 _rigidbody = GetComponent<Rigidbody>();
             }
 
+            if (_rigidbody != null)
+            {
+                _baseMass = _rigidbody.mass;
+            }
+
+            if (_fusionSocket == null)
+            {
+                _fusionSocket = GetComponentInChildren<FusionSocket>();
+            }
+
             if (_inputReader == null)
             {
                 _inputReader = GetComponent<LegsInputReader>();
@@ -117,6 +139,26 @@ namespace Game.Gameplay.Player.Legs
             {
                 _rigidbody.isKinematic = false;
             }
+
+            if (_coordinator == null)
+            {
+                _coordinator = FindFirstObjectByType<RobotCoordinator>();
+            }
+
+            if (_coordinator != null)
+            {
+                _coordinator.RegisterLegs(this);
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            if (_coordinator != null)
+            {
+                _coordinator.UnregisterLegs(this);
+            }
+
+            base.OnDestroy();
         }
 
         private void Update()
@@ -324,6 +366,56 @@ namespace Game.Gameplay.Player.Legs
         public void Kick()
         {
             _pendingInput.KickTriggered = true;
+        }
+
+        public FusionSocket FusionSocket => _fusionSocket;
+        public bool IsFused => _isFused;
+        public bool CanFuse => _coordinator != null && _coordinator.CanFuse();
+
+        public void SetCoordinator(RobotCoordinator coordinator)
+        {
+            _coordinator = coordinator;
+        }
+
+        public void SetFusionSocket(FusionSocket socket)
+        {
+            _fusionSocket = socket;
+        }
+
+        public void SetFused(bool isFused, float additionalMass)
+        {
+            _isFused = isFused;
+
+            if (_rigidbody == null)
+            {
+                _rigidbody = GetComponent<Rigidbody>();
+            }
+
+            if (_rigidbody != null)
+            {
+                if (_baseMass <= 0.01f)
+                {
+                    _baseMass = _rigidbody.mass;
+                }
+
+                _rigidbody.mass = isFused ? (_baseMass + additionalMass) : _baseMass;
+            }
+        }
+
+        public void RequestFusion()
+        {
+            if (_coordinator != null)
+            {
+                _coordinator.RequestFusion();
+            }
+        }
+
+        public void RequestSeparation()
+        {
+            if (_coordinator != null)
+            {
+                _coordinator.RequestSeparation();
+            }
         }
 
         private void OnDrawGizmosSelected()

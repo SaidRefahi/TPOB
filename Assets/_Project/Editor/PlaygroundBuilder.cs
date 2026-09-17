@@ -187,8 +187,27 @@ namespace Game.Editor
             readerSo.FindProperty("_inputActions").objectReferenceValue = inputActions;
             readerSo.ApplyModifiedPropertiesWithoutUndo();
 
+            var socketGo = new GameObject("FusionSocket");
+            socketGo.transform.SetParent(root.transform);
+            socketGo.transform.localPosition = new Vector3(0f, 1.8f, 0f);
+            var fusionSocket = socketGo.AddComponent<Game.Gameplay.Player.Robot.FusionSocket>();
+
+            var socketVisual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            socketVisual.name = "SocketVisual";
+            socketVisual.transform.SetParent(socketGo.transform);
+            socketVisual.transform.localPosition = Vector3.zero;
+            socketVisual.transform.localScale = new Vector3(0.5f, 0.1f, 0.5f);
+            socketVisual.GetComponent<Renderer>().sharedMaterial = mat;
+            Object.DestroyImmediate(socketVisual.GetComponent<Collider>());
+
+            var socketSo = new SerializedObject(fusionSocket);
+            socketSo.FindProperty("_attachPoint").objectReferenceValue = socketGo.transform;
+            socketSo.FindProperty("_visualJoint").objectReferenceValue = socketVisual.transform;
+            socketSo.ApplyModifiedPropertiesWithoutUndo();
+
             var controllerSo = new SerializedObject(controller);
             controllerSo.FindProperty("_rigidbody").objectReferenceValue = rb;
+            controllerSo.FindProperty("_fusionSocket").objectReferenceValue = fusionSocket;
             controllerSo.FindProperty("_inputReader").objectReferenceValue = reader;
             controllerSo.FindProperty("_commandInvoker").objectReferenceValue = invoker;
             controllerSo.FindProperty("_groundCheckPoint").objectReferenceValue = groundCheck.transform;
@@ -447,11 +466,18 @@ namespace Game.Editor
             spawnerSo.FindProperty("_spawnPointManager").objectReferenceValue = spawnManager;
             spawnerSo.ApplyModifiedPropertiesWithoutUndo();
 
+            // Robot Coordinator
+            var coordinatorGo = new GameObject("[ROBOT_COORDINATOR]");
+            coordinatorGo.transform.SetParent(mgmtGroup.transform);
+            coordinatorGo.AddComponent<NetworkIdentity>();
+            var coordinator = coordinatorGo.AddComponent<Game.Gameplay.Player.Robot.RobotCoordinator>();
+
             // Wire RoomScope
             var roomScopeSo = new SerializedObject(roomScope);
             roomScopeSo.FindProperty("_roomController").objectReferenceValue = roomController;
             roomScopeSo.FindProperty("_spawnPointManager").objectReferenceValue = spawnManager;
             roomScopeSo.FindProperty("_playerSpawner").objectReferenceValue = playerSpawner;
+            roomScopeSo.FindProperty("_robotCoordinator").objectReferenceValue = coordinator;
             roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             // 3. INTERACTABLES

@@ -15,6 +15,7 @@ namespace Game.Core.Commands
         public IMagnetOperator MagnetOperator { get; }
         public IClimber Climber { get; }
         public IInteractOperator InteractOperator { get; }
+        public IFusionOperator FusionOperator { get; }
 
         public PlayerContext(
             GameObject gameObject,
@@ -26,7 +27,8 @@ namespace Game.Core.Commands
             IThrower thrower,
             IMagnetOperator magnetOperator,
             IClimber climber,
-            IInteractOperator interactOperator = null)
+            IInteractOperator interactOperator = null,
+            IFusionOperator fusionOperator = null)
         {
             GameObject = gameObject;
             Transform = transform;
@@ -38,6 +40,7 @@ namespace Game.Core.Commands
             MagnetOperator = magnetOperator;
             Climber = climber;
             InteractOperator = interactOperator;
+            FusionOperator = fusionOperator;
         }
     }
 }

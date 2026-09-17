@@ -15,6 +15,7 @@ namespace Game.Gameplay.Rooms
         [SerializeField] private RoomController _roomController;
         [SerializeField] private SpawnPointManager _spawnPointManager;
         [SerializeField] private TPOBPlayerSpawner _playerSpawner;
+        [SerializeField] private Game.Gameplay.Player.Robot.RobotCoordinator _robotCoordinator;
 
         protected override LifetimeScope FindParent()
         {
@@ -47,6 +48,15 @@ namespace Game.Gameplay.Rooms
             else
             {
                 builder.RegisterComponentInHierarchy<TPOBPlayerSpawner>();
+            }
+
+            if (_robotCoordinator != null)
+            {
+                builder.RegisterComponent(_robotCoordinator).As<IRobotCoordinator>();
+            }
+            else
+            {
+                builder.RegisterComponentInHierarchy<Game.Gameplay.Player.Robot.RobotCoordinator>().As<IRobotCoordinator>();
             }
         }
     }

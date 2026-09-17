@@ -38,6 +38,7 @@ namespace Game.Gameplay.Player.Commands
             var magnetOperator = GetComponent<IMagnetOperator>();
             var climber = GetComponent<IClimber>();
             var interactOperator = GetComponent<IInteractOperator>();
+            var fusionOperator = GetComponent<IFusionOperator>();
             var rb = GetComponent<Rigidbody>();
 
             _context = new PlayerContext(
@@ -50,7 +51,8 @@ namespace Game.Gameplay.Player.Commands
                 thrower,
                 magnetOperator,
                 climber,
-                interactOperator
+                interactOperator,
+                fusionOperator
             );
         }
 
@@ -124,6 +126,8 @@ namespace Game.Gameplay.Player.Commands
             RegisterHandler(PlayerCommandType.Climb, HandleClimbCommand);
             RegisterHandler(PlayerCommandType.Magnet, HandleMagnetCommand);
             RegisterHandler(PlayerCommandType.Interact, HandleInteractCommand);
+            RegisterHandler(PlayerCommandType.Fuse, HandleFuseCommand);
+            RegisterHandler(PlayerCommandType.Separate, HandleSeparateCommand);
         }
 
         private static void HandleMoveCommand(in PlayerCommandPacket packet, PlayerContext context)
@@ -188,6 +192,22 @@ namespace Game.Gameplay.Player.Commands
             if (context.InteractOperator != null)
             {
                 context.InteractOperator.TriggerInteract();
+            }
+        }
+
+        private static void HandleFuseCommand(in PlayerCommandPacket packet, PlayerContext context)
+        {
+            if (context.FusionOperator != null && context.FusionOperator.CanFuse)
+            {
+                context.FusionOperator.RequestFusion();
+            }
+        }
+
+        private static void HandleSeparateCommand(in PlayerCommandPacket packet, PlayerContext context)
+        {
+            if (context.FusionOperator != null && context.FusionOperator.IsFused)
+            {
+                context.FusionOperator.RequestSeparation();
             }
         }
     }

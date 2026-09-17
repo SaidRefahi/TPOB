@@ -136,6 +136,7 @@ GameObject:
   - component: {fileID: 2436260387479303178}
   - component: {fileID: 6985753436973795554}
   - component: {fileID: 8679256048164678916}
+  - component: {fileID: 4533800559941898043}
   m_Layer: 0
   m_Name: TorsoPlayer
   m_TagString: Untagged
@@ -288,7 +289,9 @@ MonoBehaviour:
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
   _rigidbody: {fileID: 5691588366824779483}
+  _coordinator: {fileID: 0}
   _inputReader: {fileID: 8679256048164678916}
+  _commandInvoker: {fileID: 4533800559941898043}
   _aimPivot: {fileID: 5926513064040193909}
   _holdSocket: {fileID: 8265454599244668231}
   _magnetOrigin: {fileID: 7008551134735924117}
@@ -323,7 +326,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Player.Torso.TorsoInputReader
   _inputActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  _isInputActive: 1
+--- !u!114 &4533800559941898043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5267184360539245304}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98f856d67a0dad541a790731a0608e7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Player.Commands.CommandInvoker
+  _isSetup: 0
+  _prefabId: -2147483648
+  _hasPrefabScope: 0
+  _prefabScope: 0
+  _componentIndex: -2147483648
+  _shouldBePooled: 0
+  _parent: {fileID: 0}
+  _invertedPathToNearestParent: 
+  _directChildren: []
+  _networkRules: {fileID: 0}
+  _visitiblityRules: {fileID: 0}
 --- !u!1 &5947107764733596459
 GameObject:
   m_ObjectHideFlags: 0

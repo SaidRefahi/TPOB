@@ -1,4 +1,5 @@
 using Game.Core.Enums;
+using UnityEngine;
 
 namespace Game.Core.Events
 {
@@ -45,6 +46,26 @@ namespace Game.Core.Events
         {
             PlayerId = playerId;
             NewRole = newRole;
+        }
+    }
+
+    public readonly struct RobotFusedEvent
+    {
+        public readonly Vector3 FusionPosition;
+
+        public RobotFusedEvent(Vector3 fusionPosition)
+        {
+            FusionPosition = fusionPosition;
+        }
+    }
+
+    public readonly struct RobotSeparatedEvent
+    {
+        public readonly Vector3 SeparationPosition;
+
+        public RobotSeparatedEvent(Vector3 separationPosition)
+        {
+            SeparationPosition = separationPosition;
         }
     }
 }

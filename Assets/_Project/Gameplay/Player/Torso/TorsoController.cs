@@ -3,6 +3,7 @@ using Game.Core.Commands;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
+using Game.Gameplay.Player.Robot;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
@@ -19,10 +20,14 @@ namespace Game.Gameplay.Player.Torso
     [DeclareBoxGroup("Lanzamiento")]
     [DeclareBoxGroup("Imán")]
     [DeclareBoxGroup("Mecanismos")]
-    public sealed class TorsoController : NetworkBehaviour, IGrabber, IThrower, IMagnetOperator, IMoveable, IClimber, IInteractOperator
+    [DeclareBoxGroup("Fusión")]
+    public sealed class TorsoController : NetworkBehaviour, IGrabber, IThrower, IMagnetOperator, IMoveable, IClimber, IInteractOperator, IFusionOperator
     {
         [Group("Componentes")]
         [SerializeField] private Rigidbody _rigidbody;
+
+        [Group("Componentes")]
+        [SerializeField] private RobotCoordinator _coordinator;
 
         [Group("Componentes")]
         [SerializeField] private TorsoInputReader _inputReader;
@@ -84,6 +89,7 @@ namespace Game.Gameplay.Player.Torso
         private bool _isMagnetActive;
         private bool _isClimbing;
         private Vector2 _climbDirection;
+        private bool _isFused;
 
         public bool IsHoldingObject => _currentHeldObject != null;
         public IGrabbable CurrentHeldObject => _currentHeldObject;
@@ -139,6 +145,26 @@ namespace Game.Gameplay.Player.Torso
             {
                 _rigidbody.isKinematic = false;
             }
+
+            if (_coordinator == null)
+            {
+                _coordinator = FindFirstObjectByType<RobotCoordinator>();
+            }
+
+            if (_coordinator != null)
+            {
+                _coordinator.RegisterTorso(this);
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            if (_coordinator != null)
+            {
+                _coordinator.UnregisterTorso(this);
+            }
+
+            base.OnDestroy();
         }
 
         private void Update()
@@ -222,13 +248,16 @@ namespace Game.Gameplay.Player.Torso
                 return;
             }
 
-            if (_isClimbing)
+            if (!_isFused && !_rigidbody.isKinematic)
             {
-                ApplyClimbing();
-            }
-            else
-            {
-                ApplyCrawlLocomotion();
+                if (_isClimbing)
+                {
+                    ApplyClimbing();
+                }
+                else
+                {
+                    ApplyCrawlLocomotion();
+                }
             }
 
             ApplyAiming();
@@ -494,6 +523,50 @@ namespace Game.Gameplay.Player.Torso
         public void TriggerInteract() => _pendingInput.InteractTriggered = true;
 
         public bool IsClimbing => _isClimbing;
+        public bool IsFused => _isFused;
+        public bool CanFuse => _coordinator != null && _coordinator.CanFuse();
+
+        public void SetCoordinator(RobotCoordinator coordinator)
+        {
+            _coordinator = coordinator;
+        }
+
+        public void SetFused(bool isFused)
+        {
+            _isFused = isFused;
+
+            if (_rigidbody == null)
+            {
+                _rigidbody = GetComponent<Rigidbody>();
+            }
+
+            if (_rigidbody != null)
+            {
+                if (!_rigidbody.isKinematic)
+                {
+                    _rigidbody.linearVelocity = Vector3.zero;
+                }
+
+                bool canSimulate = !isSpawned || isServer;
+                _rigidbody.isKinematic = isFused || !canSimulate;
+            }
+        }
+
+        public void RequestFusion()
+        {
+            if (_coordinator != null)
+            {
+                _coordinator.RequestFusion();
+            }
+        }
+
+        public void RequestSeparation()
+        {
+            if (_coordinator != null)
+            {
+                _coordinator.RequestSeparation();
+            }
+        }
 
         public void Climb(Vector2 direction)
         {
