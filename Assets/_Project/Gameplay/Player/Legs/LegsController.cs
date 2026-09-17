@@ -7,6 +7,7 @@ using Game.Gameplay.Player.Robot;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
+using Unity.Cinemachine;
 using UnityEngine;
 
 namespace Game.Gameplay.Player.Legs
@@ -17,6 +18,7 @@ namespace Game.Gameplay.Player.Legs
     [DeclareBoxGroup("Locomoción")]
     [DeclareBoxGroup("Ground Check")]
     [DeclareBoxGroup("Patada")]
+    [DeclareBoxGroup("Impulsos de Cámara")]
     [DeclareBoxGroup("Fusión")]
     public sealed class LegsController : NetworkBehaviour, IMoveable, IKicker, IFusionOperator
     {
@@ -80,6 +82,15 @@ namespace Game.Gameplay.Player.Legs
         [Group("Patada")]
         [SerializeField] private LayerMask _kickLayer = ~0;
 
+        [Group("Impulsos de Cámara")]
+        [SerializeField] private CinemachineImpulseSource _kickImpulseSource;
+
+        [Group("Impulsos de Cámara")]
+        [SerializeField] private float _kickImpulseForce = 1.2f;
+
+        [Group("Impulsos de Cámara")]
+        [SerializeField] private float _hardLandingThreshold = 10f;
+
         private readonly RaycastHit[] _groundHits = new RaycastHit[1];
         private readonly Collider[] _kickColliders = new Collider[8];
 
@@ -120,6 +131,11 @@ namespace Game.Gameplay.Player.Legs
             if (_fusionSocket == null)
             {
                 _fusionSocket = GetComponentInChildren<FusionSocket>();
+            }
+
+            if (_kickImpulseSource == null)
+            {
+                _kickImpulseSource = GetComponent<CinemachineImpulseSource>();
             }
 
             if (_inputReader == null)
@@ -242,7 +258,16 @@ namespace Game.Gameplay.Player.Legs
         {
             Vector3 origin = _groundCheckPoint != null ? _groundCheckPoint.position : transform.position;
             int hitCount = Physics.RaycastNonAlloc(origin, Vector3.down, _groundHits, _groundCheckDistance, _groundLayer);
+            bool wasGrounded = _isGrounded;
             _isGrounded = hitCount > 0;
+
+            if (!wasGrounded && _isGrounded && _rigidbody != null)
+            {
+                if (_rigidbody.linearVelocity.y <= -_hardLandingThreshold && _kickImpulseSource != null)
+                {
+                    _kickImpulseSource.GenerateImpulse(Vector3.down * 0.8f);
+                }
+            }
         }
 
         private void ApplyLocomotion()
@@ -334,6 +359,7 @@ namespace Game.Gameplay.Player.Legs
 
             if (!isSpawned)
             {
+                TriggerKickImpulse();
                 OnKicked?.Invoke();
             }
             else
@@ -345,7 +371,16 @@ namespace Game.Gameplay.Player.Legs
         [ObserversRpc(runLocally: true)]
         private void PlayKickEffectObserversRpc(Vector3 origin)
         {
+            TriggerKickImpulse();
             OnKicked?.Invoke();
+        }
+
+        private void TriggerKickImpulse()
+        {
+            if (_kickImpulseSource != null)
+            {
+                _kickImpulseSource.GenerateImpulse(transform.forward * _kickImpulseForce);
+            }
         }
 
         public void SetMoveInput(Vector2 input)

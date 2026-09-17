@@ -16,6 +16,7 @@ namespace Game.Gameplay.Rooms
         [SerializeField] private SpawnPointManager _spawnPointManager;
         [SerializeField] private TPOBPlayerSpawner _playerSpawner;
         [SerializeField] private Game.Gameplay.Player.Robot.RobotCoordinator _robotCoordinator;
+        [SerializeField] private Game.Gameplay.Camera.CameraController _cameraController;
 
         protected override LifetimeScope FindParent()
         {
@@ -41,23 +42,35 @@ namespace Game.Gameplay.Rooms
                 builder.RegisterComponent(_spawnPointManager);
             }
 
-            if (_playerSpawner != null)
+            var playerSpawner = _playerSpawner != null ? _playerSpawner : FindFirstObjectByType<TPOBPlayerSpawner>();
+            if (playerSpawner != null)
             {
-                builder.RegisterComponent(_playerSpawner);
-            }
-            else
-            {
-                builder.RegisterComponentInHierarchy<TPOBPlayerSpawner>();
+                builder.RegisterComponent(playerSpawner);
             }
 
-            if (_robotCoordinator != null)
+            var robotCoordinator = _robotCoordinator != null ? _robotCoordinator : FindFirstObjectByType<Game.Gameplay.Player.Robot.RobotCoordinator>();
+            if (robotCoordinator != null)
             {
-                builder.RegisterComponent(_robotCoordinator).As<IRobotCoordinator>();
+                builder.RegisterComponent(robotCoordinator).As<IRobotCoordinator>();
+            }
+
+            var cameraController = _cameraController != null ? _cameraController : FindFirstObjectByType<Game.Gameplay.Camera.CameraController>();
+            if (cameraController != null)
+            {
+                builder.RegisterComponent(cameraController).As<ICameraCoordinator>();
             }
             else
             {
-                builder.RegisterComponentInHierarchy<Game.Gameplay.Player.Robot.RobotCoordinator>().As<IRobotCoordinator>();
+                builder.Register<NullCameraCoordinator>(Lifetime.Scoped).As<ICameraCoordinator>();
             }
+        }
+
+        private sealed class NullCameraCoordinator : ICameraCoordinator
+        {
+            public bool IsFused => false;
+            public void RegisterTargets(Transform legs, Transform torso) { }
+            public void SetFused(bool isFused) { }
+            public void TriggerImpulse(Vector3 velocity, float force = 1f) { }
         }
     }
 }

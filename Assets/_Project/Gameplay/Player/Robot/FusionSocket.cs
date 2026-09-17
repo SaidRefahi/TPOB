@@ -7,6 +7,7 @@ namespace Game.Gameplay.Player.Robot
     [DisallowMultipleComponent]
     [DeclareBoxGroup("Socket Configuration")]
     [DeclareBoxGroup("DOTween Juicing")]
+    [DeclareBoxGroup("Impulsos de Cámara")]
     public sealed class FusionSocket : MonoBehaviour
     {
         [Group("Socket Configuration")]
@@ -30,6 +31,12 @@ namespace Game.Gameplay.Player.Robot
         [Group("DOTween Juicing")]
         [SerializeField] private float _punchElasticity = 1f;
 
+        [Group("Impulsos de Cámara")]
+        [SerializeField] private Unity.Cinemachine.CinemachineImpulseSource _dockImpulseSource;
+
+        [Group("Impulsos de Cámara")]
+        [SerializeField] private float _dockImpulseForce = 0.8f;
+
         private Tween _punchTween;
 
         public Transform AttachPoint => _attachPoint != null ? _attachPoint : transform;
@@ -46,6 +53,11 @@ namespace Game.Gameplay.Player.Robot
             {
                 _visualJoint = transform;
             }
+
+            if (_dockImpulseSource == null)
+            {
+                _dockImpulseSource = GetComponent<Unity.Cinemachine.CinemachineImpulseSource>();
+            }
         }
 
         private void OnDestroy()
@@ -58,6 +70,11 @@ namespace Game.Gameplay.Player.Robot
             if (!Application.isPlaying)
             {
                 return;
+            }
+
+            if (_dockImpulseSource != null)
+            {
+                _dockImpulseSource.GenerateImpulse(Vector3.down * _dockImpulseForce);
             }
 
             _punchTween?.Kill();

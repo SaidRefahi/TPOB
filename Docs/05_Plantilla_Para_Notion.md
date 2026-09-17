@@ -56,12 +56,12 @@
 * **Integración:** `IPlayerCommand`, `CommandInvoker` y structs serializables por valor para Cero Asignaciones en el heap.
 * **Entregable:** Nuevas habilidades se integran implementando `IPlayerCommand` sin tocar el código de red.
 
-### 🔹 Fase 7: Fusión y Separación del Robot
+### 🔹 Fase 7: Fusión y Separación del Robot `[COMPLETADA]`
 * **Objetivo:** Alternar entre dos cuerpos separados y un robot unificado.
 * **Integración:** Emparentamiento en servidor a socket receptor, desactivación de `Rigidbody` secundario y animación snap con DOTween.
 * **Entregable:** Ambos clientes ven la fusión en el mismo fotograma sin tirones físicos.
 
-### 🔹 Fase 8: Cámara Cinemachine 3.x Adaptativa
+### 🔹 Fase 8: Cámara Cinemachine 3.x Adaptativa `[COMPLETADA]`
 * **Objetivo:** Encuadre dinámico que responde a la Fusión/Separación y sacudida de pantalla por impactos.
 * **Integración:** `CinemachineTargetGroup` con pesos adaptativos (1 objetivo en Fusión, 2 en Separación) y `CinemachineImpulseSource` en patadas y caídas pesadas.
 * **Entregable:** Zoom y encuadre fluido en tiempo real al alejarse o juntarse los jugadores.

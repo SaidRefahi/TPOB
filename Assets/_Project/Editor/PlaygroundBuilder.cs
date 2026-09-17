@@ -7,10 +7,12 @@ using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Rooms;
 using Game.Gameplay.Spawning;
 using PurrNet;
+using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Game.Gameplay.Camera;
 
 namespace Game.Editor
 {
@@ -200,14 +202,18 @@ namespace Game.Editor
             socketVisual.GetComponent<Renderer>().sharedMaterial = mat;
             Object.DestroyImmediate(socketVisual.GetComponent<Collider>());
 
+            var dockImpulse = socketGo.AddComponent<CinemachineImpulseSource>();
             var socketSo = new SerializedObject(fusionSocket);
             socketSo.FindProperty("_attachPoint").objectReferenceValue = socketGo.transform;
             socketSo.FindProperty("_visualJoint").objectReferenceValue = socketVisual.transform;
+            socketSo.FindProperty("_dockImpulseSource").objectReferenceValue = dockImpulse;
             socketSo.ApplyModifiedPropertiesWithoutUndo();
 
+            var kickImpulse = root.AddComponent<CinemachineImpulseSource>();
             var controllerSo = new SerializedObject(controller);
             controllerSo.FindProperty("_rigidbody").objectReferenceValue = rb;
             controllerSo.FindProperty("_fusionSocket").objectReferenceValue = fusionSocket;
+            controllerSo.FindProperty("_kickImpulseSource").objectReferenceValue = kickImpulse;
             controllerSo.FindProperty("_inputReader").objectReferenceValue = reader;
             controllerSo.FindProperty("_commandInvoker").objectReferenceValue = invoker;
             controllerSo.FindProperty("_groundCheckPoint").objectReferenceValue = groundCheck.transform;
@@ -528,6 +534,48 @@ namespace Game.Editor
             var cam = camGo.AddComponent<Camera>();
             cam.fieldOfView = 60f;
             camGo.AddComponent<AudioListener>();
+            camGo.AddComponent<CinemachineBrain>();
+
+            // 5. CAMERA RIG (Cinemachine 3.x)
+            var cameraRigGo = new GameObject("[CAMERA_RIG]");
+            cameraRigGo.transform.SetParent(mgmtGroup.transform);
+
+            var targetGroupGo = new GameObject("CM_TargetGroup");
+            targetGroupGo.transform.SetParent(cameraRigGo.transform);
+            var targetGroup = targetGroupGo.AddComponent<CinemachineTargetGroup>();
+            var targetGroupCoord = targetGroupGo.AddComponent<TargetGroupCoordinator>();
+
+            var cmCamGo = new GameObject("CM_AdaptiveCamera");
+            cmCamGo.transform.SetParent(cameraRigGo.transform);
+            cmCamGo.transform.position = new Vector3(0f, 15f, -17f);
+            cmCamGo.transform.rotation = Quaternion.Euler(42f, 0f, 0f);
+            var cmCam = cmCamGo.AddComponent<CinemachineCamera>();
+            cmCam.Target.TrackingTarget = targetGroupGo.transform;
+            cmCam.Target.LookAtTarget = targetGroupGo.transform;
+
+            var groupFraming = cmCamGo.AddComponent<CinemachineGroupFraming>();
+            groupFraming.FramingMode = CinemachineGroupFraming.FramingModes.HorizontalAndVertical;
+            groupFraming.SizeAdjustment = CinemachineGroupFraming.SizeAdjustmentModes.DollyThenZoom;
+            groupFraming.FramingSize = 0.8f;
+            groupFraming.Damping = 2f;
+
+            cmCamGo.AddComponent<CinemachineImpulseListener>();
+            var impulseSource = cmCamGo.AddComponent<CinemachineImpulseSource>();
+
+            var cameraController = cameraRigGo.AddComponent<CameraController>();
+            var camCtrlSo = new SerializedObject(cameraController);
+            camCtrlSo.FindProperty("_cinemachineCamera").objectReferenceValue = cmCam;
+            camCtrlSo.FindProperty("_groupFraming").objectReferenceValue = groupFraming;
+            camCtrlSo.FindProperty("_targetCoordinator").objectReferenceValue = targetGroupCoord;
+            camCtrlSo.FindProperty("_impulseSource").objectReferenceValue = impulseSource;
+            camCtrlSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var targetCoordSo = new SerializedObject(targetGroupCoord);
+            targetCoordSo.FindProperty("_targetGroup").objectReferenceValue = targetGroup;
+            targetCoordSo.ApplyModifiedPropertiesWithoutUndo();
+
+            roomScopeSo.FindProperty("_cameraController").objectReferenceValue = cameraController;
+            roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene);
         }

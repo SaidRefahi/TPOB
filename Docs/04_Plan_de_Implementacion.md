@@ -29,8 +29,8 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | **04** | Jugador 1: Locomoción y Habilidades (Piernas) | InputSystem, PurrNet Physics, Tri-Inspector | Piernas camina, salta, patea y empuja cajas con física autoritativa. `[COMPLETADA]` |
 | **05** | Jugador 2: Manipulación y Habilidades (Torso) | InputSystem, PurrNet Physics, DOTween | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. `[COMPLETADA]` |
 | **06** | Sistema de Comandos (Command Pattern) | C# Structs (Zero GC), PurrNet ServerRpc | Comandos polimórficos de jugador desacoplados de la red. `[COMPLETADA]` |
-| **07** | Fusión y Separación del Robot | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween | Alternancia fluida entre 1 y 2 avatares físicos en red. |
-| **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. |
+| **07** | Fusión y Separación del Robot | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween | Alternancia fluida entre 1 y 2 avatares físicos en red. `[COMPLETADA]` |
+| **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. `[COMPLETADA]` |
 | **09** | Bus de Eventos Desacoplado (Observer Pattern) | VContainer, C# Events, PurrNet ObserversRpc | Comunicación entre subsistemas sin llamadas cruzadas directas. |
 | **10** | Composite Pattern y Mecanismos de Puzzle | Interfaces, DOTween, Tri-Inspector | Árbol lógico de finalización y objetos interactivos reactivos. |
 | **11** | Ciclo de Muerte, Checkpoints y Respawn | UniTask, PurrNet SyncVar | Caídas y muertes con reaparición rápida sin reiniciar la sala. |
@@ -130,7 +130,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 7: Fusión y Separación del Robot
+### 🔹 Fase 7: Fusión y Separación del Robot `[COMPLETADA]`
 * **Objetivo:** Gestionar la alternancia entre las dos entidades físicas separadas y el robot combinado.
 * **Integración de Addons:**
   * **PurrNet:** Validación de distancia en el servidor (`.sqrMagnitude < maxDistance`). Al fusionar, el servidor emparenta Torso al socket de Piernas, activa `isKinematic` en Torso y transfiere la masa total a Piernas.
@@ -144,7 +144,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 8: Cámara Cinemachine 3.x Adaptativa e Impulsos
+### 🔹 Fase 8: Cámara Cinemachine 3.x Adaptativa e Impulsos `[COMPLETADA]`
 * **Objetivo:** Proveer una experiencia visual cinematográfica y adaptativa al estado de Fusión/Separación.
 * **Integración de Addons:**
   * **Cinemachine 3.x:** Uso de `CinemachineCamera` y `CinemachineTargetGroup`.

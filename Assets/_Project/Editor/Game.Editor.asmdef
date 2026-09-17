@@ -10,7 +10,9 @@
         "VContainer",
         "Unity.InputSystem",
         "TriInspector",
-        "TriInspector.Editor"
+        "TriInspector.Editor",
+        "Unity.Cinemachine",
+        "Unity.Cinemachine.Editor"
     ],
     "includePlatforms": [
         "Editor"
