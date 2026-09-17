@@ -1,6 +1,8 @@
 using System;
+using Game.Core.Commands;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
+using Game.Gameplay.Player.Commands;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
@@ -21,6 +23,9 @@ namespace Game.Gameplay.Player.Legs
 
         [Group("Componentes")]
         [SerializeField] private LegsInputReader _inputReader;
+
+        [Group("Componentes")]
+        [SerializeField] private CommandInvoker _commandInvoker;
 
         [Group("Componentes")]
         [SerializeField] private Transform _groundCheckPoint;
@@ -99,6 +104,11 @@ namespace Game.Gameplay.Player.Legs
             {
                 _inputReader = GetComponent<LegsInputReader>();
             }
+
+            if (_commandInvoker == null)
+            {
+                _commandInvoker = GetComponent<CommandInvoker>();
+            }
         }
 
         private void Start()
@@ -114,6 +124,22 @@ namespace Game.Gameplay.Player.Legs
             bool hasAuthority = !isSpawned || isOwner;
             if (!hasAuthority || _inputReader == null)
             {
+                return;
+            }
+
+            if (_commandInvoker != null)
+            {
+                _commandInvoker.Execute(new MoveCommand(_inputReader.MoveInput, _inputReader.IsSprintHeld));
+
+                if (_inputReader.ConsumeJumpTrigger())
+                {
+                    _commandInvoker.Execute(new JumpCommand());
+                }
+
+                if (_inputReader.ConsumeKickTrigger())
+                {
+                    _commandInvoker.Execute(new KickCommand());
+                }
                 return;
             }
 

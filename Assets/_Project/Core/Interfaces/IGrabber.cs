@@ -8,6 +8,7 @@ namespace Game.Core.Interfaces
         IGrabbable CurrentHeldObject { get; }
         void Grab(IGrabbable target);
         void ReleaseHeldObject();
+        void TriggerGrab();
         event Action<IGrabbable> OnObjectGrabbed;
         event Action<IGrabbable> OnObjectReleased;
     }

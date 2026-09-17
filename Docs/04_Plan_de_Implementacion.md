@@ -28,7 +28,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | **03** | Capa de Sala: RoomController y State Pattern | VContainer, PurrNet SyncVar, Tri-Inspector | Ciclo de vida determinista de sala con spawning sincronizado. `[COMPLETADA]` |
 | **04** | Jugador 1: Locomoción y Habilidades (Piernas) | InputSystem, PurrNet Physics, Tri-Inspector | Piernas camina, salta, patea y empuja cajas con física autoritativa. `[COMPLETADA]` |
 | **05** | Jugador 2: Manipulación y Habilidades (Torso) | InputSystem, PurrNet Physics, DOTween | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. `[COMPLETADA]` |
-| **06** | Sistema de Comandos (Command Pattern) | C# Structs (Zero GC), PurrNet ServerRpc | Comandos polimórficos de jugador desacoplados de la red. |
+| **06** | Sistema de Comandos (Command Pattern) | C# Structs (Zero GC), PurrNet ServerRpc | Comandos polimórficos de jugador desacoplados de la red. `[COMPLETADA]` |
 | **07** | Fusión y Separación del Robot | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween | Alternancia fluida entre 1 y 2 avatares físicos en red. |
 | **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. |
 | **09** | Bus de Eventos Desacoplado (Observer Pattern) | VContainer, C# Events, PurrNet ObserversRpc | Comunicación entre subsistemas sin llamadas cruzadas directas. |
@@ -117,7 +117,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 6: Sistema de Comandos (Command Pattern)
+### 🔹 Fase 6: Sistema de Comandos (Command Pattern) `[COMPLETADA]`
 * **Objetivo:** Desacoplar la recepción de inputs del transporte de red y de la ejecución física de las acciones.
 * **Integración de Addons:**
   * **PurrNet:** Envío de identificadores de comando serializables por valor en lugar de invocaciones directas de RPCs por cada botón.

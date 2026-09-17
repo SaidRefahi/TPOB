@@ -1,6 +1,8 @@
 using System;
+using Game.Core.Commands;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
+using Game.Gameplay.Player.Commands;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
@@ -17,13 +19,16 @@ namespace Game.Gameplay.Player.Torso
     [DeclareBoxGroup("Lanzamiento")]
     [DeclareBoxGroup("Imán")]
     [DeclareBoxGroup("Mecanismos")]
-    public sealed class TorsoController : NetworkBehaviour, IGrabber, IThrower, IMagnetOperator
+    public sealed class TorsoController : NetworkBehaviour, IGrabber, IThrower, IMagnetOperator, IMoveable, IClimber, IInteractOperator
     {
         [Group("Componentes")]
         [SerializeField] private Rigidbody _rigidbody;
 
         [Group("Componentes")]
         [SerializeField] private TorsoInputReader _inputReader;
+
+        [Group("Componentes")]
+        [SerializeField] private CommandInvoker _commandInvoker;
 
         [Group("Componentes")]
         [SerializeField] private Transform _aimPivot;
@@ -77,6 +82,8 @@ namespace Game.Gameplay.Player.Torso
         private TorsoInputData _pendingInput;
         private IGrabbable _currentHeldObject;
         private bool _isMagnetActive;
+        private bool _isClimbing;
+        private Vector2 _climbDirection;
 
         public bool IsHoldingObject => _currentHeldObject != null;
         public IGrabbable CurrentHeldObject => _currentHeldObject;
@@ -110,6 +117,11 @@ namespace Game.Gameplay.Player.Torso
                 _inputReader = GetComponent<TorsoInputReader>();
             }
 
+            if (_commandInvoker == null)
+            {
+                _commandInvoker = GetComponent<CommandInvoker>();
+            }
+
             if (_holdSocket == null)
             {
                 _holdSocket = transform;
@@ -134,6 +146,35 @@ namespace Game.Gameplay.Player.Torso
             bool hasAuthority = !isSpawned || isOwner;
             if (!hasAuthority || _inputReader == null)
             {
+                return;
+            }
+
+            if (_commandInvoker != null)
+            {
+                _pendingInput.AimDirection = _inputReader.LookInput;
+
+                _commandInvoker.Execute(new MoveCommand(_inputReader.MoveInput, false));
+
+                if (_inputReader.ConsumeGrabTrigger())
+                {
+                    _commandInvoker.Execute(new GrabCommand());
+                }
+
+                if (_inputReader.ConsumeThrowTrigger())
+                {
+                    _commandInvoker.Execute(new ThrowCommand());
+                }
+
+                if (_inputReader.IsMagnetHeld != _isMagnetActive)
+                {
+                    _commandInvoker.Execute(new MagnetCommand(_inputReader.IsMagnetHeld));
+                }
+
+                if (_inputReader.ConsumeInteractTrigger())
+                {
+                    _commandInvoker.Execute(new InteractCommand());
+                }
+
                 return;
             }
 
@@ -181,12 +222,27 @@ namespace Game.Gameplay.Player.Torso
                 return;
             }
 
-            ApplyCrawlLocomotion();
+            if (_isClimbing)
+            {
+                ApplyClimbing();
+            }
+            else
+            {
+                ApplyCrawlLocomotion();
+            }
+
             ApplyAiming();
             ApplyGrabAndRelease();
             ApplyThrow();
             ApplyMagnet();
             ApplyMechanismInteraction();
+        }
+
+        private void ApplyClimbing()
+        {
+            Vector3 currentVelocity = _rigidbody.linearVelocity;
+            Vector3 targetVelocity = new Vector3(_climbDirection.x * _crawlSpeed, _climbDirection.y * _crawlSpeed, currentVelocity.z);
+            _rigidbody.linearVelocity = Vector3.MoveTowards(currentVelocity, targetVelocity, _acceleration * Time.fixedDeltaTime);
         }
 
         private void ApplyCrawlLocomotion()
@@ -425,6 +481,30 @@ namespace Game.Gameplay.Player.Torso
         {
             _isMagnetActive = active;
             OnMagnetStateChanged?.Invoke(active);
+        }
+
+        public Vector2 MoveInput => _pendingInput.MoveDirection;
+        public bool IsGrounded => true;
+        public bool IsSprinting => false;
+        public void SetMoveInput(Vector2 input) => _pendingInput.MoveDirection = input;
+        public void SetSprint(bool isSprinting) { }
+        public void Jump() { }
+
+        public void TriggerGrab() => _pendingInput.GrabTriggered = true;
+        public void TriggerInteract() => _pendingInput.InteractTriggered = true;
+
+        public bool IsClimbing => _isClimbing;
+
+        public void Climb(Vector2 direction)
+        {
+            _isClimbing = direction.sqrMagnitude > 0.01f;
+            _climbDirection = direction;
+        }
+
+        public void StopClimbing()
+        {
+            _isClimbing = false;
+            _climbDirection = Vector2.zero;
         }
 
         private void OnDrawGizmosSelected()

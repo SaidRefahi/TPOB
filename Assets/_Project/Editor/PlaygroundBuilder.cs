@@ -3,6 +3,7 @@ using Game.Core.Enums;
 using Game.Gameplay.Interactables;
 using Game.Gameplay.Player.Legs;
 using Game.Gameplay.Player.Torso;
+using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Rooms;
 using Game.Gameplay.Spawning;
 using PurrNet;
@@ -164,6 +165,7 @@ namespace Game.Editor
 
             var controller = root.AddComponent<LegsController>();
             var reader = root.AddComponent<LegsInputReader>();
+            var invoker = root.AddComponent<CommandInvoker>();
 
             var mesh = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             mesh.name = "LegsMesh";
@@ -188,6 +190,7 @@ namespace Game.Editor
             var controllerSo = new SerializedObject(controller);
             controllerSo.FindProperty("_rigidbody").objectReferenceValue = rb;
             controllerSo.FindProperty("_inputReader").objectReferenceValue = reader;
+            controllerSo.FindProperty("_commandInvoker").objectReferenceValue = invoker;
             controllerSo.FindProperty("_groundCheckPoint").objectReferenceValue = groundCheck.transform;
             controllerSo.FindProperty("_kickPoint").objectReferenceValue = kickPoint.transform;
             controllerSo.ApplyModifiedPropertiesWithoutUndo();
@@ -215,6 +218,7 @@ namespace Game.Editor
 
             var controller = root.AddComponent<TorsoController>();
             var reader = root.AddComponent<TorsoInputReader>();
+            var invoker = root.AddComponent<CommandInvoker>();
 
             var aimPivot = new GameObject("AimPivot");
             aimPivot.transform.SetParent(root.transform);
@@ -243,6 +247,7 @@ namespace Game.Editor
             var controllerSo = new SerializedObject(controller);
             controllerSo.FindProperty("_rigidbody").objectReferenceValue = rb;
             controllerSo.FindProperty("_inputReader").objectReferenceValue = reader;
+            controllerSo.FindProperty("_commandInvoker").objectReferenceValue = invoker;
             controllerSo.FindProperty("_aimPivot").objectReferenceValue = aimPivot.transform;
             controllerSo.FindProperty("_holdSocket").objectReferenceValue = holdSocket.transform;
             controllerSo.FindProperty("_magnetOrigin").objectReferenceValue = magnetOrigin.transform;

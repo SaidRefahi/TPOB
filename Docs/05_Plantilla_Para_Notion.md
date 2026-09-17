@@ -12,7 +12,7 @@
 - [x] **Fase 3:** Capa de Sala: RoomController, Spawning y State Pattern (Completada)
 - [x] **Fase 4:** Movimiento y habilidades Jugador 1 (Piernas: Locomoción y Patada) (Completada)
 - [x] **Fase 5:** Movimiento y habilidades Jugador 2 (Torso: Agarre, Imán y Palancas) (Completada)
-- [ ] **Fase 6:** Sistema de Comandos desacoplado de red (Command Pattern & Structs)
+- [x] **Fase 6:** Sistema de Comandos desacoplado de red (Command Pattern & Structs) (Completada)
 - [ ] **Fase 7:** Fusión y Separación del Robot (Hierarchy & Rigidbody Sync)
 - [ ] **Fase 8:** Cinemachine 3.x Adaptativa (TargetGroup Fusión/Separación e Impulsos)
 - [ ] **Fase 9:** Sistema de Eventos en Red (GameEventBus + NetworkEventRelay)
