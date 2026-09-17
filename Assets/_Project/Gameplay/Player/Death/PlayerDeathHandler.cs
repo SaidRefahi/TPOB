@@ -161,11 +161,14 @@ namespace Game.Gameplay.Player.Death
 
             if (_rigidbody != null)
             {
-                _rigidbody.linearVelocity = Vector3.zero;
-                _rigidbody.angularVelocity = Vector3.zero;
+                _rigidbody.isKinematic = !isServer;
+                if (!_rigidbody.isKinematic)
+                {
+                    _rigidbody.linearVelocity = Vector3.zero;
+                    _rigidbody.angularVelocity = Vector3.zero;
+                }
                 _rigidbody.position = position;
                 _rigidbody.rotation = rotation;
-                _rigidbody.isKinematic = !isServer;
             }
 
             int pId = isSpawned && owner.HasValue ? (int)owner.Value.id.value : (_role == PlayerRole.Legs ? 1 : 2);

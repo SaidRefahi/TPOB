@@ -33,8 +33,8 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. `[COMPLETADA]` |
 | **09** | Bus de Eventos Desacoplado (Observer Pattern) | VContainer, C# Events, PurrNet ObserversRpc | Comunicación entre subsistemas sin llamadas cruzadas directas. `[COMPLETADA]` |
 | **10** | Composite Pattern y Mecanismos de Puzzle | Interfaces, DOTween, Tri-Inspector | Árbol lógico de finalización y objetos interactivos reactivos. `[COMPLETADA]` |
-| **11** | Ciclo de Muerte, Checkpoints y Respawn | UniTask, PurrNet SyncVar | Caídas y muertes con reaparición rápida sin reiniciar la sala. |
-| **12** | Producción de Contenido: Diseño de 10 Salas | Tri-Inspector, Cinemachine, PurrNet | 4 salas simples, 4 intermedias y 2 avanzadas encadenadas. |
+| **11** | Ciclo de Muerte, Checkpoints y Respawn | UniTask, PurrNet SyncVar | Caídas y muertes con reaparición rápida sin reiniciar la sala. `[COMPLETADA]` |
+| **12** | Producción de Contenido: Diseño de 10 Salas | Tri-Inspector, Cinemachine, PurrNet | 4 salas simples, 4 intermedias y 2 avanzadas encadenadas. `[COMPLETADA]` |
 | **13** | Comedia Física, Ragdolls y Jugo Audiovisual | DOTween, Cinemachine Impulses, Audio Network | Sensación de impacto, fallos cómicos y audio sincronizado. |
 | **14** | Optimización Zero-GC, Simulación de Red y QA Final | PurrNet Latency Sim, Unity Profiler | Juego fluido bajo 150 ms de ping sin picos de GC en hot paths. |
 
@@ -198,7 +198,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 12: Producción de Contenido: Diseño de 10 Salas
+### 🔹 Fase 12: Producción de Contenido: Diseño de 10 Salas `[COMPLETADA]`
 * **Objetivo:** Construir y conectar las 10 salas del arco de dificultad.
 * **Integración de Addons:**
   * **LevelManager + UniTask:** Encadenamiento fluido de escenas mediante `LoadRoomAsync`.

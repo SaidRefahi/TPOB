@@ -14,14 +14,59 @@ namespace Game.Network.Scopes
         [SerializeField] private NetworkManager _networkManager;
         [SerializeField] private LevelManager _levelManager;
 
+        public static GameLifetimeScope Instance { get; private set; }
+
         protected override void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                var nms = FindObjectsByType<NetworkManager>(FindObjectsSortMode.None);
+                for (int i = 0; i < nms.Length; i++)
+                {
+                    if (nms[i] != null && nms[i] != Instance._networkManager && nms[i] != NetworkManager.main)
+                    {
+                        Destroy(nms[i].gameObject);
+                    }
+                }
+
+                if (transform.parent != null && transform.parent.name == "--- NETWORKING ---")
+                {
+                    Destroy(transform.parent.gameObject);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
+                return;
+            }
+
+            Instance = this;
+
+            var nm = _networkManager != null ? _networkManager : FindFirstObjectByType<NetworkManager>();
+            if (nm != null)
+            {
+                _networkManager = nm;
+                if (nm.transform.parent != null)
+                {
+                    nm.transform.SetParent(null);
+                }
+            }
+
             if (transform.parent != null)
             {
                 transform.SetParent(null);
             }
             DontDestroyOnLoad(gameObject);
             base.Awake();
+        }
+
+        protected override void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+            base.OnDestroy();
         }
 
         protected override void Configure(IContainerBuilder builder)

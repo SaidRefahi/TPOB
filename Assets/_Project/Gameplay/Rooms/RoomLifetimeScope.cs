@@ -49,8 +49,12 @@ namespace Game.Gameplay.Rooms
             if (FindParent() == null)
             {
                 builder.Register<GameEventBus>(Lifetime.Singleton).As<IGameEventBus>();
+                builder.Register<GameManager>(Lifetime.Singleton).As<IGameManager>();
                 builder.Register<NetworkService>(Lifetime.Singleton).As<INetworkService>();
                 builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>();
+
+                var lm = FindFirstObjectByType<LevelManager>();
+                if (lm != null) builder.RegisterComponent(lm).As<ILevelManager>();
             }
 
             if (_roomController != null)
@@ -117,6 +121,12 @@ namespace Game.Gameplay.Rooms
             if (respawnCoordinator != null)
             {
                 builder.RegisterComponent(respawnCoordinator).As<IRespawnCoordinator>();
+            }
+
+            var exitTrigger = FindFirstObjectByType<RoomExitTrigger>();
+            if (exitTrigger != null)
+            {
+                builder.RegisterComponent(exitTrigger);
             }
         }
 

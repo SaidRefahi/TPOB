@@ -52,6 +52,23 @@ namespace Game.Editor
                     BuildAll();
                 };
             }
+
+            string campaignTriggerPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp", "BuildCampaign.trigger");
+            if (File.Exists(campaignTriggerPath))
+            {
+                try
+                {
+                    File.Delete(campaignTriggerPath);
+                }
+                catch
+                {
+                }
+
+                EditorApplication.delayCall += () =>
+                {
+                    RoomContentBuilder.BuildAllCampaignRooms();
+                };
+            }
         }
 
         [MenuItem("TPOB/1. Generar Prefabs y Playground")]
@@ -63,6 +80,7 @@ namespace Game.Editor
             BuildPlaygroundScene(prefabs, materials);
             Debug.Log("<color=green>[TPOB] Playground y Prefabs generados con éxito en Room_01.unity!</color>");
         }
+
 
         [MenuItem("TPOB/2. Configurar Networking en Escena Actual")]
         public static void EnsureNetworkingInCurrentScene()
@@ -85,7 +103,6 @@ namespace Game.Editor
             if (netManager == null)
             {
                 netManagerGo = new GameObject("[NETWORK_MANAGER]");
-                netManagerGo.transform.SetParent(netGroup.transform);
                 netManager = netManagerGo.AddComponent<NetworkManager>();
                 netManagerGo.AddComponent<UDPTransport>();
                 Undo.RegisterCreatedObjectUndo(netManagerGo, "Create [NETWORK_MANAGER]");
@@ -97,9 +114,9 @@ namespace Game.Editor
                 {
                     netManagerGo.AddComponent<UDPTransport>();
                 }
-                if (netManagerGo.transform.parent == null)
+                if (netManagerGo.transform.parent != null)
                 {
-                    netManagerGo.transform.SetParent(netGroup.transform);
+                    netManagerGo.transform.SetParent(null);
                 }
             }
 
@@ -120,6 +137,7 @@ namespace Game.Editor
             {
                 netManagerSo.FindProperty("_networkPrefabs").objectReferenceValue = netPrefabs;
             }
+            netManagerSo.FindProperty("_dontDestroyOnLoad").boolValue = true;
             netManagerSo.ApplyModifiedPropertiesWithoutUndo();
 
             // 3. Find or create [NETWORK_EVENT_RELAY]
@@ -221,7 +239,7 @@ namespace Game.Editor
             Debug.Log("<color=cyan>[TPOB] Networking estructurado y configurado en escena: --- NETWORKING ---, NetworkManager, NetworkEventRelay, GameLifetimeScope, LevelManager, Bootstrapper!</color>");
         }
 
-        private static void EnsureDirectories()
+        public static void EnsureDirectories()
         {
             if (!Directory.Exists(PrefabsDir)) Directory.CreateDirectory(PrefabsDir);
             if (!Directory.Exists(MaterialsDir)) Directory.CreateDirectory(MaterialsDir);
@@ -270,9 +288,10 @@ namespace Game.Editor
             public GameObject PuzzleSocket;
             public GameObject Checkpoint;
             public GameObject KillVolume;
+            public GameObject SeeSawPlatform;
         }
 
-        private static MaterialSet CreateMaterials()
+        public static MaterialSet CreateMaterials()
         {
             MaterialSet set = new MaterialSet();
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
@@ -320,7 +339,7 @@ namespace Game.Editor
             return mat;
         }
 
-        private static PrefabSet CreatePrefabs(MaterialSet mats)
+        public static PrefabSet CreatePrefabs(MaterialSet mats)
         {
             PrefabSet prefabs = new PrefabSet();
             var inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
@@ -367,11 +386,14 @@ namespace Game.Editor
             // 14. KillVolume Prefab
             prefabs.KillVolume = CreateKillVolumePrefab();
 
+            // 15. SeeSawPlatform Prefab
+            prefabs.SeeSawPlatform = CreateSeeSawPrefab(mats.Floor);
+
             AssetDatabase.SaveAssets();
             return prefabs;
         }
 
-        private static NetworkTransform AddServerAuthoritativeTransform(GameObject root)
+        public static NetworkTransform AddServerAuthoritativeTransform(GameObject root)
         {
             var nt = root.AddComponent<NetworkTransform>();
             var ntSo = new SerializedObject(nt);
@@ -953,6 +975,51 @@ namespace Game.Editor
             return prefab;
         }
 
+        public static GameObject CreateSeeSawPrefab(Material mat)
+        {
+            string path = $"{PrefabsDir}/SeeSawPlatform.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject root = new GameObject("SeeSawPlatform");
+            var col = root.AddComponent<BoxCollider>();
+            col.size = new Vector3(8f, 0.4f, 3f);
+
+            var rb = root.AddComponent<Rigidbody>();
+            rb.mass = 300f;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+
+            var hinge = root.AddComponent<HingeJoint>();
+            hinge.axis = Vector3.forward;
+            hinge.anchor = Vector3.zero;
+
+            root.AddComponent<Game.Gameplay.Interactables.SeeSawPlatform>();
+
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            visual.name = "Plank";
+            visual.transform.SetParent(root.transform);
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localScale = new Vector3(8f, 0.4f, 3f);
+            visual.GetComponent<Renderer>().sharedMaterial = mat;
+            Object.DestroyImmediate(visual.GetComponent<Collider>());
+
+            var fulcrum = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            fulcrum.name = "Fulcrum";
+            fulcrum.transform.SetParent(root.transform);
+            fulcrum.transform.localPosition = new Vector3(0f, -0.6f, 0f);
+            fulcrum.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            fulcrum.transform.localScale = new Vector3(0.8f, 1.5f, 0.8f);
+            fulcrum.GetComponent<Renderer>().sharedMaterial = mat;
+            Object.DestroyImmediate(fulcrum.GetComponent<Collider>());
+
+            AddServerAuthoritativeTransform(root);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
         private static void BuildPlaygroundScene(PrefabSet prefabs, MaterialSet mats)
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
@@ -1166,11 +1233,10 @@ namespace Game.Editor
             respawnCoordSo.FindProperty("_checkpointSystem").objectReferenceValue = checkpointSystem;
             respawnCoordSo.ApplyModifiedPropertiesWithoutUndo();
 
-            // NETWORKING
+            // NETWORKING (NetworkManager stays at root for DontDestroyOnLoad compatibility)
             var netGroup = new GameObject("--- NETWORKING ---");
 
             var netManagerGo = new GameObject("[NETWORK_MANAGER]");
-            netManagerGo.transform.SetParent(netGroup.transform);
             var netManager = netManagerGo.AddComponent<NetworkManager>();
             netManagerGo.AddComponent<UDPTransport>();
 
@@ -1179,6 +1245,7 @@ namespace Game.Editor
             var defaultPrefabs = AssetDatabase.LoadAssetAtPath<NetworkPrefabs>("Assets/_Project/Network/NetworkPrefabs.asset");
 
             var netManagerBuildSo = new SerializedObject(netManager);
+            netManagerBuildSo.FindProperty("_dontDestroyOnLoad").boolValue = true;
             if (defaultRules != null) netManagerBuildSo.FindProperty("_networkRules").objectReferenceValue = defaultRules;
             if (defaultVisibility != null) netManagerBuildSo.FindProperty("_visibilityRules").objectReferenceValue = defaultVisibility;
             if (defaultPrefabs != null) netManagerBuildSo.FindProperty("_networkPrefabs").objectReferenceValue = defaultPrefabs;
@@ -1279,7 +1346,7 @@ namespace Game.Editor
             EditorSceneManager.SaveScene(scene);
         }
 
-        private static void CreateWall(string name, Vector3 pos, Vector3 scale, Transform parent, Material mat)
+        public static void CreateWall(string name, Vector3 pos, Vector3 scale, Transform parent, Material mat)
         {
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             wall.name = name;

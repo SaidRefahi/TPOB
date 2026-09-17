@@ -13,13 +13,25 @@ namespace Game.Gameplay.Player.Robot
                 return;
             }
 
+            var torsoColliders = context.Torso.GetComponentsInChildren<Collider>();
+            var legsColliders = context.Legs.GetComponentsInChildren<Collider>();
+            for (int i = 0; i < torsoColliders.Length; i++)
+            {
+                for (int j = 0; j < legsColliders.Length; j++)
+                {
+                    Physics.IgnoreCollision(torsoColliders[i], legsColliders[j], true);
+                }
+            }
+
             if (context.TorsoRigidbody != null)
             {
                 if (!context.TorsoRigidbody.isKinematic)
                 {
                     context.TorsoRigidbody.linearVelocity = Vector3.zero;
+                    context.TorsoRigidbody.angularVelocity = Vector3.zero;
                 }
                 context.TorsoRigidbody.isKinematic = true;
+                context.TorsoRigidbody.constraints = RigidbodyConstraints.FreezeAll;
             }
 
             Transform attachPoint = context.Socket.AttachPoint;
@@ -30,7 +42,7 @@ namespace Game.Gameplay.Player.Robot
                 context.Torso.transform.localRotation = Quaternion.identity;
             }
 
-            context.Torso.SetFused(true);
+            context.Torso.SetFused(true, context.Legs.transform.rotation);
             context.Legs.SetFused(true, context.TorsoBaseMass);
             context.Socket.PlayDockJuice();
         }

@@ -14,9 +14,30 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Rooms/Room_02.unity
     guid: 02f0604a2516d4647af2bdc889773c2f
-  - enabled: 0
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_03.unity
+    guid: 326be4a151650c64a97d7c7704f7b3d6
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_04.unity
+    guid: b794d8c2e4237d449a45b4840244b316
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_05.unity
+    guid: d53917b3a46cfed47929ead1bf8293c1
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_06.unity
+    guid: 232724d3f6d86f64093b2d5fdae2581c
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_07.unity
+    guid: 5d91c16669838a944892e1e4f1976d1a
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_08.unity
+    guid: d7737c75c31aee44e98c778706f04f3c
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_09.unity
+    guid: 01b5573ee4c08bc4eb860ed6f88fee1f
+  - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_10.unity
+    guid: a623b046f5cc63541a8aff80f28ed46b
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

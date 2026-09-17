@@ -8,6 +8,8 @@ namespace Game.Core.Interfaces
     {
         int CurrentRoomIndex { get; }
         string CurrentRoomName { get; }
+        int TotalRooms { get; }
+        bool IsLastRoom { get; }
         bool IsLoading { get; }
 
         event Action<int, string> OnRoomLoaded;

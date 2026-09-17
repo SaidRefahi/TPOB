@@ -59,10 +59,18 @@ namespace Game.Gameplay.Camera
         private CinemachineTargetGroup.Target _legsMember;
         private CinemachineTargetGroup.Target _torsoMember;
 
+        private Transform _cachedLegsTarget;
+        private Transform _cachedTorsoTarget;
+
         public bool IsFused => _isFused;
         public CinemachineTargetGroup TargetGroup => _targetGroup;
         public Transform LegsTarget => _legsTarget;
         public Transform TorsoTarget => _torsoTarget;
+
+        private static bool IsTargetValid(Transform t)
+        {
+            return t != null && t.gameObject != null && t.gameObject.activeInHierarchy;
+        }
 
         private void Awake()
         {
@@ -84,15 +92,7 @@ namespace Game.Gameplay.Camera
 
         private void Update()
         {
-            if (_legsMember == null || _torsoMember == null)
-            {
-                EnsureTargets();
-                RebuildMembers();
-                if (_legsMember == null || _torsoMember == null)
-                {
-                    return;
-                }
-            }
+            EnsureTargets();
 
             float targetTorsoWeight = _isFused ? _fusedTorsoWeight : _separatedTorsoWeight;
             float targetTorsoRadius = _isFused ? _fusedTorsoRadius : _separatedTorsoRadius;
@@ -102,11 +102,17 @@ namespace Game.Gameplay.Camera
             _currentTorsoRadius = Mathf.MoveTowards(_currentTorsoRadius, targetTorsoRadius, _transitionSpeed * Time.deltaTime);
             _currentLegsRadius = Mathf.MoveTowards(_currentLegsRadius, targetLegsRadius, _transitionSpeed * Time.deltaTime);
 
-            _legsMember.Weight = _isFused ? _fusedLegsWeight : _separatedLegsWeight;
-            _legsMember.Radius = _currentLegsRadius;
+            if (_legsMember != null && IsTargetValid(_legsTarget))
+            {
+                _legsMember.Weight = _isFused ? _fusedLegsWeight : _separatedLegsWeight;
+                _legsMember.Radius = _currentLegsRadius;
+            }
 
-            _torsoMember.Weight = _currentTorsoWeight;
-            _torsoMember.Radius = _currentTorsoRadius;
+            if (_torsoMember != null && IsTargetValid(_torsoTarget))
+            {
+                _torsoMember.Weight = _currentTorsoWeight;
+                _torsoMember.Radius = _currentTorsoRadius;
+            }
         }
 
         public void SetTargets(Transform legs, Transform torso)
@@ -123,22 +129,36 @@ namespace Game.Gameplay.Camera
 
         private void EnsureTargets()
         {
-            if (_legsTarget == null)
+            bool needsRebuild = false;
+
+            if (!IsTargetValid(_legsTarget))
             {
+                _legsTarget = null;
                 var legs = FindFirstObjectByType<LegsController>();
-                if (legs != null)
+                if (legs != null && IsTargetValid(legs.transform))
                 {
                     _legsTarget = legs.transform;
                 }
             }
 
-            if (_torsoTarget == null)
+            if (!IsTargetValid(_torsoTarget))
             {
+                _torsoTarget = null;
                 var torso = FindFirstObjectByType<TorsoController>();
-                if (torso != null)
+                if (torso != null && IsTargetValid(torso.transform))
                 {
                     _torsoTarget = torso.transform;
                 }
+            }
+
+            if (_legsTarget != _cachedLegsTarget || _torsoTarget != _cachedTorsoTarget)
+            {
+                needsRebuild = true;
+            }
+
+            if (needsRebuild)
+            {
+                RebuildMembers();
             }
         }
 
@@ -150,8 +170,13 @@ namespace Game.Gameplay.Camera
             }
 
             _targetGroup.Targets.Clear();
+            _cachedLegsTarget = _legsTarget;
+            _cachedTorsoTarget = _torsoTarget;
 
-            if (_legsTarget != null)
+            bool hasLegs = IsTargetValid(_legsTarget);
+            bool hasTorso = IsTargetValid(_torsoTarget);
+
+            if (hasLegs)
             {
                 _legsMember = new CinemachineTargetGroup.Target
                 {
@@ -166,12 +191,12 @@ namespace Game.Gameplay.Camera
                 _legsMember = null;
             }
 
-            if (_torsoTarget != null)
+            if (hasTorso)
             {
                 _torsoMember = new CinemachineTargetGroup.Target
                 {
                     Object = _torsoTarget,
-                    Weight = _currentTorsoWeight,
+                    Weight = _isFused ? _fusedTorsoWeight : _separatedTorsoWeight,
                     Radius = _currentTorsoRadius
                 };
                 _targetGroup.Targets.Add(_torsoMember);

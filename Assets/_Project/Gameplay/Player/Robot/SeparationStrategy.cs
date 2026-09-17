@@ -13,6 +13,16 @@ namespace Game.Gameplay.Player.Robot
                 return;
             }
 
+            var torsoColliders = context.Torso.GetComponentsInChildren<Collider>();
+            var legsColliders = context.Legs.GetComponentsInChildren<Collider>();
+            for (int i = 0; i < torsoColliders.Length; i++)
+            {
+                for (int j = 0; j < legsColliders.Length; j++)
+                {
+                    Physics.IgnoreCollision(torsoColliders[i], legsColliders[j], false);
+                }
+            }
+
             context.Torso.transform.SetParent(null, true);
 
             Vector3 offset = context.Socket != null ? context.Socket.SeparationOffset : new Vector3(0f, 0.25f, 1.5f);
@@ -30,9 +40,11 @@ namespace Game.Gameplay.Player.Robot
             {
                 bool canSimulate = !context.Torso.isSpawned || context.IsServer;
                 context.TorsoRigidbody.isKinematic = !canSimulate;
+                context.TorsoRigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
                 if (!context.TorsoRigidbody.isKinematic)
                 {
                     context.TorsoRigidbody.linearVelocity = Vector3.zero;
+                    context.TorsoRigidbody.angularVelocity = Vector3.zero;
                 }
             }
         }

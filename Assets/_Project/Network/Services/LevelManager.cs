@@ -20,7 +20,15 @@ namespace Game.Network.Services
         [SerializeField] private string[] _roomScenes = new string[]
         {
             "Room_01",
-            "Room_02"
+            "Room_02",
+            "Room_03",
+            "Room_04",
+            "Room_05",
+            "Room_06",
+            "Room_07",
+            "Room_08",
+            "Room_09",
+            "Room_10"
         };
 
         [Group("Estado Actual")]
@@ -32,6 +40,14 @@ namespace Game.Network.Services
         public string CurrentRoomName => (CurrentRoomIndex >= 0 && CurrentRoomIndex < _roomScenes.Length) 
             ? _roomScenes[CurrentRoomIndex] 
             : string.Empty;
+
+        [Group("Estado Actual")]
+        [ShowInInspector, ReadOnly]
+        public int TotalRooms => _roomScenes != null ? _roomScenes.Length : 0;
+
+        [Group("Estado Actual")]
+        [ShowInInspector, ReadOnly]
+        public bool IsLastRoom => CurrentRoomIndex >= 0 && CurrentRoomIndex >= TotalRooms - 1;
 
         [Group("Estado Actual")]
         [ShowInInspector, ReadOnly]
@@ -80,22 +96,38 @@ namespace Game.Network.Services
             string sceneName = _roomScenes[roomIndex];
             int previousIndex = CurrentRoomIndex;
 
-            if (_networkService != null && _networkService.IsServer)
+            try
             {
-                await LoadRoomServerAuthoritativeAsync(sceneName, ct);
-            }
-            else
-            {
-                // Standalone local or offline preview fallback
-                AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
-                if (op != null)
-                {
-                    await op.ToUniTask(cancellationToken: ct);
-                }
-            }
+                var cancelToken = this.GetCancellationTokenOnDestroy();
 
-            CurrentRoomIndex = roomIndex;
-            IsLoading = false;
+                if (_networkService != null && _networkService.IsServer)
+                {
+                    await LoadRoomServerAuthoritativeAsync(sceneName, cancelToken);
+                }
+                else
+                {
+                    // Standalone local or offline preview fallback
+                    AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+                    if (op != null)
+                    {
+                        await op.ToUniTask(cancellationToken: cancelToken);
+                    }
+                }
+
+                CurrentRoomIndex = roomIndex;
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.Log($"[LevelManager] LoadRoomAsync for '{sceneName}' was cancelled.");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LevelManager] Error loading room '{sceneName}': {ex}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
 
             if (previousIndex >= 0 && previousIndex < _roomScenes.Length)
             {
@@ -155,6 +187,7 @@ namespace Game.Network.Services
                 if (_roomScenes[i] == scene.name)
                 {
                     CurrentRoomIndex = i;
+                    IsLoading = false;
                     OnRoomLoaded?.Invoke(i, scene.name);
                     _gameManager?.ChangeState(GameState.InGame);
                     break;

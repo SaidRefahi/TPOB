@@ -91,7 +91,12 @@ namespace Game.Gameplay.Player.Torso
         private bool _isClimbing;
         private Vector2 _climbDirection;
         private bool _isFused;
+        private Quaternion _fusedWorldRotation = Quaternion.identity;
+        private NetworkTransform _networkTransform;
         private PlayerDeathHandler _deathHandler;
+
+        [Group("Fusión")]
+        [SerializeField] private SyncVar<Quaternion> _syncedFusedRotation = new(Quaternion.identity);
 
         public bool IsHoldingObject => _currentHeldObject != null;
         public IGrabbable CurrentHeldObject => _currentHeldObject;
@@ -111,6 +116,14 @@ namespace Game.Gameplay.Player.Torso
             {
                 _rigidbody.isKinematic = !isServer;
             }
+
+            _syncedFusedRotation.onChanged += HandleSyncedFusedRotationChanged;
+        }
+
+        protected override void OnDespawned()
+        {
+            _syncedFusedRotation.onChanged -= HandleSyncedFusedRotationChanged;
+            base.OnDespawned();
         }
 
         private void Awake()
@@ -144,6 +157,11 @@ namespace Game.Gameplay.Player.Torso
             {
                 _deathHandler = GetComponent<PlayerDeathHandler>();
             }
+
+            if (_networkTransform == null)
+            {
+                _networkTransform = GetComponent<NetworkTransform>();
+            }
         }
 
         private void Start()
@@ -166,6 +184,8 @@ namespace Game.Gameplay.Player.Torso
 
         protected override void OnDestroy()
         {
+            _syncedFusedRotation.onChanged -= HandleSyncedFusedRotationChanged;
+
             if (_coordinator != null)
             {
                 _coordinator.UnregisterTorso(this);
@@ -196,6 +216,22 @@ namespace Game.Gameplay.Player.Torso
                 _inputReader.ConsumeInteractTrigger()
             );
 
+            if (_isFused)
+            {
+                Vector2 aim = inputData.AimDirection;
+                if (aim.sqrMagnitude < 0.04f && inputData.MoveDirection.sqrMagnitude >= 0.04f)
+                {
+                    aim = inputData.MoveDirection;
+                }
+
+                if (aim.sqrMagnitude >= 0.04f)
+                {
+                    Vector3 aimDir = new Vector3(aim.x, 0f, aim.y).normalized;
+                    Quaternion targetRot = Quaternion.LookRotation(aimDir, Vector3.up);
+                    _fusedWorldRotation = Quaternion.Slerp(_fusedWorldRotation, targetRot, _aimRotationSpeed * Time.deltaTime);
+                }
+            }
+
             if (!isSpawned || isServer)
             {
                 ProcessTorsoInput(inputData);
@@ -203,6 +239,14 @@ namespace Game.Gameplay.Player.Torso
             else
             {
                 SendTorsoInputServerRpc(inputData);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (_isFused)
+            {
+                transform.rotation = _fusedWorldRotation;
             }
         }
 
@@ -283,15 +327,42 @@ namespace Game.Gameplay.Player.Torso
         private void ApplyAiming()
         {
             Vector2 aimInput = _pendingInput.AimDirection;
+            if (_isFused && aimInput.sqrMagnitude < 0.04f && _pendingInput.MoveDirection.sqrMagnitude >= 0.04f)
+            {
+                aimInput = _pendingInput.MoveDirection;
+            }
+
+            if (_isFused)
+            {
+                if (aimInput.sqrMagnitude >= 0.04f)
+                {
+                    Vector3 aimDir = new Vector3(aimInput.x, 0f, aimInput.y).normalized;
+                    Quaternion targetRotation = Quaternion.LookRotation(aimDir, Vector3.up);
+                    _fusedWorldRotation = Quaternion.Slerp(_fusedWorldRotation, targetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+                }
+
+                transform.rotation = _fusedWorldRotation;
+                if (isServer)
+                {
+                    _syncedFusedRotation.value = _fusedWorldRotation;
+                }
+
+                if (_aimPivot != null && _aimPivot != transform)
+                {
+                    _aimPivot.localRotation = Quaternion.identity;
+                }
+                return;
+            }
+
             if (aimInput.sqrMagnitude < 0.04f)
             {
                 return;
             }
 
-            Vector3 aimDir = new Vector3(aimInput.x, 0f, aimInput.y).normalized;
-            Quaternion targetRotation = Quaternion.LookRotation(aimDir, Vector3.up);
+            Vector3 crawlAimDir = new Vector3(aimInput.x, 0f, aimInput.y).normalized;
+            Quaternion crawlTargetRotation = Quaternion.LookRotation(crawlAimDir, Vector3.up);
 
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, crawlTargetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
             if (_aimPivot != null && _aimPivot != transform)
             {
                 _aimPivot.localRotation = Quaternion.identity;
@@ -532,9 +603,28 @@ namespace Game.Gameplay.Player.Torso
             _coordinator = coordinator;
         }
 
-        public void SetFused(bool isFused)
+        public void SetFused(bool isFused, Quaternion initialRotation = default)
         {
             _isFused = isFused;
+
+            if (isFused)
+            {
+                _fusedWorldRotation = initialRotation != default ? initialRotation : transform.rotation;
+                if (isServer)
+                {
+                    _syncedFusedRotation.value = _fusedWorldRotation;
+                }
+            }
+
+            if (_networkTransform == null)
+            {
+                _networkTransform = GetComponent<NetworkTransform>();
+            }
+
+            if (_networkTransform != null)
+            {
+                _networkTransform.enabled = !isFused;
+            }
 
             if (_rigidbody == null)
             {
@@ -546,10 +636,27 @@ namespace Game.Gameplay.Player.Torso
                 if (!_rigidbody.isKinematic)
                 {
                     _rigidbody.linearVelocity = Vector3.zero;
+                    _rigidbody.angularVelocity = Vector3.zero;
                 }
 
                 bool canSimulate = !isSpawned || isServer;
                 _rigidbody.isKinematic = isFused || !canSimulate;
+                if (isFused)
+                {
+                    _rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+                }
+                else
+                {
+                    _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+                }
+            }
+        }
+
+        private void HandleSyncedFusedRotationChanged(Quaternion newRotation)
+        {
+            if (!isServer)
+            {
+                _fusedWorldRotation = newRotation;
             }
         }
 
