@@ -28,19 +28,19 @@ namespace Game.Gameplay.Camera
         [SerializeField] private float _separatedLegsWeight = 1f;
 
         [Group("Separado")]
-        [SerializeField] private float _separatedLegsRadius = 1.2f;
+        [SerializeField] private float _separatedLegsRadius = 3.5f;
 
         [Group("Separado")]
         [SerializeField] private float _separatedTorsoWeight = 1f;
 
         [Group("Separado")]
-        [SerializeField] private float _separatedTorsoRadius = 1f;
+        [SerializeField] private float _separatedTorsoRadius = 3f;
 
         [Group("Fusionado")]
         [SerializeField] private float _fusedLegsWeight = 1f;
 
         [Group("Fusionado")]
-        [SerializeField] private float _fusedLegsRadius = 1.5f;
+        [SerializeField] private float _fusedLegsRadius = 4f;
 
         [Group("Fusionado")]
         [SerializeField] private float _fusedTorsoWeight = 0f;
@@ -53,8 +53,8 @@ namespace Game.Gameplay.Camera
 
         private bool _isFused;
         private float _currentTorsoWeight = 1f;
-        private float _currentTorsoRadius = 1f;
-        private float _currentLegsRadius = 1.2f;
+        private float _currentTorsoRadius = 3f;
+        private float _currentLegsRadius = 3.5f;
 
         private CinemachineTargetGroup.Target _legsMember;
         private CinemachineTargetGroup.Target _torsoMember;

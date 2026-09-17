@@ -27,10 +27,10 @@ namespace Game.Gameplay.Camera
         [SerializeField] private CinemachineImpulseSource _impulseSource;
 
         [Group("Configuración de Encuadre")]
-        [SerializeField] private float _separatedFramingSize = 0.8f;
+        [SerializeField] private float _separatedFramingSize = 0.52f;
 
         [Group("Configuración de Encuadre")]
-        [SerializeField] private float _fusedFramingSize = 0.65f;
+        [SerializeField] private float _fusedFramingSize = 0.42f;
 
         [Group("Configuración de Encuadre")]
         [SerializeField] private float _framingTransitionSpeed = 2.5f;
@@ -38,7 +38,7 @@ namespace Game.Gameplay.Camera
         private IGameEventBus _eventBus;
         private IRobotCoordinator _robotCoordinator;
         private bool _isFused;
-        private float _currentFramingSize = 0.8f;
+        private float _currentFramingSize = 0.52f;
 
         public bool IsFused => _isFused;
         public CinemachineCamera CinemachineCamera => _cinemachineCamera;

@@ -150,7 +150,11 @@ namespace Game.Gameplay.Player.Torso
         private void HandleMoveCanceled(InputAction.CallbackContext ctx) => _moveInput = Vector2.zero;
         private void HandleLookPerformed(InputAction.CallbackContext ctx) => _lookInput = ctx.ReadValue<Vector2>();
         private void HandleLookCanceled(InputAction.CallbackContext ctx) => _lookInput = Vector2.zero;
-        private void HandleGrabPerformed(InputAction.CallbackContext ctx) => _grabTriggered = true;
+        private void HandleGrabPerformed(InputAction.CallbackContext ctx)
+        {
+            _grabTriggered = true;
+            _interactTriggered = true;
+        }
         private void HandleThrowPerformed(InputAction.CallbackContext ctx) => _throwTriggered = true;
         private void HandleMagnetPerformed(InputAction.CallbackContext ctx) => _magnetHeld = true;
         private void HandleMagnetCanceled(InputAction.CallbackContext ctx) => _magnetHeld = false;

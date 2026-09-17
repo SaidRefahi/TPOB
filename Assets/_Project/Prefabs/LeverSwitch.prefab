@@ -334,7 +334,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4343265560637551998}
-  - component: {fileID: 8708914505738644253}
+  - component: {fileID: 7677925847654266380}
   - component: {fileID: 7677925847654266379}
   m_Layer: 0
   m_Name: LeverSwitch
@@ -360,29 +360,27 @@ Transform:
   - {fileID: 4107836344308565103}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8708914505738644253
-MonoBehaviour:
+--- !u!65 &7677925847654266380
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7625544253966923425}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5681fe548eb84304ea28a286062791f5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.NetworkIdentity
-  _isSetup: 0
-  _prefabId: -2147483648
-  _hasPrefabScope: 0
-  _prefabScope: 0
-  _componentIndex: -2147483648
-  _shouldBePooled: 0
-  _parent: {fileID: 0}
-  _invertedPathToNearestParent: 
-  _directChildren: []
-  _networkRules: {fileID: 0}
-  _visitiblityRules: {fileID: 0}
+  serializedVersion: 3
+  m_Size: {x: 1.4, y: 1.2, z: 1.4}
+  m_Center: {x: 0, y: 0.6, z: 0}
 --- !u!114 &7677925847654266379
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -407,7 +405,10 @@ MonoBehaviour:
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
   _handleTransform: {fileID: 4107836344308565103}
+  _indicatorRenderer: {fileID: 7732374260936430261}
   _offEulerAngles: {x: -35, y: 0, z: 0}
   _onEulerAngles: {x: 35, y: 0, z: 0}
   _toggleDuration: 0.35
   _isActivated: 0
+  _offColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+  _onColor: {r: 0.15, g: 0.95, b: 0.35, a: 1}

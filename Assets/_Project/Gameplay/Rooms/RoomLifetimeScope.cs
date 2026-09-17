@@ -100,6 +100,12 @@ namespace Game.Gameplay.Rooms
             {
                 builder.RegisterComponent(hud);
             }
+
+            var roomCompletion = FindFirstObjectByType<RoomCompletion>();
+            if (roomCompletion != null)
+            {
+                builder.RegisterComponent(roomCompletion);
+            }
         }
 
         private sealed class NullCameraCoordinator : ICameraCoordinator

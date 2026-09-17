@@ -5,6 +5,7 @@ using Game.Gameplay.Player.Legs;
 using Game.Gameplay.Player.Torso;
 using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Rooms;
+using Game.Gameplay.Rooms.Conditions;
 using Game.Gameplay.Spawning;
 using PurrNet;
 using PurrNet.Transports;
@@ -125,17 +126,12 @@ namespace Game.Editor
             {
                 relayGo = new GameObject("[NETWORK_EVENT_RELAY]");
                 relayGo.transform.SetParent(netGroup.transform);
-                relayGo.AddComponent<NetworkIdentity>();
                 relay = relayGo.AddComponent<NetworkEventRelay>();
                 Undo.RegisterCreatedObjectUndo(relayGo, "Create [NETWORK_EVENT_RELAY]");
             }
             else
             {
                 relayGo = relay.gameObject;
-                if (relayGo.GetComponent<NetworkIdentity>() == null)
-                {
-                    relayGo.AddComponent<NetworkIdentity>();
-                }
                 if (relayGo.transform.parent == null)
                 {
                     relayGo.transform.SetParent(netGroup.transform);
@@ -241,6 +237,14 @@ namespace Game.Editor
             public Material Kickable;
             public Material LeverBase;
             public Material LeverHandle;
+            public Material DoorFrame;
+            public Material DoorLeaf;
+            public Material ButtonBase;
+            public Material ButtonFace;
+            public Material WeightPlate;
+            public Material BreakableWall;
+            public Material PushableBox;
+            public Material PuzzleSocket;
         }
 
         public struct PrefabSet
@@ -251,6 +255,12 @@ namespace Game.Editor
             public GameObject MagneticKey;
             public GameObject KickableObstacle;
             public GameObject LeverSwitch;
+            public GameObject SlidingDoor;
+            public GameObject TargetButton;
+            public GameObject WeightPlatform;
+            public GameObject BreakableWall;
+            public GameObject PushableBox;
+            public GameObject PuzzleSocket;
         }
 
         private static MaterialSet CreateMaterials()
@@ -269,6 +279,14 @@ namespace Game.Editor
             set.Kickable = GetOrCreateMaterial("Mat_KickableObstacle", new Color(0.85f, 0.15f, 0.15f), shader);
             set.LeverBase = GetOrCreateMaterial("Mat_LeverBase", new Color(0.12f, 0.15f, 0.22f), shader);
             set.LeverHandle = GetOrCreateMaterial("Mat_LeverHandle", new Color(0.15f, 0.95f, 0.35f), shader);
+            set.DoorFrame = GetOrCreateMaterial("Mat_DoorFrame", new Color(0.2f, 0.22f, 0.28f), shader, 0.7f, 0.6f);
+            set.DoorLeaf = GetOrCreateMaterial("Mat_DoorLeaf", new Color(0.15f, 0.55f, 0.85f), shader, 0.8f, 0.7f);
+            set.ButtonBase = GetOrCreateMaterial("Mat_ButtonBase", new Color(0.25f, 0.25f, 0.28f), shader);
+            set.ButtonFace = GetOrCreateMaterial("Mat_ButtonFace", new Color(0.9f, 0.2f, 0.2f), shader, 0.2f, 0.8f);
+            set.WeightPlate = GetOrCreateMaterial("Mat_WeightPlate", new Color(0.85f, 0.7f, 0.1f), shader, 0.5f, 0.5f);
+            set.BreakableWall = GetOrCreateMaterial("Mat_BreakableWall", new Color(0.45f, 0.35f, 0.3f), shader, 0.1f, 0.2f);
+            set.PushableBox = GetOrCreateMaterial("Mat_PushableBox", new Color(0.3f, 0.65f, 0.45f), shader, 0.3f, 0.5f);
+            set.PuzzleSocket = GetOrCreateMaterial("Mat_PuzzleSocket", new Color(0.15f, 0.75f, 0.85f), shader, 0.8f, 0.7f);
 
             AssetDatabase.SaveAssets();
             return set;
@@ -312,6 +330,24 @@ namespace Game.Editor
 
             // 6. LeverSwitch Prefab
             prefabs.LeverSwitch = CreateLeverPrefab(mats.LeverBase, mats.LeverHandle);
+
+            // 7. SlidingDoor Prefab
+            prefabs.SlidingDoor = CreateSlidingDoorPrefab(mats.DoorFrame, mats.DoorLeaf);
+
+            // 8. TargetButton Prefab
+            prefabs.TargetButton = CreateTargetButtonPrefab(mats.ButtonBase, mats.ButtonFace);
+
+            // 9. WeightPlatform Prefab
+            prefabs.WeightPlatform = CreateWeightPlatformPrefab(mats.Floor, mats.WeightPlate);
+
+            // 10. BreakableWall Prefab
+            prefabs.BreakableWall = CreateBreakableWallPrefab(mats.BreakableWall, mats.BreakableWall);
+
+            // 11. PushableBox Prefab
+            prefabs.PushableBox = CreatePushableBoxPrefab(mats.PushableBox);
+
+            // 12. PuzzleSocket Prefab
+            prefabs.PuzzleSocket = CreatePuzzleSocketPrefab(mats.DoorFrame, mats.PuzzleSocket);
 
             AssetDatabase.SaveAssets();
             return prefabs;
@@ -530,6 +566,11 @@ namespace Game.Editor
             string path = $"{PrefabsDir}/LeverSwitch.prefab";
             GameObject root = new GameObject("LeverSwitch");
 
+            var triggerCol = root.AddComponent<BoxCollider>();
+            triggerCol.isTrigger = true;
+            triggerCol.size = new Vector3(1.4f, 1.2f, 1.4f);
+            triggerCol.center = new Vector3(0f, 0.6f, 0f);
+
             var baseBox = GameObject.CreatePrimitive(PrimitiveType.Cube);
             baseBox.name = "Base";
             baseBox.transform.SetParent(root.transform);
@@ -558,12 +599,251 @@ namespace Game.Editor
             knob.GetComponent<Renderer>().sharedMaterial = handleMat;
             Object.DestroyImmediate(knob.GetComponent<Collider>());
 
-            root.AddComponent<NetworkIdentity>();
             var lever = root.AddComponent<LeverMechanism>();
 
             var leverSo = new SerializedObject(lever);
             leverSo.FindProperty("_handleTransform").objectReferenceValue = handlePivot.transform;
+            leverSo.FindProperty("_indicatorRenderer").objectReferenceValue = knob.GetComponent<Renderer>();
             leverSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreateSlidingDoorPrefab(Material frameMat, Material leafMat)
+        {
+            string path = $"{PrefabsDir}/SlidingDoor.prefab";
+            GameObject root = new GameObject("SlidingDoor");
+
+            var leftPost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leftPost.name = "LeftPost";
+            leftPost.transform.SetParent(root.transform);
+            leftPost.transform.localPosition = new Vector3(-1.8f, 1.75f, 0f);
+            leftPost.transform.localScale = new Vector3(0.4f, 3.5f, 0.6f);
+            leftPost.GetComponent<Renderer>().sharedMaterial = frameMat;
+
+            var rightPost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rightPost.name = "RightPost";
+            rightPost.transform.SetParent(root.transform);
+            rightPost.transform.localPosition = new Vector3(1.8f, 1.75f, 0f);
+            rightPost.transform.localScale = new Vector3(0.4f, 3.5f, 0.6f);
+            rightPost.GetComponent<Renderer>().sharedMaterial = frameMat;
+
+            var lintel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            lintel.name = "Lintel";
+            lintel.transform.SetParent(root.transform);
+            lintel.transform.localPosition = new Vector3(0f, 3.65f, 0f);
+            lintel.transform.localScale = new Vector3(4f, 0.4f, 0.6f);
+            lintel.GetComponent<Renderer>().sharedMaterial = frameMat;
+
+            var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leaf.name = "DoorLeaf";
+            leaf.transform.SetParent(root.transform);
+            leaf.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            leaf.transform.localScale = new Vector3(3.2f, 3.2f, 0.25f);
+            leaf.GetComponent<Renderer>().sharedMaterial = leafMat;
+
+            var door = root.AddComponent<SlidingDoor>();
+            var impulse = root.AddComponent<CinemachineImpulseSource>();
+
+            var doorSo = new SerializedObject(door);
+            doorSo.FindProperty("_doorLeaf").objectReferenceValue = leaf.transform;
+            doorSo.FindProperty("_openOffset").vector3Value = new Vector3(0f, 3.3f, 0f);
+            doorSo.FindProperty("_impulseSource").objectReferenceValue = impulse;
+            doorSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreateTargetButtonPrefab(Material baseMat, Material faceMat)
+        {
+            string path = $"{PrefabsDir}/TargetButton.prefab";
+            GameObject root = new GameObject("TargetButton");
+
+            var rb = root.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+
+            var col = root.AddComponent<BoxCollider>();
+            col.center = new Vector3(0f, 0f, 0.1f);
+            col.size = new Vector3(1.2f, 1.2f, 0.3f);
+
+            var backing = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            backing.name = "BackingPlate";
+            backing.transform.SetParent(root.transform);
+            backing.transform.localPosition = new Vector3(0f, 0f, 0.05f);
+            backing.transform.localScale = new Vector3(1.2f, 1.2f, 0.1f);
+            backing.GetComponent<Renderer>().sharedMaterial = baseMat;
+            Object.DestroyImmediate(backing.GetComponent<Collider>());
+
+            var face = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            face.name = "ButtonFace";
+            face.transform.SetParent(root.transform);
+            face.transform.localPosition = new Vector3(0f, 0f, 0.15f);
+            face.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            face.transform.localScale = new Vector3(0.9f, 0.1f, 0.9f);
+            var faceRenderer = face.GetComponent<Renderer>();
+            faceRenderer.sharedMaterial = faceMat;
+            Object.DestroyImmediate(face.GetComponent<Collider>());
+
+            var btn = root.AddComponent<TargetButton>();
+
+            var btnSo = new SerializedObject(btn);
+            btnSo.FindProperty("_buttonFace").objectReferenceValue = face.transform;
+            btnSo.FindProperty("_pressOffset").vector3Value = new Vector3(0f, 0f, -0.15f);
+            btnSo.FindProperty("_indicatorRenderer").objectReferenceValue = faceRenderer;
+            btnSo.FindProperty("_isToggle").boolValue = true;
+            btnSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreateWeightPlatformPrefab(Material baseMat, Material plateMat)
+        {
+            string path = $"{PrefabsDir}/WeightPlatform.prefab";
+            GameObject root = new GameObject("WeightPlatform");
+
+            var rim = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rim.name = "BaseRim";
+            rim.transform.SetParent(root.transform);
+            rim.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            rim.transform.localScale = new Vector3(2.6f, 0.1f, 2.6f);
+            rim.GetComponent<Renderer>().sharedMaterial = baseMat;
+
+            var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            plate.name = "PressurePlate";
+            plate.transform.SetParent(root.transform);
+            plate.transform.localPosition = new Vector3(0f, 0.15f, 0f);
+            plate.transform.localScale = new Vector3(2.2f, 0.15f, 2.2f);
+            var plateRenderer = plate.GetComponent<Renderer>();
+            plateRenderer.sharedMaterial = plateMat;
+
+            var wp = root.AddComponent<WeightPlatform>();
+
+            var wpSo = new SerializedObject(wp);
+            wpSo.FindProperty("_platformPlate").objectReferenceValue = plate.transform;
+            wpSo.FindProperty("_indicatorRenderer").objectReferenceValue = plateRenderer;
+            wpSo.FindProperty("_sinkOffset").vector3Value = new Vector3(0f, -0.18f, 0f);
+            wpSo.FindProperty("_detectionBoxHalfExtents").vector3Value = new Vector3(1.6f, 1.5f, 1.6f);
+            wpSo.FindProperty("_detectionBoxOffset").vector3Value = new Vector3(0f, 1.5f, 0f);
+            wpSo.FindProperty("_requiredMass").floatValue = 80f;
+            wpSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreateBreakableWallPrefab(Material wallMat, Material chunkMat)
+        {
+            string path = $"{PrefabsDir}/BreakableWall.prefab";
+            GameObject root = new GameObject("BreakableWall");
+
+            var solidCol = root.AddComponent<BoxCollider>();
+            solidCol.size = new Vector3(3f, 3f, 0.6f);
+            solidCol.center = new Vector3(0f, 1.5f, 0f);
+
+            var intact = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            intact.name = "IntactWall";
+            intact.transform.SetParent(root.transform);
+            intact.transform.localPosition = new Vector3(0f, 1.5f, 0f);
+            intact.transform.localScale = new Vector3(3f, 3f, 0.6f);
+            intact.GetComponent<Renderer>().sharedMaterial = wallMat;
+            Object.DestroyImmediate(intact.GetComponent<Collider>());
+
+            var brokenRoot = new GameObject("BrokenPieces");
+            brokenRoot.transform.SetParent(root.transform);
+            brokenRoot.transform.localPosition = Vector3.zero;
+
+            for (int y = 0; y < 2; y++)
+            {
+                for (int x = 0; x < 4; x++)
+                {
+                    var chunk = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    chunk.name = $"Chunk_{x}_{y}";
+                    chunk.transform.SetParent(brokenRoot.transform);
+                    chunk.transform.localPosition = new Vector3(-1.125f + x * 0.75f, 0.75f + y * 1.5f, 0f);
+                    chunk.transform.localScale = new Vector3(0.7f, 1.4f, 0.5f);
+                    chunk.GetComponent<Renderer>().sharedMaterial = chunkMat;
+
+                    var rb = chunk.AddComponent<Rigidbody>();
+                    rb.mass = 2f;
+                    rb.isKinematic = true;
+                }
+            }
+
+            brokenRoot.SetActive(false);
+
+            var bw = root.AddComponent<BreakableWall>();
+            var impulse = root.AddComponent<CinemachineImpulseSource>();
+
+            var bwSo = new SerializedObject(bw);
+            bwSo.FindProperty("_intactVisual").objectReferenceValue = intact;
+            bwSo.FindProperty("_brokenPiecesRoot").objectReferenceValue = brokenRoot;
+            bwSo.FindProperty("_solidCollider").objectReferenceValue = solidCol;
+            bwSo.FindProperty("_impulseSource").objectReferenceValue = impulse;
+            bwSo.FindProperty("_minBreakForce").floatValue = 4f;
+            bwSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreatePushableBoxPrefab(Material mat)
+        {
+            string path = $"{PrefabsDir}/PushableBox.prefab";
+            GameObject root = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            root.name = "PushableBox";
+            root.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+            root.GetComponent<Renderer>().sharedMaterial = mat;
+
+            var rb = root.AddComponent<Rigidbody>();
+            rb.mass = 50f;
+
+            AddServerAuthoritativeTransform(root);
+            root.AddComponent<PushableBox>();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreatePuzzleSocketPrefab(Material baseMat, Material ringMat)
+        {
+            string path = $"{PrefabsDir}/PuzzleSocket.prefab";
+            GameObject root = new GameObject("PuzzleSocket");
+
+            var pedestal = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            pedestal.name = "Pedestal";
+            pedestal.transform.SetParent(root.transform);
+            pedestal.transform.localPosition = new Vector3(0f, 0.4f, 0f);
+            pedestal.transform.localScale = new Vector3(0.9f, 0.4f, 0.9f);
+            pedestal.GetComponent<Renderer>().sharedMaterial = baseMat;
+
+            var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ring.name = "ReceptorRing";
+            ring.transform.SetParent(root.transform);
+            ring.transform.localPosition = new Vector3(0f, 0.85f, 0f);
+            ring.transform.localScale = new Vector3(0.6f, 0.08f, 0.6f);
+            ring.GetComponent<Renderer>().sharedMaterial = ringMat;
+            Object.DestroyImmediate(ring.GetComponent<Collider>());
+
+            var snap = new GameObject("SnapPoint");
+            snap.transform.SetParent(root.transform);
+            snap.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+
+            var socket = root.AddComponent<PuzzleSocket>();
+
+            var socketSo = new SerializedObject(socket);
+            socketSo.FindProperty("_snapPoint").objectReferenceValue = snap.transform;
+            socketSo.FindProperty("_detectionRadius").floatValue = 1.5f;
+            socketSo.ApplyModifiedPropertiesWithoutUndo();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
@@ -592,11 +872,17 @@ namespace Game.Editor
             floor.transform.localScale = new Vector3(32f, 1f, 32f);
             floor.GetComponent<Renderer>().sharedMaterial = mats.Floor;
 
-            // Walls
-            CreateWall("Wall_North", new Vector3(0f, 1.5f, 16f), new Vector3(32f, 3f, 1f), envGroup.transform, mats.Wall);
+            // Walls with Exit Gateway opening (center gap for SlidingDoor)
+            CreateWall("Wall_North_Left", new Vector3(-9f, 1.5f, 16f), new Vector3(14f, 3f, 1f), envGroup.transform, mats.Wall);
+            CreateWall("Wall_North_Right", new Vector3(9f, 1.5f, 16f), new Vector3(14f, 3f, 1f), envGroup.transform, mats.Wall);
+            CreateWall("Wall_North_Lintel", new Vector3(0f, 3.25f, 16f), new Vector3(4f, 0.5f, 1f), envGroup.transform, mats.Wall);
             CreateWall("Wall_South", new Vector3(0f, 1.5f, -16f), new Vector3(32f, 3f, 1f), envGroup.transform, mats.Wall);
             CreateWall("Wall_East", new Vector3(16f, 1.5f, 0f), new Vector3(1f, 3f, 32f), envGroup.transform, mats.Wall);
             CreateWall("Wall_West", new Vector3(-16f, 1.5f, 0f), new Vector3(1f, 3f, 32f), envGroup.transform, mats.Wall);
+
+            // Secret Alcove Wall (entrance blocked by BreakableWall)
+            CreateWall("Alcove_Wall_Back", new Vector3(11.5f, 1.5f, 10f), new Vector3(8f, 3f, 1f), envGroup.transform, mats.Wall);
+            CreateWall("Alcove_Wall_Side", new Vector3(7.5f, 1.5f, 8f), new Vector3(1f, 3f, 5f), envGroup.transform, mats.Wall);
 
             // Raised Platform
             var platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -615,13 +901,107 @@ namespace Game.Editor
             ramp.transform.localScale = new Vector3(4f, 0.4f, 6.5f);
             ramp.GetComponent<Renderer>().sharedMaterial = mats.Ramp;
 
-            // 2. MANAGEMENT
+            // 2. INTERACTABLES
+            var interactGroup = new GameObject("--- INTERACTABLES ---");
+
+            // Grabbable Boxes
+            PrefabUtility.InstantiatePrefab(prefabs.GrabbableBox, interactGroup.transform);
+            var box1 = GameObject.Find("GrabbableBox");
+            if (box1) box1.transform.position = new Vector3(0f, 0.5f, -2f);
+
+            var box2 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.GrabbableBox, interactGroup.transform);
+            box2.transform.position = new Vector3(-2f, 0.5f, 0f);
+
+            var box3 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.GrabbableBox, interactGroup.transform);
+            box3.transform.position = new Vector3(2f, 0.5f, 0f);
+
+            // Pushable Box (for WeightPlatform)
+            var pushBox = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.PushableBox, interactGroup.transform);
+            pushBox.transform.position = new Vector3(-7f, 0.6f, -4f);
+
+            // Kickable Obstacles
+            var kick1 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.KickableObstacle, interactGroup.transform);
+            kick1.transform.position = new Vector3(-4f, 0.6f, 3f);
+
+            var kick2 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.KickableObstacle, interactGroup.transform);
+            kick2.transform.position = new Vector3(-6f, 0.6f, 3f);
+
+            // Breakable Wall blocking access to Alcove
+            var breakableWall = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.BreakableWall, interactGroup.transform);
+            breakableWall.transform.position = new Vector3(11.5f, 0f, 5.5f);
+
+            // Target Button inside Alcove (rotated towards arena)
+            var targetBtn = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.TargetButton, interactGroup.transform);
+            targetBtn.transform.position = new Vector3(11.5f, 1.5f, 9.45f);
+            targetBtn.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+
+            // Weight Platform
+            var weightPlatform = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.WeightPlatform, interactGroup.transform);
+            weightPlatform.transform.position = new Vector3(-7f, 0f, 0f);
+
+            // Puzzle Socket
+            var puzzleSocket = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.PuzzleSocket, interactGroup.transform);
+            puzzleSocket.transform.position = new Vector3(5f, 0f, 0f);
+
+            // Magnetic Key on elevated platform
+            var key = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.MagneticKey, interactGroup.transform);
+            key.transform.position = new Vector3(0f, 2.2f, 9f);
+
+            // Lever Switch
+            var lever = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.LeverSwitch, interactGroup.transform);
+            lever.transform.position = new Vector3(5f, 0f, 3f);
+
+            // Sliding Door at Exit Gateway
+            var exitDoor = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.SlidingDoor, interactGroup.transform);
+            exitDoor.transform.position = new Vector3(0f, 0f, 16f);
+
+            // 3. MANAGEMENT
             var mgmtGroup = new GameObject("--- MANAGEMENT ---");
 
             var roomSystem = new GameObject("[ROOM_SYSTEM]");
             roomSystem.transform.SetParent(mgmtGroup.transform);
             var roomController = roomSystem.AddComponent<RoomController>();
             var roomScope = roomSystem.AddComponent<RoomLifetimeScope>();
+            var roomCompletion = roomSystem.AddComponent<RoomCompletion>();
+
+            // Setup Composite Condition Tree
+            var conditionsGroup = new GameObject("[PUZZLE_CONDITIONS]");
+            conditionsGroup.transform.SetParent(roomSystem.transform);
+
+            var andCondGo = new GameObject("Root_AndCondition");
+            andCondGo.transform.SetParent(conditionsGroup.transform);
+            var andCondition = andCondGo.AddComponent<AndCondition>();
+
+            // Condition 1: WeightPlatform activated
+            var weightCondGo = new GameObject("Cond_WeightPlatform");
+            weightCondGo.transform.SetParent(andCondGo.transform);
+            var weightCondition = weightCondGo.AddComponent<MechanismCondition>();
+            weightCondition.Configure(weightPlatform.GetComponent<WeightPlatform>(), true);
+
+            // Condition 2: OR Condition (TargetButton hit OR Key slotted in PuzzleSocket)
+            var orCondGo = new GameObject("Cond_Or_ButtonOrSocket");
+            orCondGo.transform.SetParent(andCondGo.transform);
+            var orCondition = orCondGo.AddComponent<OrCondition>();
+
+            var btnCondGo = new GameObject("SubCond_TargetButton");
+            btnCondGo.transform.SetParent(orCondGo.transform);
+            var btnCondition = btnCondGo.AddComponent<MechanismCondition>();
+            btnCondition.Configure(targetBtn.GetComponent<TargetButton>(), true);
+
+            var socketCondGo = new GameObject("SubCond_PuzzleSocket");
+            socketCondGo.transform.SetParent(orCondGo.transform);
+            var socketCondition = socketCondGo.AddComponent<SocketCondition>();
+            socketCondition.Configure(puzzleSocket.GetComponent<PuzzleSocket>());
+
+            var leverCondGo = new GameObject("SubCond_LeverSwitch");
+            leverCondGo.transform.SetParent(orCondGo.transform);
+            var leverCondition = leverCondGo.AddComponent<MechanismCondition>();
+            leverCondition.Configure(lever.GetComponent<LeverMechanism>(), true);
+
+            orCondition.SetConditions(new ConditionBase[] { btnCondition, socketCondition, leverCondition });
+            andCondition.SetConditions(new ConditionBase[] { weightCondition, orCondition });
+
+            roomCompletion.Configure(andCondition, exitDoor.GetComponent<SlidingDoor>(), roomController);
 
             var spawnGroup = new GameObject("[SPAWN_POINTS]");
             spawnGroup.transform.SetParent(mgmtGroup.transform);
@@ -657,7 +1037,6 @@ namespace Game.Editor
             // Robot Coordinator
             var coordinatorGo = new GameObject("[ROBOT_COORDINATOR]");
             coordinatorGo.transform.SetParent(mgmtGroup.transform);
-            coordinatorGo.AddComponent<NetworkIdentity>();
             var coordinator = coordinatorGo.AddComponent<Game.Gameplay.Player.Robot.RobotCoordinator>();
 
             // NETWORKING
@@ -680,7 +1059,6 @@ namespace Game.Editor
 
             var relayGo = new GameObject("[NETWORK_EVENT_RELAY]");
             relayGo.transform.SetParent(netGroup.transform);
-            relayGo.AddComponent<NetworkIdentity>();
             var relay = relayGo.AddComponent<NetworkEventRelay>();
 
             var gameScopeGo = new GameObject("[GAME_LIFETIME_SCOPE]");
@@ -706,35 +1084,6 @@ namespace Game.Editor
             roomScopeSo.FindProperty("_networkEventRelay").objectReferenceValue = relay;
             roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
-            // 3. INTERACTABLES
-            var interactGroup = new GameObject("--- INTERACTABLES ---");
-
-            // Grabbable Boxes
-            PrefabUtility.InstantiatePrefab(prefabs.GrabbableBox, interactGroup.transform);
-            var box1 = GameObject.Find("GrabbableBox");
-            if (box1) box1.transform.position = new Vector3(0f, 0.5f, -2f);
-
-            var box2 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.GrabbableBox, interactGroup.transform);
-            box2.transform.position = new Vector3(-2f, 0.5f, 0f);
-
-            var box3 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.GrabbableBox, interactGroup.transform);
-            box3.transform.position = new Vector3(2f, 0.5f, 0f);
-
-            // Kickable Obstacles
-            var kick1 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.KickableObstacle, interactGroup.transform);
-            kick1.transform.position = new Vector3(-4f, 0.6f, 3f);
-
-            var kick2 = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.KickableObstacle, interactGroup.transform);
-            kick2.transform.position = new Vector3(-6f, 0.6f, 3f);
-
-            // Magnetic Key on elevated platform
-            var key = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.MagneticKey, interactGroup.transform);
-            key.transform.position = new Vector3(0f, 2.2f, 9f);
-
-            // Lever Switch
-            var lever = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.LeverSwitch, interactGroup.transform);
-            lever.transform.position = new Vector3(5f, 0f, 2f);
-
             // 4. LIGHTING & CAMERA
             var lightingGroup = new GameObject("--- LIGHTING & CAMERA ---");
 
@@ -749,8 +1098,8 @@ namespace Game.Editor
             var camGo = new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             camGo.transform.SetParent(lightingGroup.transform);
-            camGo.transform.position = new Vector3(0f, 15f, -17f);
-            camGo.transform.rotation = Quaternion.Euler(42f, 0f, 0f);
+            camGo.transform.position = new Vector3(0f, 18f, -22f);
+            camGo.transform.rotation = Quaternion.Euler(40f, 0f, 0f);
             var cam = camGo.AddComponent<Camera>();
             cam.fieldOfView = 60f;
             camGo.AddComponent<AudioListener>();
@@ -767,16 +1116,17 @@ namespace Game.Editor
 
             var cmCamGo = new GameObject("CM_AdaptiveCamera");
             cmCamGo.transform.SetParent(cameraRigGo.transform);
-            cmCamGo.transform.position = new Vector3(0f, 15f, -17f);
-            cmCamGo.transform.rotation = Quaternion.Euler(42f, 0f, 0f);
+            cmCamGo.transform.position = new Vector3(0f, 18f, -22f);
+            cmCamGo.transform.rotation = Quaternion.Euler(40f, 0f, 0f);
             var cmCam = cmCamGo.AddComponent<CinemachineCamera>();
             cmCam.Target.TrackingTarget = targetGroupGo.transform;
             cmCam.Target.LookAtTarget = targetGroupGo.transform;
+            cmCam.Lens.FieldOfView = 55f;
 
             var groupFraming = cmCamGo.AddComponent<CinemachineGroupFraming>();
             groupFraming.FramingMode = CinemachineGroupFraming.FramingModes.HorizontalAndVertical;
             groupFraming.SizeAdjustment = CinemachineGroupFraming.SizeAdjustmentModes.DollyThenZoom;
-            groupFraming.FramingSize = 0.8f;
+            groupFraming.FramingSize = 0.52f;
             groupFraming.Damping = 2f;
 
             cmCamGo.AddComponent<CinemachineImpulseListener>();

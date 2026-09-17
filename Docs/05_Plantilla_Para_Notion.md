@@ -14,9 +14,9 @@
 - [x] **Fase 5:** Movimiento y habilidades Jugador 2 (Torso: Agarre, Imán y Palancas) (Completada)
 - [x] **Fase 6:** Sistema de Comandos desacoplado de red (Command Pattern & Structs) (Completada)
 - [x] **Fase 7:** Fusión y Separación del Robot (Hierarchy & Rigidbody Sync) (Completada)
-- [ ] **Fase 8:** Cinemachine 3.x Adaptativa (TargetGroup Fusión/Separación e Impulsos)
-- [ ] **Fase 9:** Sistema de Eventos en Red (GameEventBus + NetworkEventRelay)
-- [ ] **Fase 10:** RoomCompletion (Composite Pattern) y Objetos de Puzzle con DOTween
+- [x] **Fase 8:** Cinemachine 3.x Adaptativa (TargetGroup Fusión/Separación e Impulsos) (Completada)
+- [x] **Fase 9:** Sistema de Eventos en Red (GameEventBus + NetworkEventRelay) (Completada)
+- [x] **Fase 10:** RoomCompletion (Composite Pattern) y Objetos de Puzzle con DOTween (Completada)
 - [ ] **Fase 11:** Muerte, Reaparición y Checkpoints (UniTask Respawn Flow)
 - [ ] **Fase 12:** Diseño de Niveles y Progresión (10 Salas de Prueba)
 - [ ] **Fase 13:** Física Emergente, Comedia, Ragdolls y Jugo Audiovisual
@@ -71,7 +71,7 @@
 * **Integración:** `GameEventBus` inyectado por VContainer y `NetworkEventRelay` con RPCs y Broadcasts de PurrNet.
 * **Entregable:** Eventos globales (`RoomCompletedEvent`, `PlayerDiedEvent`) coordinan audio, UI y lógica sin dependencias directas.
 
-### 🔹 Fase 10: Composite Pattern y Mecanismos de Puzzle
+### 🔹 Fase 10: Composite Pattern y Mecanismos de Puzzle `[COMPLETADA]`
 * **Objetivo:** Árbol de condiciones lógicas para resolver salas y objetos interactivos.
 * **Integración:** `RoomCompletion` con nodos AND/OR y feedback procedural con DOTween (compuertas, pulsadores, palancas).
 * **Entregable:** Al cumplirse las condiciones del árbol, se dispara la apertura animada de la compuerta final.

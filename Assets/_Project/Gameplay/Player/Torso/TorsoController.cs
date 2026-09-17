@@ -75,14 +75,14 @@ namespace Game.Gameplay.Player.Torso
         [SerializeField] private LayerMask _magneticLayer = ~0;
 
         [Group("Mecanismos")]
-        [SerializeField] private float _interactRadius = 1.8f;
+        [SerializeField] private float _interactRadius = 2.2f;
 
         [Group("Mecanismos")]
         [SerializeField] private LayerMask _mechanismLayer = ~0;
 
         private readonly Collider[] _grabColliders = new Collider[8];
         private readonly Collider[] _magnetColliders = new Collider[16];
-        private readonly Collider[] _mechanismColliders = new Collider[8];
+        private readonly Collider[] _mechanismColliders = new Collider[16];
 
         private TorsoInputData _pendingInput;
         private IGrabbable _currentHeldObject;
@@ -293,6 +293,7 @@ namespace Game.Gameplay.Player.Torso
             if (IsHoldingObject)
             {
                 ReleaseHeldObject();
+                _pendingInput.InteractTriggered = false;
                 return;
             }
 
@@ -310,6 +311,7 @@ namespace Game.Gameplay.Player.Torso
                 if (col.TryGetComponent<IGrabbable>(out var grabbable) && !grabbable.IsGrabbed)
                 {
                     Grab(grabbable);
+                    _pendingInput.InteractTriggered = false;
                     break;
                 }
             }
@@ -451,15 +453,17 @@ namespace Game.Gameplay.Player.Torso
 
             _pendingInput.InteractTriggered = false;
 
-            Vector3 center = transform.position;
+            Vector3 center = transform.position + transform.forward * 0.3f;
             int count = Physics.OverlapSphereNonAlloc(center, _interactRadius, _mechanismColliders, _mechanismLayer);
 
             for (int i = 0; i < count; i++)
             {
                 Collider col = _mechanismColliders[i];
-                if (col == null) continue;
+                if (col == null || col.transform == transform || col.transform.IsChildOf(transform)) continue;
 
-                if (col.TryGetComponent<IInteractableMechanism>(out var mechanism))
+                if (col.TryGetComponent<IInteractableMechanism>(out var mechanism) ||
+                    (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<IInteractableMechanism>(out mechanism)) ||
+                    (col.GetComponentInParent<IInteractableMechanism>() is { } pMech && (mechanism = pMech) != null))
                 {
                     mechanism.Toggle(gameObject);
                     break;

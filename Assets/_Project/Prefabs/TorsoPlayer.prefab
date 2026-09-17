@@ -285,7 +285,7 @@ MonoBehaviour:
   _magneticLayer:
     serializedVersion: 2
     m_Bits: 4294967295
-  _interactRadius: 1.8
+  _interactRadius: 2.2
   _mechanismLayer:
     serializedVersion: 2
     m_Bits: 4294967295

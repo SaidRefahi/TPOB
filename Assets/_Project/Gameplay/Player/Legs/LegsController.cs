@@ -343,11 +343,15 @@ namespace Game.Gameplay.Player.Legs
                 direction.y = 0.2f;
                 direction = direction.normalized;
 
-                if (col.TryGetComponent<IKickable>(out var kickable))
+                if (col.TryGetComponent<IKickable>(out var kickable) ||
+                    (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<IKickable>(out kickable)) ||
+                    (col.GetComponentInParent<IKickable>() is { } pKick && (kickable = pKick) != null))
                 {
                     kickable.OnKicked(col.bounds.center, direction, _kickForce);
                 }
-                else if (col.TryGetComponent<IPushable>(out var pushable))
+                else if (col.TryGetComponent<IPushable>(out var pushable) ||
+                         (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<IPushable>(out pushable)) ||
+                         (col.GetComponentInParent<IPushable>() is { } pPush && (pushable = pPush) != null))
                 {
                     pushable.OnPushed(direction, _kickForce);
                 }
