@@ -16,6 +16,10 @@ namespace Game.Network.Scopes
 
         protected override void Awake()
         {
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
             base.Awake();
         }
@@ -31,19 +35,24 @@ namespace Game.Network.Scopes
             builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>();
 
             // Level Manager
-            if (_levelManager != null)
+            var levelManager = _levelManager != null ? _levelManager : FindFirstObjectByType<LevelManager>();
+            if (levelManager != null)
             {
-                builder.RegisterComponent(_levelManager).As<ILevelManager>();
-            }
-            else
-            {
-                builder.RegisterComponentInHierarchy<LevelManager>().As<ILevelManager>();
+                builder.RegisterComponent(levelManager).As<ILevelManager>();
             }
 
             // Register NetworkManager instance if referenced or present
-            if (_networkManager != null)
+            var networkManager = _networkManager != null ? _networkManager : FindFirstObjectByType<NetworkManager>();
+            if (networkManager != null)
             {
-                builder.RegisterComponent(_networkManager);
+                builder.RegisterComponent(networkManager);
+            }
+
+            // Connection HUD
+            var hud = FindFirstObjectByType<Game.Network.UI.ConnectionHUD>();
+            if (hud != null)
+            {
+                builder.RegisterComponent(hud);
             }
         }
     }

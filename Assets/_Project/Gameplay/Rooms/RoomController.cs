@@ -84,6 +84,11 @@ namespace Game.Gameplay.Rooms
         {
             OnRoomStateChanged?.Invoke(state);
             Debug.Log($"[RoomController] Room '{_roomName}' changed state to: {state}");
+
+            if (state == RoomState.Completed)
+            {
+                _eventBus?.Publish(new RoomCompletedEvent(_roomIndex, Time.timeSinceLevelLoad));
+            }
         }
 
         [Button("Activar Sala (Servidor)")]

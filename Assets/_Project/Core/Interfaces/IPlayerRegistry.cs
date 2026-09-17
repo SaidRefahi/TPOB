@@ -29,5 +29,6 @@ namespace Game.Core.Interfaces
 
         PlayerRole GetRoleForPlayer(int playerId);
         bool TryAssignRole(int playerId, PlayerRole role);
+        void SwapRoles();
     }
 }

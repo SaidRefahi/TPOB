@@ -66,7 +66,7 @@
 * **Integración:** `CinemachineTargetGroup` con pesos adaptativos (1 objetivo en Fusión, 2 en Separación) y `CinemachineImpulseSource` en patadas y caídas pesadas.
 * **Entregable:** Zoom y encuadre fluido en tiempo real al alejarse o juntarse los jugadores.
 
-### 🔹 Fase 9: Bus de Eventos de Red (Observer Pattern)
+### 🔹 Fase 9: Bus de Eventos de Red (Observer Pattern) `[COMPLETADA]`
 * **Objetivo:** Comunicación reactiva sin acoplamiento directo entre componentes.
 * **Integración:** `GameEventBus` inyectado por VContainer y `NetworkEventRelay` con RPCs y Broadcasts de PurrNet.
 * **Entregable:** Eventos globales (`RoomCompletedEvent`, `PlayerDiedEvent`) coordinan audio, UI y lógica sin dependencias directas.

@@ -12,9 +12,21 @@ namespace Game.Network.Services
         private readonly IGameEventBus _eventBus;
         private NetworkManager _cachedManager;
 
-        public bool IsServer => _cachedManager != null && _cachedManager.isServer;
-        public bool IsClient => _cachedManager != null && _cachedManager.isClient;
-        public bool IsConnected => _cachedManager != null && 
+        private NetworkManager Manager
+        {
+            get
+            {
+                if (_cachedManager == null && NetworkManager.main != null)
+                {
+                    BindManager(NetworkManager.main);
+                }
+                return _cachedManager;
+            }
+        }
+
+        public bool IsServer => Manager != null && _cachedManager.isServer;
+        public bool IsClient => Manager != null && _cachedManager.isClient;
+        public bool IsConnected => Manager != null && 
             (_cachedManager.serverState == ConnectionState.Connected || _cachedManager.clientState == ConnectionState.Connected);
 
         public event Action OnConnected;
@@ -63,6 +75,48 @@ namespace Game.Network.Services
             _cachedManager = null;
         }
 
+        public string ServerAddress
+        {
+            get
+            {
+                var udp = GetUDPTransport();
+                return udp != null ? udp.address : "127.0.0.1";
+            }
+            set
+            {
+                var udp = GetUDPTransport();
+                if (udp != null)
+                {
+                    udp.address = value;
+                }
+            }
+        }
+
+        public ushort ServerPort
+        {
+            get
+            {
+                var udp = GetUDPTransport();
+                return udp != null ? udp.serverPort : (ushort)5000;
+            }
+            set
+            {
+                var udp = GetUDPTransport();
+                if (udp != null)
+                {
+                    udp.serverPort = value;
+                }
+            }
+        }
+
+        private UDPTransport GetUDPTransport()
+        {
+            EnsureManager();
+            if (_cachedManager == null) return null;
+            if (_cachedManager.transport is UDPTransport udp) return udp;
+            return _cachedManager.GetComponent<UDPTransport>();
+        }
+
         public void StartHost()
         {
             EnsureManager();
@@ -72,12 +126,25 @@ namespace Game.Network.Services
             _cachedManager.StartClient();
         }
 
+        public void StartHost(ushort port)
+        {
+            ServerPort = port;
+            StartHost();
+        }
+
         public void StartClient()
         {
             EnsureManager();
             if (_cachedManager == null) return;
 
             _cachedManager.StartClient();
+        }
+
+        public void StartClient(string address, ushort port)
+        {
+            ServerAddress = address;
+            ServerPort = port;
+            StartClient();
         }
 
         public void Disconnect()
@@ -129,6 +196,11 @@ namespace Game.Network.Services
 
         private void HandlePlayerJoined(PlayerID player, bool isReconnect, bool asServer)
         {
+            if (_cachedManager != null && _cachedManager.isServer && !asServer)
+            {
+                return;
+            }
+
             int playerId = (int)player.id.value;
             bool isLocal = _cachedManager != null && _cachedManager.localPlayer == player;
 

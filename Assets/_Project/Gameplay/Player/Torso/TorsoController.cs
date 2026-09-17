@@ -169,38 +169,9 @@ namespace Game.Gameplay.Player.Torso
 
         private void Update()
         {
-            bool hasAuthority = !isSpawned || isOwner;
+            bool hasAuthority = !isSpawned ? true : isOwner;
             if (!hasAuthority || _inputReader == null)
             {
-                return;
-            }
-
-            if (_commandInvoker != null)
-            {
-                _pendingInput.AimDirection = _inputReader.LookInput;
-
-                _commandInvoker.Execute(new MoveCommand(_inputReader.MoveInput, false));
-
-                if (_inputReader.ConsumeGrabTrigger())
-                {
-                    _commandInvoker.Execute(new GrabCommand());
-                }
-
-                if (_inputReader.ConsumeThrowTrigger())
-                {
-                    _commandInvoker.Execute(new ThrowCommand());
-                }
-
-                if (_inputReader.IsMagnetHeld != _isMagnetActive)
-                {
-                    _commandInvoker.Execute(new MagnetCommand(_inputReader.IsMagnetHeld));
-                }
-
-                if (_inputReader.ConsumeInteractTrigger())
-                {
-                    _commandInvoker.Execute(new InteractCommand());
-                }
-
                 return;
             }
 
@@ -284,6 +255,12 @@ namespace Game.Gameplay.Player.Torso
             Vector3 newHorizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, _acceleration * Time.fixedDeltaTime);
 
             _rigidbody.linearVelocity = new Vector3(newHorizontalVelocity.x, currentVelocity.y, newHorizontalVelocity.z);
+
+            if (_pendingInput.AimDirection.sqrMagnitude < 0.04f && targetVelocity.sqrMagnitude > 0.001f)
+            {
+                Quaternion crawlRotation = Quaternion.LookRotation(targetVelocity.normalized, Vector3.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, crawlRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+            }
         }
 
         private void ApplyAiming()
@@ -297,8 +274,11 @@ namespace Game.Gameplay.Player.Torso
             Vector3 aimDir = new Vector3(aimInput.x, 0f, aimInput.y).normalized;
             Quaternion targetRotation = Quaternion.LookRotation(aimDir, Vector3.up);
 
-            Transform targetTransform = _aimPivot != null ? _aimPivot : transform;
-            targetTransform.rotation = Quaternion.Slerp(targetTransform.rotation, targetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+            if (_aimPivot != null && _aimPivot != transform)
+            {
+                _aimPivot.localRotation = Quaternion.identity;
+            }
         }
 
         private void ApplyGrabAndRelease()

@@ -1,3 +1,4 @@
+using Game.Core.Enums;
 using Game.Core.Events;
 using Game.Core.Interfaces;
 using Game.Gameplay.Player.Legs;
@@ -16,6 +17,7 @@ namespace Game.Gameplay.Player.Robot
     [DeclareBoxGroup("Configuración")]
     [DeclareBoxGroup("Estado Sincronizado")]
     [DeclareBoxGroup("Acciones")]
+    [DeclareBoxGroup("Simulación de Muerte")]
     public sealed class RobotCoordinator : NetworkBehaviour, IRobotCoordinator
     {
         [Group("Referencias")]
@@ -404,6 +406,74 @@ namespace Game.Gameplay.Player.Robot
         {
             EnsureReferences();
             RequestSeparation();
+        }
+
+        [Group("Simulación de Muerte")]
+        [Button(ButtonSizes.Medium, "Simular Muerte Piernas")]
+        public void SimulateLegsDeath()
+        {
+            EnsureReferences();
+            var pos = _legs != null ? _legs.transform.position : transform.position;
+            if (_eventBus != null)
+            {
+                _eventBus.Publish(new PlayerDiedEvent(1, PlayerRole.Legs, pos, DeathCause.Hazard));
+            }
+            else
+            {
+                var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
+                relay?.BroadcastPlayerDied(new PlayerDiedEvent(1, PlayerRole.Legs, pos, DeathCause.Hazard));
+            }
+        }
+
+        [Group("Simulación de Muerte")]
+        [Button(ButtonSizes.Medium, "Simular Muerte Torso")]
+        public void SimulateTorsoDeath()
+        {
+            EnsureReferences();
+            var pos = _torso != null ? _torso.transform.position : transform.position;
+            if (_eventBus != null)
+            {
+                _eventBus.Publish(new PlayerDiedEvent(2, PlayerRole.Torso, pos, DeathCause.Hazard));
+            }
+            else
+            {
+                var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
+                relay?.BroadcastPlayerDied(new PlayerDiedEvent(2, PlayerRole.Torso, pos, DeathCause.Hazard));
+            }
+        }
+
+        [Group("Simulación de Muerte")]
+        [Button(ButtonSizes.Medium, "Simular Respawn Piernas")]
+        public void SimulateLegsRespawn()
+        {
+            EnsureReferences();
+            var pos = _legs != null ? _legs.transform.position : transform.position;
+            if (_eventBus != null)
+            {
+                _eventBus.Publish(new PlayerRespawnedEvent(1, PlayerRole.Legs, pos));
+            }
+            else
+            {
+                var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
+                relay?.BroadcastPlayerRespawned(new PlayerRespawnedEvent(1, PlayerRole.Legs, pos));
+            }
+        }
+
+        [Group("Simulación de Muerte")]
+        [Button(ButtonSizes.Medium, "Simular Respawn Torso")]
+        public void SimulateTorsoRespawn()
+        {
+            EnsureReferences();
+            var pos = _torso != null ? _torso.transform.position : transform.position;
+            if (_eventBus != null)
+            {
+                _eventBus.Publish(new PlayerRespawnedEvent(2, PlayerRole.Torso, pos));
+            }
+            else
+            {
+                var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
+                relay?.BroadcastPlayerRespawned(new PlayerRespawnedEvent(2, PlayerRole.Torso, pos));
+            }
         }
     }
 }

@@ -17,10 +17,31 @@ namespace Game.Gameplay.Rooms
         [SerializeField] private TPOBPlayerSpawner _playerSpawner;
         [SerializeField] private Game.Gameplay.Player.Robot.RobotCoordinator _robotCoordinator;
         [SerializeField] private Game.Gameplay.Camera.CameraController _cameraController;
+        [SerializeField] private Game.Network.Events.NetworkEventRelay _networkEventRelay;
 
         protected override LifetimeScope FindParent()
         {
-            return FindFirstObjectByType<GameLifetimeScope>();
+            var parent = FindFirstObjectByType<GameLifetimeScope>();
+            if (parent != null)
+            {
+                if (parent.Container == null)
+                {
+                    try
+                    {
+                        parent.Build();
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[RoomLifetimeScope] Parent GameLifetimeScope.Build() deferred or failed: {ex.Message}");
+                    }
+                }
+
+                if (parent.Container != null)
+                {
+                    return parent;
+                }
+            }
+            return null;
         }
 
         protected override void Configure(IContainerBuilder builder)
@@ -63,6 +84,22 @@ namespace Game.Gameplay.Rooms
             {
                 builder.Register<NullCameraCoordinator>(Lifetime.Scoped).As<ICameraCoordinator>();
             }
+
+            var eventRelay = _networkEventRelay != null ? _networkEventRelay : FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
+            if (eventRelay != null)
+            {
+                builder.RegisterComponent(eventRelay).As<INetworkEventRelay>();
+            }
+            else
+            {
+                builder.Register<NullNetworkEventRelay>(Lifetime.Scoped).As<INetworkEventRelay>();
+            }
+
+            var hud = FindFirstObjectByType<Game.Network.UI.ConnectionHUD>();
+            if (hud != null)
+            {
+                builder.RegisterComponent(hud);
+            }
         }
 
         private sealed class NullCameraCoordinator : ICameraCoordinator
@@ -71,6 +108,15 @@ namespace Game.Gameplay.Rooms
             public void RegisterTargets(Transform legs, Transform torso) { }
             public void SetFused(bool isFused) { }
             public void TriggerImpulse(Vector3 velocity, float force = 1f) { }
+        }
+
+        private sealed class NullNetworkEventRelay : INetworkEventRelay
+        {
+            public void BroadcastPlayerDied(PlayerDiedEvent evt) { }
+            public void BroadcastPlayerRespawned(PlayerRespawnedEvent evt) { }
+            public void BroadcastRoomCompleted(RoomCompletedEvent evt) { }
+            public void BroadcastRobotFused(RobotFusedEvent evt) { }
+            public void BroadcastRobotSeparated(RobotSeparatedEvent evt) { }
         }
     }
 }

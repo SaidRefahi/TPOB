@@ -115,6 +115,20 @@ namespace Game.Network.Services
             return false;
         }
 
+        public void SwapRoles()
+        {
+            if (_players.Count < 2) return;
+
+            var p1 = _players[0];
+            var p2 = _players[1];
+
+            PlayerRole role1 = p1.Role;
+            PlayerRole role2 = p2.Role;
+
+            TryAssignRole(p1.PlayerId, role2);
+            TryAssignRole(p2.PlayerId, role1);
+        }
+
         public void Dispose()
         {
             if (_networkService != null)

@@ -7,12 +7,17 @@ using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Rooms;
 using Game.Gameplay.Spawning;
 using PurrNet;
+using PurrNet.Transports;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Gameplay.Camera;
+using Game.Network.Events;
+using Game.Network.Scopes;
+using Game.Network.Services;
+using Game.Network.UI;
 
 namespace Game.Editor
 {
@@ -25,6 +30,8 @@ namespace Game.Editor
 
         static PlaygroundBuilder()
         {
+            EditorApplication.delayCall += EnsureNetworkingInCurrentScene;
+
             string triggerPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp", "BuildPlayground.trigger");
             if (File.Exists(triggerPath))
             {
@@ -51,6 +58,168 @@ namespace Game.Editor
             var prefabs = CreatePrefabs(materials);
             BuildPlaygroundScene(prefabs, materials);
             Debug.Log("<color=green>[TPOB] Playground y Prefabs generados con éxito en Room_01.unity!</color>");
+        }
+
+        [MenuItem("TPOB/2. Configurar Networking en Escena Actual")]
+        public static void EnsureNetworkingInCurrentScene()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isPlaying) return;
+            var activeScene = EditorSceneManager.GetActiveScene();
+            if (!activeScene.isLoaded) return;
+
+            // 1. Find or create --- NETWORKING --- root
+            GameObject netGroup = GameObject.Find("--- NETWORKING ---");
+            if (netGroup == null)
+            {
+                netGroup = new GameObject("--- NETWORKING ---");
+                Undo.RegisterCreatedObjectUndo(netGroup, "Create --- NETWORKING ---");
+            }
+
+            // 2. Find or create [NETWORK_MANAGER]
+            NetworkManager netManager = Object.FindFirstObjectByType<NetworkManager>();
+            GameObject netManagerGo;
+            if (netManager == null)
+            {
+                netManagerGo = new GameObject("[NETWORK_MANAGER]");
+                netManagerGo.transform.SetParent(netGroup.transform);
+                netManager = netManagerGo.AddComponent<NetworkManager>();
+                netManagerGo.AddComponent<UDPTransport>();
+                Undo.RegisterCreatedObjectUndo(netManagerGo, "Create [NETWORK_MANAGER]");
+            }
+            else
+            {
+                netManagerGo = netManager.gameObject;
+                if (netManagerGo.GetComponent<UDPTransport>() == null)
+                {
+                    netManagerGo.AddComponent<UDPTransport>();
+                }
+                if (netManagerGo.transform.parent == null)
+                {
+                    netManagerGo.transform.SetParent(netGroup.transform);
+                }
+            }
+
+            var rules = AssetDatabase.LoadAssetAtPath<NetworkRules>("Assets/PurrNet/Defaults/NetworkRules/ServerStrict.asset");
+            var visibility = AssetDatabase.LoadAssetAtPath<NetworkVisibilityRuleSet>("Assets/PurrNet/Defaults/VisibilitySets/AlwaysVisible.asset");
+            var netPrefabs = AssetDatabase.LoadAssetAtPath<NetworkPrefabs>("Assets/_Project/Network/NetworkPrefabs.asset");
+
+            var netManagerSo = new SerializedObject(netManager);
+            if (rules != null && netManagerSo.FindProperty("_networkRules").objectReferenceValue == null)
+            {
+                netManagerSo.FindProperty("_networkRules").objectReferenceValue = rules;
+            }
+            if (visibility != null && netManagerSo.FindProperty("_visibilityRules").objectReferenceValue == null)
+            {
+                netManagerSo.FindProperty("_visibilityRules").objectReferenceValue = visibility;
+            }
+            if (netPrefabs != null && netManagerSo.FindProperty("_networkPrefabs").objectReferenceValue == null)
+            {
+                netManagerSo.FindProperty("_networkPrefabs").objectReferenceValue = netPrefabs;
+            }
+            netManagerSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // 3. Find or create [NETWORK_EVENT_RELAY]
+            NetworkEventRelay relay = Object.FindFirstObjectByType<NetworkEventRelay>();
+            GameObject relayGo;
+            if (relay == null)
+            {
+                relayGo = new GameObject("[NETWORK_EVENT_RELAY]");
+                relayGo.transform.SetParent(netGroup.transform);
+                relayGo.AddComponent<NetworkIdentity>();
+                relay = relayGo.AddComponent<NetworkEventRelay>();
+                Undo.RegisterCreatedObjectUndo(relayGo, "Create [NETWORK_EVENT_RELAY]");
+            }
+            else
+            {
+                relayGo = relay.gameObject;
+                if (relayGo.GetComponent<NetworkIdentity>() == null)
+                {
+                    relayGo.AddComponent<NetworkIdentity>();
+                }
+                if (relayGo.transform.parent == null)
+                {
+                    relayGo.transform.SetParent(netGroup.transform);
+                }
+            }
+
+            // 4. Find or create [GAME_LIFETIME_SCOPE]
+            GameLifetimeScope gameScope = Object.FindFirstObjectByType<GameLifetimeScope>();
+            GameObject gameScopeGo;
+            if (gameScope == null)
+            {
+                gameScopeGo = new GameObject("[GAME_LIFETIME_SCOPE]");
+                gameScopeGo.transform.SetParent(netGroup.transform);
+                gameScope = gameScopeGo.AddComponent<GameLifetimeScope>();
+                Undo.RegisterCreatedObjectUndo(gameScopeGo, "Create [GAME_LIFETIME_SCOPE]");
+            }
+            else
+            {
+                gameScopeGo = gameScope.gameObject;
+                if (gameScopeGo.transform.parent == null)
+                {
+                    gameScopeGo.transform.SetParent(netGroup.transform);
+                }
+            }
+
+            // 5. Find or create LevelManager
+            LevelManager levelManager = Object.FindFirstObjectByType<LevelManager>();
+            if (levelManager == null)
+            {
+                levelManager = gameScopeGo.AddComponent<LevelManager>();
+            }
+
+            // 6. Find or create Bootstrapper
+            Bootstrapper bootstrapper = Object.FindFirstObjectByType<Bootstrapper>();
+            if (bootstrapper == null)
+            {
+                var bootstrapperGo = new GameObject("[BOOTSTRAPPER]");
+                bootstrapperGo.transform.SetParent(netGroup.transform);
+                bootstrapper = bootstrapperGo.AddComponent<Bootstrapper>();
+                Undo.RegisterCreatedObjectUndo(bootstrapperGo, "Create [BOOTSTRAPPER]");
+            }
+
+            // 7. Find or create [CONNECTION_HUD]
+            ConnectionHUD hud = Object.FindFirstObjectByType<ConnectionHUD>();
+            if (hud == null)
+            {
+                var hudGo = new GameObject("[CONNECTION_HUD]");
+                hudGo.transform.SetParent(netGroup.transform);
+                hud = hudGo.AddComponent<ConnectionHUD>();
+                Undo.RegisterCreatedObjectUndo(hudGo, "Create [CONNECTION_HUD]");
+            }
+            else
+            {
+                if (hud.transform.parent == null)
+                {
+                    hud.transform.SetParent(netGroup.transform);
+                }
+            }
+
+            // Wire GameScope
+            var gameScopeSo = new SerializedObject(gameScope);
+            gameScopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
+            gameScopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
+            gameScopeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // Wire RoomLifetimeScope
+            RoomLifetimeScope roomScope = Object.FindFirstObjectByType<RoomLifetimeScope>();
+            if (roomScope != null)
+            {
+                var roomScopeSo = new SerializedObject(roomScope);
+                roomScopeSo.FindProperty("_networkEventRelay").objectReferenceValue = relay;
+                roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(roomScope);
+            }
+
+            if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isPlaying) return;
+
+            EditorUtility.SetDirty(netManager);
+            EditorUtility.SetDirty(gameScope);
+            EditorUtility.SetDirty(netGroup);
+            EditorSceneManager.MarkSceneDirty(activeScene);
+            EditorSceneManager.SaveScene(activeScene);
+
+            Debug.Log("<color=cyan>[TPOB] Networking estructurado y configurado en escena: --- NETWORKING ---, NetworkManager, NetworkEventRelay, GameLifetimeScope, LevelManager, Bootstrapper!</color>");
         }
 
         private static void EnsureDirectories()
@@ -148,6 +317,24 @@ namespace Game.Editor
             return prefabs;
         }
 
+        private static NetworkTransform AddServerAuthoritativeTransform(GameObject root)
+        {
+            var nt = root.AddComponent<NetworkTransform>();
+            var ntSo = new SerializedObject(nt);
+            var ownerAuthProp = ntSo.FindProperty("_ownerAuth");
+            if (ownerAuthProp != null) ownerAuthProp.boolValue = false;
+            var syncPosProp = ntSo.FindProperty("_syncPosition");
+            if (syncPosProp != null) syncPosProp.enumValueIndex = (int)SyncMode.World;
+            var syncRotProp = ntSo.FindProperty("_syncRotation");
+            if (syncRotProp != null) syncRotProp.enumValueIndex = (int)SyncMode.World;
+            var syncScaleProp = ntSo.FindProperty("_syncScale");
+            if (syncScaleProp != null) syncScaleProp.boolValue = false;
+            var syncParentProp = ntSo.FindProperty("_syncParent");
+            if (syncParentProp != null) syncParentProp.boolValue = false;
+            ntSo.ApplyModifiedPropertiesWithoutUndo();
+            return nt;
+        }
+
         private static GameObject CreateLegsPrefab(Material mat, InputActionAsset inputActions)
         {
             string path = $"{PrefabsDir}/LegsPlayer.prefab";
@@ -162,8 +349,7 @@ namespace Game.Editor
             col.height = 1.8f;
             col.radius = 0.45f;
 
-            root.AddComponent<NetworkIdentity>();
-            root.AddComponent<NetworkTransform>();
+            AddServerAuthoritativeTransform(root);
 
             var controller = root.AddComponent<LegsController>();
             var reader = root.AddComponent<LegsInputReader>();
@@ -238,8 +424,7 @@ namespace Game.Editor
             col.center = new Vector3(0f, 0.5f, 0f);
             col.size = new Vector3(0.9f, 1f, 0.9f);
 
-            root.AddComponent<NetworkIdentity>();
-            root.AddComponent<NetworkTransform>();
+            AddServerAuthoritativeTransform(root);
 
             var controller = root.AddComponent<TorsoController>();
             var reader = root.AddComponent<TorsoInputReader>();
@@ -294,8 +479,7 @@ namespace Game.Editor
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 2f;
 
-            root.AddComponent<NetworkIdentity>();
-            root.AddComponent<NetworkTransform>();
+            AddServerAuthoritativeTransform(root);
             root.AddComponent<GrabbableObject>();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -314,8 +498,7 @@ namespace Game.Editor
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 0.5f;
 
-            root.AddComponent<NetworkIdentity>();
-            root.AddComponent<NetworkTransform>();
+            AddServerAuthoritativeTransform(root);
             root.AddComponent<MagneticKey>();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -334,8 +517,7 @@ namespace Game.Editor
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 3f;
 
-            root.AddComponent<NetworkIdentity>();
-            root.AddComponent<NetworkTransform>();
+            AddServerAuthoritativeTransform(root);
             root.AddComponent<KickableTestObject>();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -478,12 +660,50 @@ namespace Game.Editor
             coordinatorGo.AddComponent<NetworkIdentity>();
             var coordinator = coordinatorGo.AddComponent<Game.Gameplay.Player.Robot.RobotCoordinator>();
 
+            // NETWORKING
+            var netGroup = new GameObject("--- NETWORKING ---");
+
+            var netManagerGo = new GameObject("[NETWORK_MANAGER]");
+            netManagerGo.transform.SetParent(netGroup.transform);
+            var netManager = netManagerGo.AddComponent<NetworkManager>();
+            netManagerGo.AddComponent<UDPTransport>();
+
+            var defaultRules = AssetDatabase.LoadAssetAtPath<NetworkRules>("Assets/PurrNet/Defaults/NetworkRules/ServerStrict.asset");
+            var defaultVisibility = AssetDatabase.LoadAssetAtPath<NetworkVisibilityRuleSet>("Assets/PurrNet/Defaults/VisibilitySets/AlwaysVisible.asset");
+            var defaultPrefabs = AssetDatabase.LoadAssetAtPath<NetworkPrefabs>("Assets/_Project/Network/NetworkPrefabs.asset");
+
+            var netManagerBuildSo = new SerializedObject(netManager);
+            if (defaultRules != null) netManagerBuildSo.FindProperty("_networkRules").objectReferenceValue = defaultRules;
+            if (defaultVisibility != null) netManagerBuildSo.FindProperty("_visibilityRules").objectReferenceValue = defaultVisibility;
+            if (defaultPrefabs != null) netManagerBuildSo.FindProperty("_networkPrefabs").objectReferenceValue = defaultPrefabs;
+            netManagerBuildSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var relayGo = new GameObject("[NETWORK_EVENT_RELAY]");
+            relayGo.transform.SetParent(netGroup.transform);
+            relayGo.AddComponent<NetworkIdentity>();
+            var relay = relayGo.AddComponent<NetworkEventRelay>();
+
+            var gameScopeGo = new GameObject("[GAME_LIFETIME_SCOPE]");
+            gameScopeGo.transform.SetParent(netGroup.transform);
+            var gameScope = gameScopeGo.AddComponent<GameLifetimeScope>();
+            var levelManager = gameScopeGo.AddComponent<LevelManager>();
+
+            var bootstrapperGo = new GameObject("[BOOTSTRAPPER]");
+            bootstrapperGo.transform.SetParent(netGroup.transform);
+            var bootstrapper = bootstrapperGo.AddComponent<Bootstrapper>();
+
+            var gameScopeSo = new SerializedObject(gameScope);
+            gameScopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
+            gameScopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
+            gameScopeSo.ApplyModifiedPropertiesWithoutUndo();
+
             // Wire RoomScope
             var roomScopeSo = new SerializedObject(roomScope);
             roomScopeSo.FindProperty("_roomController").objectReferenceValue = roomController;
             roomScopeSo.FindProperty("_spawnPointManager").objectReferenceValue = spawnManager;
             roomScopeSo.FindProperty("_playerSpawner").objectReferenceValue = playerSpawner;
             roomScopeSo.FindProperty("_robotCoordinator").objectReferenceValue = coordinator;
+            roomScopeSo.FindProperty("_networkEventRelay").objectReferenceValue = relay;
             roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             // 3. INTERACTABLES
@@ -576,6 +796,8 @@ namespace Game.Editor
 
             roomScopeSo.FindProperty("_cameraController").objectReferenceValue = cameraController;
             roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            EnsureNetworkingInCurrentScene();
 
             EditorSceneManager.SaveScene(scene);
         }

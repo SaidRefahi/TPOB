@@ -179,7 +179,7 @@ namespace Game.Gameplay.Player.Legs
 
         private void Update()
         {
-            bool hasAuthority = !isSpawned || isOwner;
+            bool hasAuthority = !isSpawned ? true : isOwner;
             if (!hasAuthority || _inputReader == null)
             {
                 return;

@@ -1,4 +1,5 @@
 using Game.Core.Interfaces;
+using Game.Network.Services;
 using PurrNet;
 using TriInspector;
 using UnityEngine;
@@ -25,6 +26,10 @@ namespace Game.Network.Scopes
         private void Start()
         {
             EnsureNetworkManager();
+            if (_networkService is NetworkService netService && NetworkManager.main != null)
+            {
+                netService.BindManager(NetworkManager.main);
+            }
         }
 
         private void EnsureNetworkManager()

@@ -31,7 +31,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | **06** | Sistema de Comandos (Command Pattern) | C# Structs (Zero GC), PurrNet ServerRpc | Comandos polimórficos de jugador desacoplados de la red. `[COMPLETADA]` |
 | **07** | Fusión y Separación del Robot | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween | Alternancia fluida entre 1 y 2 avatares físicos en red. `[COMPLETADA]` |
 | **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. `[COMPLETADA]` |
-| **09** | Bus de Eventos Desacoplado (Observer Pattern) | VContainer, C# Events, PurrNet ObserversRpc | Comunicación entre subsistemas sin llamadas cruzadas directas. |
+| **09** | Bus de Eventos Desacoplado (Observer Pattern) | VContainer, C# Events, PurrNet ObserversRpc | Comunicación entre subsistemas sin llamadas cruzadas directas. `[COMPLETADA]` |
 | **10** | Composite Pattern y Mecanismos de Puzzle | Interfaces, DOTween, Tri-Inspector | Árbol lógico de finalización y objetos interactivos reactivos. |
 | **11** | Ciclo de Muerte, Checkpoints y Respawn | UniTask, PurrNet SyncVar | Caídas y muertes con reaparición rápida sin reiniciar la sala. |
 | **12** | Producción de Contenido: Diseño de 10 Salas | Tri-Inspector, Cinemachine, PurrNet | 4 salas simples, 4 intermedias y 2 avanzadas encadenadas. |
@@ -158,7 +158,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 9: Bus de Eventos de Red Desacoplado (Observer Pattern)
+### 🔹 Fase 9: Bus de Eventos de Red Desacoplado (Observer Pattern) `[COMPLETADA]`
 * **Objetivo:** Eliminar el acoplamiento directo entre subsistemas (puzzles, audio, UI, jugadores).
 * **Integración de Addons:**
   * **VContainer:** `GameEventBus` registrado como Singleton de servicio en el Root Scope.

@@ -1,4 +1,5 @@
 using Game.Core.Enums;
+using PurrNet.Packing;
 using UnityEngine;
 
 namespace Game.Core.Events
@@ -49,9 +50,51 @@ namespace Game.Core.Events
         }
     }
 
-    public readonly struct RobotFusedEvent
+    public struct PlayerDiedEvent : IPackedAuto
     {
-        public readonly Vector3 FusionPosition;
+        public int PlayerId;
+        public PlayerRole Role;
+        public Vector3 Position;
+        public DeathCause Cause;
+
+        public PlayerDiedEvent(int playerId, PlayerRole role, Vector3 position, DeathCause cause = DeathCause.Hazard)
+        {
+            PlayerId = playerId;
+            Role = role;
+            Position = position;
+            Cause = cause;
+        }
+    }
+
+    public struct PlayerRespawnedEvent : IPackedAuto
+    {
+        public int PlayerId;
+        public PlayerRole Role;
+        public Vector3 Position;
+
+        public PlayerRespawnedEvent(int playerId, PlayerRole role, Vector3 position)
+        {
+            PlayerId = playerId;
+            Role = role;
+            Position = position;
+        }
+    }
+
+    public struct RoomCompletedEvent : IPackedAuto
+    {
+        public int RoomIndex;
+        public float Duration;
+
+        public RoomCompletedEvent(int roomIndex, float duration)
+        {
+            RoomIndex = roomIndex;
+            Duration = duration;
+        }
+    }
+
+    public struct RobotFusedEvent : IPackedAuto
+    {
+        public Vector3 FusionPosition;
 
         public RobotFusedEvent(Vector3 fusionPosition)
         {
@@ -59,9 +102,9 @@ namespace Game.Core.Events
         }
     }
 
-    public readonly struct RobotSeparatedEvent
+    public struct RobotSeparatedEvent : IPackedAuto
     {
-        public readonly Vector3 SeparationPosition;
+        public Vector3 SeparationPosition;
 
         public RobotSeparatedEvent(Vector3 separationPosition)
         {

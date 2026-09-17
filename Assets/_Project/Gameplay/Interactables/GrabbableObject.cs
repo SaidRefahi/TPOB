@@ -52,24 +52,35 @@ namespace Game.Gameplay.Interactables
             }
         }
 
+        private Transform _holdSocket;
+
         public void OnGrabbed(Transform holdSocket)
         {
             IsGrabbed = true;
+            _holdSocket = holdSocket;
 
             if (_rigidbody != null)
             {
                 _rigidbody.isKinematic = true;
+                _rigidbody.linearVelocity = Vector3.zero;
             }
 
-            transform.SetParent(holdSocket);
-            transform.localPosition = Vector3.zero;
-            transform.localRotation = Quaternion.identity;
+            if (_holdSocket != null)
+            {
+                transform.position = _holdSocket.position;
+                transform.rotation = _holdSocket.rotation;
+            }
+
+            if (isServer)
+            {
+                SyncGrabStateObserversRpc(true);
+            }
         }
 
         public void OnReleased(Vector3 throwVelocity)
         {
             IsGrabbed = false;
-            transform.SetParent(null);
+            _holdSocket = null;
 
             if (_rigidbody != null)
             {
@@ -79,6 +90,37 @@ namespace Game.Gameplay.Interactables
                 if (canSimulate)
                 {
                     _rigidbody.linearVelocity = throwVelocity;
+                }
+            }
+
+            if (isServer)
+            {
+                SyncGrabStateObserversRpc(false);
+            }
+        }
+
+        [ObserversRpc(runLocally: false)]
+        private void SyncGrabStateObserversRpc(bool isGrabbed)
+        {
+            IsGrabbed = isGrabbed;
+            if (_rigidbody != null)
+            {
+                _rigidbody.isKinematic = !isServer || isGrabbed;
+            }
+        }
+
+        private void FixedUpdate()
+        {
+            bool canSimulate = !isSpawned || isServer;
+            if (canSimulate && IsGrabbed && _holdSocket != null)
+            {
+                transform.position = _holdSocket.position;
+                transform.rotation = _holdSocket.rotation;
+
+                if (_rigidbody != null)
+                {
+                    _rigidbody.position = _holdSocket.position;
+                    _rigidbody.rotation = _holdSocket.rotation;
                 }
             }
         }
