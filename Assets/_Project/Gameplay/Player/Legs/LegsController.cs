@@ -3,6 +3,7 @@ using Game.Core.Commands;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
+using Game.Gameplay.Player.Death;
 using Game.Gameplay.Player.Robot;
 using PurrNet;
 using PurrNet.Transports;
@@ -98,6 +99,7 @@ namespace Game.Gameplay.Player.Legs
         private bool _isGrounded;
         private float _nextKickTime;
         private bool _isFused;
+        private PlayerDeathHandler _deathHandler;
 
         public Vector2 MoveInput => _pendingInput.MoveDirection;
         public bool IsGrounded => _isGrounded;
@@ -147,6 +149,11 @@ namespace Game.Gameplay.Player.Legs
             {
                 _commandInvoker = GetComponent<CommandInvoker>();
             }
+
+            if (_deathHandler == null)
+            {
+                _deathHandler = GetComponent<PlayerDeathHandler>();
+            }
         }
 
         private void Start()
@@ -179,6 +186,11 @@ namespace Game.Gameplay.Player.Legs
 
         private void Update()
         {
+            if (_deathHandler != null && !_deathHandler.IsAlive)
+            {
+                return;
+            }
+
             bool hasAuthority = !isSpawned ? true : isOwner;
             if (!hasAuthority || _inputReader == null)
             {
@@ -242,6 +254,11 @@ namespace Game.Gameplay.Player.Legs
 
         private void FixedUpdate()
         {
+            if (_deathHandler != null && !_deathHandler.IsAlive)
+            {
+                return;
+            }
+
             bool isSimulated = !isSpawned || isServer;
             if (!isSimulated || _rigidbody == null)
             {

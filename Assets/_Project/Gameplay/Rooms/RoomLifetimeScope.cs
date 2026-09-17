@@ -106,6 +106,18 @@ namespace Game.Gameplay.Rooms
             {
                 builder.RegisterComponent(roomCompletion);
             }
+
+            var checkpointSystem = FindFirstObjectByType<Game.Gameplay.Checkpoints.CheckpointSystem>();
+            if (checkpointSystem != null)
+            {
+                builder.RegisterComponent(checkpointSystem).As<ICheckpointSystem>();
+            }
+
+            var respawnCoordinator = FindFirstObjectByType<Game.Gameplay.Player.Death.RespawnCoordinator>();
+            if (respawnCoordinator != null)
+            {
+                builder.RegisterComponent(respawnCoordinator).As<IRespawnCoordinator>();
+            }
         }
 
         private sealed class NullCameraCoordinator : ICameraCoordinator

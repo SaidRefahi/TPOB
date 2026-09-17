@@ -3,6 +3,7 @@ using Game.Core.Commands;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
+using Game.Gameplay.Player.Death;
 using Game.Gameplay.Player.Robot;
 using PurrNet;
 using PurrNet.Transports;
@@ -90,6 +91,7 @@ namespace Game.Gameplay.Player.Torso
         private bool _isClimbing;
         private Vector2 _climbDirection;
         private bool _isFused;
+        private PlayerDeathHandler _deathHandler;
 
         public bool IsHoldingObject => _currentHeldObject != null;
         public IGrabbable CurrentHeldObject => _currentHeldObject;
@@ -137,6 +139,11 @@ namespace Game.Gameplay.Player.Torso
             {
                 _magnetOrigin = transform;
             }
+
+            if (_deathHandler == null)
+            {
+                _deathHandler = GetComponent<PlayerDeathHandler>();
+            }
         }
 
         private void Start()
@@ -169,6 +176,11 @@ namespace Game.Gameplay.Player.Torso
 
         private void Update()
         {
+            if (_deathHandler != null && !_deathHandler.IsAlive)
+            {
+                return;
+            }
+
             bool hasAuthority = !isSpawned ? true : isOwner;
             if (!hasAuthority || _inputReader == null)
             {
@@ -213,6 +225,11 @@ namespace Game.Gameplay.Player.Torso
 
         private void FixedUpdate()
         {
+            if (_deathHandler != null && !_deathHandler.IsAlive)
+            {
+                return;
+            }
+
             bool isSimulated = !isSpawned || isServer;
             if (!isSimulated || _rigidbody == null)
             {

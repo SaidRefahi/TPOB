@@ -7,6 +7,9 @@ using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Rooms;
 using Game.Gameplay.Rooms.Conditions;
 using Game.Gameplay.Spawning;
+using Game.Gameplay.Checkpoints;
+using Game.Gameplay.Hazards;
+using Game.Gameplay.Player.Death;
 using PurrNet;
 using PurrNet.Transports;
 using Unity.Cinemachine;
@@ -222,6 +225,7 @@ namespace Game.Editor
         {
             if (!Directory.Exists(PrefabsDir)) Directory.CreateDirectory(PrefabsDir);
             if (!Directory.Exists(MaterialsDir)) Directory.CreateDirectory(MaterialsDir);
+            AssetDatabase.ImportAsset("Assets/_Project/Gameplay/Hazards/KillVolume.cs", ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.Refresh();
         }
 
@@ -245,6 +249,9 @@ namespace Game.Editor
             public Material BreakableWall;
             public Material PushableBox;
             public Material PuzzleSocket;
+            public Material CheckpointBase;
+            public Material CheckpointIndicator;
+            public Material KillVolume;
         }
 
         public struct PrefabSet
@@ -261,6 +268,8 @@ namespace Game.Editor
             public GameObject BreakableWall;
             public GameObject PushableBox;
             public GameObject PuzzleSocket;
+            public GameObject Checkpoint;
+            public GameObject KillVolume;
         }
 
         private static MaterialSet CreateMaterials()
@@ -287,6 +296,9 @@ namespace Game.Editor
             set.BreakableWall = GetOrCreateMaterial("Mat_BreakableWall", new Color(0.45f, 0.35f, 0.3f), shader, 0.1f, 0.2f);
             set.PushableBox = GetOrCreateMaterial("Mat_PushableBox", new Color(0.3f, 0.65f, 0.45f), shader, 0.3f, 0.5f);
             set.PuzzleSocket = GetOrCreateMaterial("Mat_PuzzleSocket", new Color(0.15f, 0.75f, 0.85f), shader, 0.8f, 0.7f);
+            set.CheckpointBase = GetOrCreateMaterial("Mat_CheckpointBase", new Color(0.2f, 0.22f, 0.28f), shader, 0.5f, 0.6f);
+            set.CheckpointIndicator = GetOrCreateMaterial("Mat_CheckpointIndicator", new Color(0.85f, 0.45f, 0.1f), shader, 0.8f, 0.8f);
+            set.KillVolume = GetOrCreateMaterial("Mat_KillVolume", new Color(0.85f, 0.15f, 0.15f, 0.3f), shader);
 
             AssetDatabase.SaveAssets();
             return set;
@@ -348,6 +360,12 @@ namespace Game.Editor
 
             // 12. PuzzleSocket Prefab
             prefabs.PuzzleSocket = CreatePuzzleSocketPrefab(mats.DoorFrame, mats.PuzzleSocket);
+
+            // 13. Checkpoint Prefab
+            prefabs.Checkpoint = CreateCheckpointPrefab(mats.CheckpointBase, mats.CheckpointIndicator);
+
+            // 14. KillVolume Prefab
+            prefabs.KillVolume = CreateKillVolumePrefab();
 
             AssetDatabase.SaveAssets();
             return prefabs;
@@ -442,6 +460,14 @@ namespace Game.Editor
             controllerSo.FindProperty("_kickPoint").objectReferenceValue = kickPoint.transform;
             controllerSo.ApplyModifiedPropertiesWithoutUndo();
 
+            var deathHandler = root.AddComponent<PlayerDeathHandler>();
+            var deathSo = new SerializedObject(deathHandler);
+            deathSo.FindProperty("_role").enumValueIndex = (int)PlayerRole.Legs;
+            deathSo.FindProperty("_rigidbody").objectReferenceValue = rb;
+            deathSo.FindProperty("_visualModel").objectReferenceValue = mesh;
+            deathSo.FindProperty("_impulseSource").objectReferenceValue = kickImpulse;
+            deathSo.ApplyModifiedPropertiesWithoutUndo();
+
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return prefab;
@@ -498,6 +524,15 @@ namespace Game.Editor
             controllerSo.FindProperty("_holdSocket").objectReferenceValue = holdSocket.transform;
             controllerSo.FindProperty("_magnetOrigin").objectReferenceValue = magnetOrigin.transform;
             controllerSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var deathImpulse = root.AddComponent<CinemachineImpulseSource>();
+            var deathHandler = root.AddComponent<PlayerDeathHandler>();
+            var deathSo = new SerializedObject(deathHandler);
+            deathSo.FindProperty("_role").enumValueIndex = (int)PlayerRole.Torso;
+            deathSo.FindProperty("_rigidbody").objectReferenceValue = rb;
+            deathSo.FindProperty("_visualModel").objectReferenceValue = torsoMesh;
+            deathSo.FindProperty("_impulseSource").objectReferenceValue = deathImpulse;
+            deathSo.ApplyModifiedPropertiesWithoutUndo();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
@@ -850,6 +885,74 @@ namespace Game.Editor
             return prefab;
         }
 
+        private static GameObject CreateCheckpointPrefab(Material baseMat, Material indicatorMat)
+        {
+            string path = $"{PrefabsDir}/Checkpoint.prefab";
+            GameObject root = new GameObject("Checkpoint");
+
+            var triggerCol = root.AddComponent<BoxCollider>();
+            triggerCol.isTrigger = true;
+            triggerCol.size = new Vector3(3f, 1.2f, 3f);
+            triggerCol.center = new Vector3(0f, 0.6f, 0f);
+
+            var basePlatform = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            basePlatform.name = "BasePlatform";
+            basePlatform.transform.SetParent(root.transform);
+            basePlatform.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            basePlatform.transform.localScale = new Vector3(2.8f, 0.08f, 2.8f);
+            basePlatform.GetComponent<Renderer>().sharedMaterial = baseMat;
+            Object.DestroyImmediate(basePlatform.GetComponent<Collider>());
+
+            var indicator = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            indicator.name = "IndicatorRing";
+            indicator.transform.SetParent(root.transform);
+            indicator.transform.localPosition = new Vector3(0f, 0.12f, 0f);
+            indicator.transform.localScale = new Vector3(2.2f, 0.04f, 2.2f);
+            var indicatorRenderer = indicator.GetComponent<Renderer>();
+            indicatorRenderer.sharedMaterial = indicatorMat;
+            Object.DestroyImmediate(indicator.GetComponent<Collider>());
+
+            var spLegs = new GameObject("SpawnPoint_Legs");
+            spLegs.transform.SetParent(root.transform);
+            spLegs.transform.localPosition = new Vector3(-0.75f, 0.15f, 0f);
+
+            var spTorso = new GameObject("SpawnPoint_Torso");
+            spTorso.transform.SetParent(root.transform);
+            spTorso.transform.localPosition = new Vector3(0.75f, 0.15f, 0f);
+
+            var impulse = root.AddComponent<CinemachineImpulseSource>();
+            var checkpoint = root.AddComponent<Checkpoint>();
+
+            var cpSo = new SerializedObject(checkpoint);
+            cpSo.FindProperty("_legsSpawnPoint").objectReferenceValue = spLegs.transform;
+            cpSo.FindProperty("_torsoSpawnPoint").objectReferenceValue = spTorso.transform;
+            cpSo.FindProperty("_indicatorRenderer").objectReferenceValue = indicatorRenderer;
+            cpSo.FindProperty("_impulseSource").objectReferenceValue = impulse;
+            cpSo.FindProperty("_priority").intValue = 10;
+            cpSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreateKillVolumePrefab()
+        {
+            string path = $"{PrefabsDir}/KillVolume.prefab";
+            GameObject root = new GameObject("KillVolume");
+
+            var triggerCol = root.AddComponent<BoxCollider>();
+            triggerCol.isTrigger = true;
+            triggerCol.size = new Vector3(10f, 2f, 10f);
+            triggerCol.center = new Vector3(0f, 0f, 0f);
+
+            root.AddComponent<Game.Gameplay.Hazards.KillVolume>();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
         private static void BuildPlaygroundScene(PrefabSet prefabs, MaterialSet mats)
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
@@ -901,8 +1004,17 @@ namespace Game.Editor
             ramp.transform.localScale = new Vector3(4f, 0.4f, 6.5f);
             ramp.GetComponent<Renderer>().sharedMaterial = mats.Ramp;
 
+            // Kill Volume (underneath arena floor to catch falls)
+            var killVolume = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.KillVolume, envGroup.transform);
+            killVolume.transform.position = new Vector3(0f, -4f, 0f);
+            killVolume.transform.localScale = new Vector3(6f, 1f, 6f);
+
             // 2. INTERACTABLES
             var interactGroup = new GameObject("--- INTERACTABLES ---");
+
+            // Mid-Room Checkpoint
+            var checkpoint = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.Checkpoint, interactGroup.transform);
+            checkpoint.transform.position = new Vector3(0f, 0f, 4f);
 
             // Grabbable Boxes
             PrefabUtility.InstantiatePrefab(prefabs.GrabbableBox, interactGroup.transform);
@@ -1038,6 +1150,21 @@ namespace Game.Editor
             var coordinatorGo = new GameObject("[ROBOT_COORDINATOR]");
             coordinatorGo.transform.SetParent(mgmtGroup.transform);
             var coordinator = coordinatorGo.AddComponent<Game.Gameplay.Player.Robot.RobotCoordinator>();
+
+            // Checkpoint System & Respawn Coordinator
+            var cpSystemGo = new GameObject("[CHECKPOINT_SYSTEM]");
+            cpSystemGo.transform.SetParent(mgmtGroup.transform);
+            var checkpointSystem = cpSystemGo.AddComponent<CheckpointSystem>();
+            var cpSystemSo = new SerializedObject(checkpointSystem);
+            cpSystemSo.FindProperty("_spawnPointManager").objectReferenceValue = spawnManager;
+            cpSystemSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var respawnCoordGo = new GameObject("[RESPAWN_COORDINATOR]");
+            respawnCoordGo.transform.SetParent(mgmtGroup.transform);
+            var respawnCoord = respawnCoordGo.AddComponent<RespawnCoordinator>();
+            var respawnCoordSo = new SerializedObject(respawnCoord);
+            respawnCoordSo.FindProperty("_checkpointSystem").objectReferenceValue = checkpointSystem;
+            respawnCoordSo.ApplyModifiedPropertiesWithoutUndo();
 
             // NETWORKING
             var netGroup = new GameObject("--- NETWORKING ---");
