@@ -11,7 +11,7 @@
 - [x] **Fase 2:** Capa Global: GameManager y LevelManager con UniTask (Completada)
 - [x] **Fase 3:** Capa de Sala: RoomController, Spawning y State Pattern (Completada)
 - [x] **Fase 4:** Movimiento y habilidades Jugador 1 (Piernas: Locomoción y Patada) (Completada)
-- [ ] **Fase 5:** Movimiento y habilidades Jugador 2 (Torso: Agarre, Imán y Palancas)
+- [x] **Fase 5:** Movimiento y habilidades Jugador 2 (Torso: Agarre, Imán y Palancas) (Completada)
 - [ ] **Fase 6:** Sistema de Comandos desacoplado de red (Command Pattern & Structs)
 - [ ] **Fase 7:** Fusión y Separación del Robot (Hierarchy & Rigidbody Sync)
 - [ ] **Fase 8:** Cinemachine 3.x Adaptativa (TargetGroup Fusión/Separación e Impulsos)

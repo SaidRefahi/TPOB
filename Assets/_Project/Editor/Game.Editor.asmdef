@@ -1,0 +1,25 @@
+{
+    "name": "Game.Editor",
+    "rootNamespace": "Game.Editor",
+    "references": [
+        "Game.Core",
+        "Game.Network",
+        "Game.Gameplay",
+        "PurrNet.Runtime",
+        "PurrNet.Editor",
+        "VContainer",
+        "Unity.InputSystem",
+        "TriInspector"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

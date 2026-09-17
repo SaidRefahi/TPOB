@@ -27,7 +27,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | **02** | Capa Global: GameManager y LevelManager | VContainer, UniTask, PurrNet SceneModule | Carga asíncrona de escenas con UniTask y gestión de estados de partida. `[COMPLETADA]` |
 | **03** | Capa de Sala: RoomController y State Pattern | VContainer, PurrNet SyncVar, Tri-Inspector | Ciclo de vida determinista de sala con spawning sincronizado. `[COMPLETADA]` |
 | **04** | Jugador 1: Locomoción y Habilidades (Piernas) | InputSystem, PurrNet Physics, Tri-Inspector | Piernas camina, salta, patea y empuja cajas con física autoritativa. `[COMPLETADA]` |
-| **05** | Jugador 2: Manipulación y Habilidades (Torso) | InputSystem, PurrNet Physics, DOTween | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. |
+| **05** | Jugador 2: Manipulación y Habilidades (Torso) | InputSystem, PurrNet Physics, DOTween | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. `[COMPLETADA]` |
 | **06** | Sistema de Comandos (Command Pattern) | C# Structs (Zero GC), PurrNet ServerRpc | Comandos polimórficos de jugador desacoplados de la red. |
 | **07** | Fusión y Separación del Robot | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween | Alternancia fluida entre 1 y 2 avatares físicos en red. |
 | **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. |
@@ -101,7 +101,7 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 5: Jugador 2: Manipulación y Habilidades (Torso)
+### 🔹 Fase 5: Jugador 2: Manipulación y Habilidades (Torso) `[COMPLETADA]`
 * **Objetivo:** Implementar las capacidades de interacción precisa del Jugador 2.
 * **Integración de Addons:**
   * **Input System:** Lectura de stick derecho/ratón para apuntado en 360° y botones de agarre/lanzamiento/imán.

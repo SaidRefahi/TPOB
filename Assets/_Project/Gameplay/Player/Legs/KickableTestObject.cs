@@ -36,9 +36,18 @@ namespace Game.Gameplay.Player.Legs
             _rigidbody.mass = _mass;
         }
 
+        private void Start()
+        {
+            if (!isSpawned && _rigidbody != null)
+            {
+                _rigidbody.isKinematic = false;
+            }
+        }
+
         public void OnKicked(Vector3 hitPoint, Vector3 direction, float kickForce)
         {
-            if (!isServer || _rigidbody == null)
+            bool canSimulate = !isSpawned || isServer;
+            if (!canSimulate || _rigidbody == null)
             {
                 return;
             }
@@ -48,7 +57,8 @@ namespace Game.Gameplay.Player.Legs
 
         public void OnPushed(Vector3 direction, float force)
         {
-            if (!isServer || _rigidbody == null)
+            bool canSimulate = !isSpawned || isServer;
+            if (!canSimulate || _rigidbody == null)
             {
                 return;
             }

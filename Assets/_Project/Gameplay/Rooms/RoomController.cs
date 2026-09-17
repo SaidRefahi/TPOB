@@ -33,7 +33,7 @@ namespace Game.Gameplay.Rooms
         private IGameEventBus _eventBus;
 
         [Inject]
-        public void Construct(SpawnPointManager spawnPointManager, IGameEventBus eventBus)
+        public void Construct(SpawnPointManager spawnPointManager, IGameEventBus eventBus = null)
         {
             _spawnPointManager = spawnPointManager;
             _eventBus = eventBus;

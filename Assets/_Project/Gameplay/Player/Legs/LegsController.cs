@@ -101,9 +101,18 @@ namespace Game.Gameplay.Player.Legs
             }
         }
 
+        private void Start()
+        {
+            if (!isSpawned && _rigidbody != null)
+            {
+                _rigidbody.isKinematic = false;
+            }
+        }
+
         private void Update()
         {
-            if (!isOwner || _inputReader == null)
+            bool hasAuthority = !isSpawned || isOwner;
+            if (!hasAuthority || _inputReader == null)
             {
                 return;
             }
@@ -115,7 +124,7 @@ namespace Game.Gameplay.Player.Legs
                 _inputReader.IsSprintHeld
             );
 
-            if (isServer)
+            if (!isSpawned || isServer)
             {
                 ProcessInput(inputData);
             }
@@ -149,7 +158,8 @@ namespace Game.Gameplay.Player.Legs
 
         private void FixedUpdate()
         {
-            if (!isServer || _rigidbody == null)
+            bool isSimulated = !isSpawned || isServer;
+            if (!isSimulated || _rigidbody == null)
             {
                 return;
             }
@@ -254,7 +264,14 @@ namespace Game.Gameplay.Player.Legs
                 }
             }
 
-            PlayKickEffectObserversRpc(kickOrigin);
+            if (!isSpawned)
+            {
+                OnKicked?.Invoke();
+            }
+            else
+            {
+                PlayKickEffectObserversRpc(kickOrigin);
+            }
         }
 
         [ObserversRpc(runLocally: true)]

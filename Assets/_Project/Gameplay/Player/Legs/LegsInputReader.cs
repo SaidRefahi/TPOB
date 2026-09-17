@@ -51,10 +51,21 @@ namespace Game.Gameplay.Player.Legs
                 return;
             }
 
-            _moveAction = _inputActions.FindAction("Player/Move", false);
-            _jumpAction = _inputActions.FindAction("Player/Jump", false);
-            _kickAction = _inputActions.FindAction("Player/Attack", false);
-            _sprintAction = _inputActions.FindAction("Player/Sprint", false);
+            var legsMap = _inputActions.FindActionMap("Legs", false);
+            if (legsMap != null)
+            {
+                _moveAction = legsMap.FindAction("Move", false);
+                _jumpAction = legsMap.FindAction("Jump", false);
+                _kickAction = legsMap.FindAction("Kick", false);
+                _sprintAction = legsMap.FindAction("Sprint", false);
+            }
+            else
+            {
+                _moveAction = _inputActions.FindAction("Player/Move", false);
+                _jumpAction = _inputActions.FindAction("Player/Jump", false);
+                _kickAction = _inputActions.FindAction("Player/Attack", false);
+                _sprintAction = _inputActions.FindAction("Player/Sprint", false);
+            }
 
             if (_moveAction != null)
             {
