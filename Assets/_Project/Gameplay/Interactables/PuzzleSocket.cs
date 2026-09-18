@@ -93,9 +93,12 @@ namespace Game.Gameplay.Interactables
             var rb = key.GetComponent<Rigidbody>();
             if (rb != null)
             {
+                if (!rb.isKinematic)
+                {
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
                 rb.isKinematic = true;
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
             }
 
             if (!isSpawned)

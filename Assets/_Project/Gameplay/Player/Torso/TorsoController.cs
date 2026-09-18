@@ -4,6 +4,7 @@ using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Player.Death;
+using Game.Gameplay.Player.Juice;
 using Game.Gameplay.Player.Robot;
 using PurrNet;
 using PurrNet.Transports;
@@ -22,7 +23,7 @@ namespace Game.Gameplay.Player.Torso
     [DeclareBoxGroup("Imán")]
     [DeclareBoxGroup("Mecanismos")]
     [DeclareBoxGroup("Fusión")]
-    public sealed class TorsoController : NetworkBehaviour, IGrabber, IThrower, IMagnetOperator, IMoveable, IClimber, IInteractOperator, IFusionOperator
+    public sealed class TorsoController : NetworkBehaviour, IGrabber, IThrower, IMagnetOperator, IMoveable, IClimber, IInteractOperator, IFusionOperator, IKickable, IPushable
     {
         [Group("Componentes")]
         [SerializeField] private Rigidbody _rigidbody;
@@ -93,6 +94,8 @@ namespace Game.Gameplay.Player.Torso
         private bool _isFused;
         private Quaternion _fusedWorldRotation = Quaternion.identity;
         private NetworkTransform _networkTransform;
+        private TumbleController _tumbleController;
+        private Game.Network.Audio.NetworkAudioRelay _audioRelay;
         private PlayerDeathHandler _deathHandler;
 
         [Group("Fusión")]
@@ -161,6 +164,11 @@ namespace Game.Gameplay.Player.Torso
             if (_networkTransform == null)
             {
                 _networkTransform = GetComponent<NetworkTransform>();
+            }
+
+            if (_tumbleController == null)
+            {
+                _tumbleController = GetComponent<TumbleController>();
             }
         }
 
@@ -282,7 +290,11 @@ namespace Game.Gameplay.Player.Torso
 
             if (!_isFused && !_rigidbody.isKinematic)
             {
-                if (_isClimbing)
+                if (_tumbleController != null && _tumbleController.IsTumbling)
+                {
+                    // Tumble physics in progress
+                }
+                else if (_isClimbing)
                 {
                     ApplyClimbing();
                 }
@@ -686,6 +698,43 @@ namespace Game.Gameplay.Player.Torso
         {
             _isClimbing = false;
             _climbDirection = Vector2.zero;
+        }
+
+        public void OnKicked(Vector3 hitPoint, Vector3 direction, float kickForce)
+        {
+            if (_isFused || _rigidbody == null || _rigidbody.isKinematic) return;
+
+            if (isSpawned && !isServer)
+            {
+                OnKickedServerRpc(hitPoint, direction, kickForce);
+                return;
+            }
+
+            Vector3 launchDir = (direction + Vector3.up * 0.45f).normalized;
+            _rigidbody.linearVelocity = launchDir * (kickForce * 1.35f);
+
+            if (_tumbleController != null)
+            {
+                _tumbleController.TriggerTumble(launchDir * kickForce);
+            }
+
+            if (_audioRelay == null)
+            {
+                _audioRelay = FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
+            }
+            _audioRelay?.PlayNetworkAudio(Game.Core.Enums.AudioCue.Kick, hitPoint, 1f, 1f);
+        }
+
+        [ServerRpc(requireOwnership: false)]
+        private void OnKickedServerRpc(Vector3 hitPoint, Vector3 direction, float kickForce)
+        {
+            OnKicked(hitPoint, direction, kickForce);
+        }
+
+        public void OnPushed(Vector3 direction, float force)
+        {
+            if (_isFused || _rigidbody == null || _rigidbody.isKinematic) return;
+            _rigidbody.AddForce(direction * force, ForceMode.Impulse);
         }
 
         private void OnDrawGizmosSelected()

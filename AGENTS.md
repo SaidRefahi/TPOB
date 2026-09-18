@@ -263,7 +263,7 @@ Este archivo sirve como base de conocimiento viva para cualquier agente de IA o 
 
 ### ❌ Errores cometidos:
 - **Pasar CancellationToken Efímero a un Servicio Persistente (`LevelManager`):** `RoomExitTrigger` pasaba su propio `_cts.Token` a `_levelManager.AdvanceToNextRoomAsync(ct)`. Al comenzar a descargarse la Sala 1, `RoomExitTrigger.OnDestroy()` invocaba `_cts.Cancel()`. La tarea de carga de escena lanzaba `OperationCanceledException` antes de resetear `IsLoading = false`. Al llegar a la Sala 2, `IsLoading` continuaba en `true` para siempre, rechazando cualquier intento futuro de cargar la Sala 3 con el mensaje `[LevelManager] Room load already in progress`.
-- **Modificar `linearVelocity` o `angularVelocity` en un `Rigidbody` cinemático:** En `PlayerDeathHandler.Respawn()`, se ejecutaba `_rigidbody.linearVelocity = Vector3.zero;` mientras `_rigidbody.isKinematic` aún estaba en `true`, provocando la advertencia/error de Unity `Setting linear/angular velocity of a kinematic body is not supported`.
+- **Modificar `linearVelocity` o `angularVelocity` en un `Rigidbody` cinemático:** Al agarrar objetos (`GrabbableObject.OnGrabbed`, `MagneticKey.OnGrabbed`), encajar llaves (`PuzzleSocket`), o en `PlayerDeathHandler.Respawn()`, se fijaba `isKinematic = true;` ANTES de resetear `linearVelocity = Vector3.zero;`, provocando la excepción/error de Unity `Setting linear/angular velocity of a kinematic body is not supported`.
 
 ### 🛡️ Reglas de Oro:
 1. **Gestión de Ciclo de Vida en Servicios Persistentes (`try-finally` e `IsLoading`):**
@@ -271,7 +271,12 @@ Este archivo sirve como base de conocimiento viva para cualquier agente de IA o 
    - En `HandleSceneLoaded(Scene scene, LoadSceneMode mode)`, resetear incondicionalmente `IsLoading = false;` para garantizar que la carga se desbloquee al confirmarse la escena.
    - **PROHIBIDO** pasar tokens de cancelación de MonoBehaviours de escena que serán destruidos a métodos de transición global. `LevelManager` debe gobernar sus cargas con `this.GetCancellationTokenOnDestroy()`.
 2. **Asignación Segura de Físicas en Rigidbody:**
-   - Al resetear velocidades durante el respawn o cambios de estado, actualizar `isKinematic` **antes** y verificar `if (!_rigidbody.isKinematic)` antes de asignar `linearVelocity` o `angularVelocity`.
+   - En cualquier transición hacia cinemático (`OnGrabbed`, `KillVolume`, `PuzzleSocket`, `Fusion`, `Death`):
+     1. Comprobar `if (!rb.isKinematic)` y resetear velocidades (`linearVelocity = Vector3.zero; angularVelocity = Vector3.zero;`) **ANTES** de cambiar `isKinematic`.
+     2. Fijar `rb.isKinematic = true;`.
+   - En cualquier transición desde cinemático hacia dinámico (`OnReleased`, `Separation`, `Respawn`):
+     1. Fijar `rb.isKinematic = false;`.
+     2. Asignar las velocidades de impulso solo si `!rb.isKinematic`.
 
 ---
 
@@ -296,4 +301,28 @@ Este archivo sirve como base de conocimiento viva para cualquier agente de IA o 
 3. **Desactivación de `NetworkTransform` en Entidades Emparentadas:**
    - Al fusionar, deshabilitar el `NetworkTransform` de la entidad hija (`_networkTransform.enabled = false;`), sincronizando la rotación de torreta mediante un `SyncVar<Quaternion> _syncedFusedRotation`.
    - Al separar, volver a habilitar `_networkTransform.enabled = true;` para retomar el seguimiento de mundo normal.
+
+---
+
+## 🔊 13. Audio Procedural, Cero GC y Sincronización en Red con PurrNet
+
+### ❌ Errores cometidos:
+- **Dependencia de Assets Externos Inexistentes:** Diseñar sistemas de audio esperando archivos `.wav`/`.mp3` que no existen en el repositorio genera excepciones de referencia nula y silencio absoluto.
+- **Límites de Ensamblados (Asmdef) y Dependencias Circulares:** Colocar la implementación de `AudioService` en `Game.Gameplay` mientras `GameLifetimeScope` (en `Game.Network`) intenta registrarlo genera un ciclo de ensamblado (`Game.Gameplay` -> `Game.Network` -> `Game.Gameplay`).
+- **RPCs de Audio con Buffer Indebido (`bufferLast: true`):** Marcar RPCs de efectos de sonido con `bufferLast: true` provoca que un cliente que cargue la sala más tarde reproduzca en ráfaga todos los sonidos de saltos, patadas y colisiones pasados.
+
+### 🛡️ Reglas de Oro:
+1. **Síntesis Procedural como Fallback Autónomo:**
+   - Implementar generadores sinusoidales y de ruido blanco procedural (`ProceduralAudioSynthesizer`) en `Awake()`. Si no hay clips en el inspector, el juego genera y cachea proceduralmente sus propios `AudioClip`s en memoria con zero-GC posterior.
+2. **Ubicación de Servicios de Infraestructura en `Game.Core`:**
+   - Servicios de audio (`IAudioService`, `AudioService`) deben residir en `Game.Core.Audio` para que tanto `Game.Network` (`GameLifetimeScope`) como `Game.Gameplay` puedan consumirlos e inyectarlos sin fricción de ensamblado.
+3. **RPCs de Audio Efímeros (`bufferLast: false`):**
+   - Los eventos de sonido son estrictamente efímeros y no representan estado persistente:
+   ```csharp
+   [ObserversRpc(runLocally: true, bufferLast: false)]
+   private void PlayAudioObserversRpc(AudioCue cue, Vector3 position, float volume, float pitch)
+   ```
+4. **Pool de AudioSources sin Garbage Collection:**
+   - Utilizar `UnityEngine.Pool.ObjectPool<AudioSource>` pre-asignado para reproducir sonidos 3D espaciales. La liberación al pool se gestiona en `Update()` mediante un tracking struct (`ActiveSourceTracker`), garantizando CERO allocations durante el juego activo.
+
 

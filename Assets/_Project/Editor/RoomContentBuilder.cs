@@ -578,6 +578,10 @@ namespace Game.Editor
             relayGo.transform.SetParent(netGroup.transform);
             var relay = relayGo.AddComponent<NetworkEventRelay>();
 
+            var audioRelayGo = new GameObject("[NETWORK_AUDIO_RELAY]");
+            audioRelayGo.transform.SetParent(netGroup.transform);
+            var audioRelay = audioRelayGo.AddComponent<Game.Network.Audio.NetworkAudioRelay>();
+
             var gameScopeGo = new GameObject("[GAME_LIFETIME_SCOPE]");
             gameScopeGo.transform.SetParent(netGroup.transform);
             var gameScope = gameScopeGo.AddComponent<GameLifetimeScope>();
@@ -658,6 +662,7 @@ namespace Game.Editor
             roomScopeSo.FindProperty("_playerSpawner").objectReferenceValue = playerSpawner;
             roomScopeSo.FindProperty("_robotCoordinator").objectReferenceValue = coordinator;
             roomScopeSo.FindProperty("_networkEventRelay").objectReferenceValue = relay;
+            roomScopeSo.FindProperty("_networkAudioRelay").objectReferenceValue = audioRelay;
             roomScopeSo.FindProperty("_cameraController").objectReferenceValue = cameraController;
             roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
 

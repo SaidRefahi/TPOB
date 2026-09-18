@@ -61,8 +61,12 @@ namespace Game.Gameplay.Interactables
 
             if (_rigidbody != null)
             {
+                if (!_rigidbody.isKinematic)
+                {
+                    _rigidbody.linearVelocity = Vector3.zero;
+                    _rigidbody.angularVelocity = Vector3.zero;
+                }
                 _rigidbody.isKinematic = true;
-                _rigidbody.linearVelocity = Vector3.zero;
             }
 
             if (_holdSocket != null)
@@ -87,7 +91,7 @@ namespace Game.Gameplay.Interactables
                 bool canSimulate = !isSpawned || isServer;
                 _rigidbody.isKinematic = !canSimulate;
 
-                if (canSimulate)
+                if (canSimulate && !_rigidbody.isKinematic)
                 {
                     _rigidbody.linearVelocity = throwVelocity;
                 }
@@ -128,7 +132,7 @@ namespace Game.Gameplay.Interactables
         public void ApplyMagneticForce(Vector3 magnetOrigin, float force, float deltaTime)
         {
             bool canSimulate = !isSpawned || isServer;
-            if (!canSimulate || IsGrabbed || _rigidbody == null)
+            if (!canSimulate || IsGrabbed || _rigidbody == null || _rigidbody.isKinematic)
             {
                 return;
             }

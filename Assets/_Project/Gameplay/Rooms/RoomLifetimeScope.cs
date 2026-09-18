@@ -18,6 +18,7 @@ namespace Game.Gameplay.Rooms
         [SerializeField] private Game.Gameplay.Player.Robot.RobotCoordinator _robotCoordinator;
         [SerializeField] private Game.Gameplay.Camera.CameraController _cameraController;
         [SerializeField] private Game.Network.Events.NetworkEventRelay _networkEventRelay;
+        [SerializeField] private Game.Network.Audio.NetworkAudioRelay _networkAudioRelay;
 
         protected override LifetimeScope FindParent()
         {
@@ -55,6 +56,13 @@ namespace Game.Gameplay.Rooms
 
                 var lm = FindFirstObjectByType<LevelManager>();
                 if (lm != null) builder.RegisterComponent(lm).As<ILevelManager>();
+
+                var audioService = FindFirstObjectByType<Game.Core.Audio.AudioService>();
+                if (audioService == null)
+                {
+                    audioService = gameObject.AddComponent<Game.Core.Audio.AudioService>();
+                }
+                builder.RegisterComponent(audioService).As<IAudioService>();
             }
 
             if (_roomController != null)
@@ -127,6 +135,12 @@ namespace Game.Gameplay.Rooms
             if (exitTrigger != null)
             {
                 builder.RegisterComponent(exitTrigger);
+            }
+
+            var audioRelay = _networkAudioRelay != null ? _networkAudioRelay : FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
+            if (audioRelay != null)
+            {
+                builder.RegisterComponent(audioRelay);
             }
         }
 

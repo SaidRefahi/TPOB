@@ -111,4 +111,21 @@ namespace Game.Core.Events
             SeparationPosition = separationPosition;
         }
     }
+
+    public struct AudioCueEvent : IPackedAuto
+    {
+        public AudioCue Cue;
+        public Vector3 Position;
+        public float Volume;
+        public float Pitch;
+
+        public AudioCueEvent(AudioCue cue, Vector3 position, float volume = 1f, float pitch = 1f)
+        {
+            Cue = cue;
+            Position = position;
+            Volume = volume;
+            Pitch = pitch;
+        }
+    }
 }
+

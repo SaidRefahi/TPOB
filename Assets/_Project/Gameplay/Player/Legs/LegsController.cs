@@ -100,6 +100,8 @@ namespace Game.Gameplay.Player.Legs
         private float _nextKickTime;
         private bool _isFused;
         private PlayerDeathHandler _deathHandler;
+        private Game.Gameplay.Player.Juice.TumbleController _tumbleController;
+        private Game.Network.Audio.NetworkAudioRelay _audioRelay;
 
         public Vector2 MoveInput => _pendingInput.MoveDirection;
         public bool IsGrounded => _isGrounded;
@@ -153,6 +155,11 @@ namespace Game.Gameplay.Player.Legs
             if (_deathHandler == null)
             {
                 _deathHandler = GetComponent<PlayerDeathHandler>();
+            }
+
+            if (_tumbleController == null)
+            {
+                _tumbleController = GetComponent<Game.Gameplay.Player.Juice.TumbleController>();
             }
         }
 
@@ -265,6 +272,11 @@ namespace Game.Gameplay.Player.Legs
                 return;
             }
 
+            if (_tumbleController != null && _tumbleController.IsTumbling)
+            {
+                return;
+            }
+
             UpdateGroundStatus();
             ApplyLocomotion();
             ApplyJumpAndGravity();
@@ -283,6 +295,7 @@ namespace Game.Gameplay.Player.Legs
                 if (_rigidbody.linearVelocity.y <= -_hardLandingThreshold && _kickImpulseSource != null)
                 {
                     _kickImpulseSource.GenerateImpulse(Vector3.down * 0.8f);
+                    PlayAudioCue(Game.Core.Enums.AudioCue.HardLanding, origin);
                 }
             }
         }
@@ -318,6 +331,7 @@ namespace Game.Gameplay.Player.Legs
                     Vector3 velocity = _rigidbody.linearVelocity;
                     velocity.y = _jumpForce;
                     _rigidbody.linearVelocity = velocity;
+                    PlayAudioCue(Game.Core.Enums.AudioCue.Jump, transform.position);
                 }
             }
 
@@ -393,7 +407,17 @@ namespace Game.Gameplay.Player.Legs
         private void PlayKickEffectObserversRpc(Vector3 origin)
         {
             TriggerKickImpulse();
+            PlayAudioCue(Game.Core.Enums.AudioCue.Kick, origin);
             OnKicked?.Invoke();
+        }
+
+        private void PlayAudioCue(Game.Core.Enums.AudioCue cue, Vector3 position)
+        {
+            if (_audioRelay == null)
+            {
+                _audioRelay = FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
+            }
+            _audioRelay?.PlayNetworkAudio(cue, position, 0.9f, 1f);
         }
 
         private void TriggerKickImpulse()

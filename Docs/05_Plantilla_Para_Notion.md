@@ -16,10 +16,9 @@
 - [x] **Fase 7:** Fusión y Separación del Robot (Hierarchy & Rigidbody Sync) (Completada)
 - [x] **Fase 8:** Cinemachine 3.x Adaptativa (TargetGroup Fusión/Separación e Impulsos) (Completada)
 - [x] **Fase 9:** Sistema de Eventos en Red (GameEventBus + NetworkEventRelay) (Completada)
-- [x] **Fase 10:** RoomCompletion (Composite Pattern) y Objetos de Puzzle con DOTween (Completada)
-- [ ] **Fase 11:** Muerte, Reaparición y Checkpoints (UniTask Respawn Flow)
-- [ ] **Fase 12:** Diseño de Niveles y Progresión (10 Salas de Prueba)
-- [ ] **Fase 13:** Física Emergente, Comedia, Ragdolls y Jugo Audiovisual
+- [x] **Fase 11:** Muerte, Reaparición y Checkpoints (UniTask Respawn Flow) (Completada)
+- [x] **Fase 12:** Diseño de Niveles y Progresión (10 Salas de Prueba) (Completada)
+- [x] **Fase 13:** Física Emergente, Comedia, Ragdolls y Jugo Audiovisual (Completada)
 - [ ] **Fase 14:** Testing de Red, Optimización Zero-GC y Build Final
 
 ---
@@ -76,17 +75,17 @@
 * **Integración:** `RoomCompletion` con nodos AND/OR y feedback procedural con DOTween (compuertas, pulsadores, palancas).
 * **Entregable:** Al cumplirse las condiciones del árbol, se dispara la apertura animada de la compuerta final.
 
-### 🔹 Fase 11: Muerte, Reaparición y Checkpoints
+### 🔹 Fase 11: Muerte, Reaparición y Checkpoints `[COMPLETADA]`
 * **Objetivo:** Flujo de reaparición sin fricción ante caídas al vacío.
 * **Integración:** Temporizadores de respawn con `UniTask.Delay` y cancelación automática al cambiar de sala.
 * **Entregable:** Jugador reaparece en menos de 1.5s en el checkpoint sin resetear el puzzle de la sala.
 
-### 🔹 Fase 12: Diseño de Niveles (10 Salas de Prueba)
+### 🔹 Fase 12: Diseño de Niveles (10 Salas de Prueba) `[COMPLETADA]`
 * **Objetivo:** Contenido jugable encadenado de inicio a fin con dificultad gradual.
 * **Contenido:** 4 salas simples, 4 salas intermedias y 2 salas avanzadas.
 * **Entregable:** Campaña completa jugable de principio a fin sin errores de transición de escena.
 
-### 🔹 Fase 13: Comedia Física, Ragdolls y Pulido
+### 🔹 Fase 13: Comedia Física, Ragdolls y Pulido `[COMPLETADA]`
 * **Objetivo:** Fortalecer la premisa de comedia física donde los fallos son divertidos.
 * **Integración:** Materiales físicos de fricción cómica, ragdolls de choque y audio de impacto replicado en red.
 * **Entregable:** Choques y fallos físicos idénticos en ambos clientes con respuesta audiovisual satisfactoria.

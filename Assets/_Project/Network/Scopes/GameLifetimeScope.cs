@@ -1,3 +1,4 @@
+using Game.Core.Audio;
 using Game.Core.Events;
 using Game.Core.Interfaces;
 using Game.Network.Services;
@@ -74,6 +75,14 @@ namespace Game.Network.Scopes
             // Core Event Bus & Game State
             builder.Register<GameEventBus>(Lifetime.Singleton).As<IGameEventBus>();
             builder.Register<GameManager>(Lifetime.Singleton).As<IGameManager>();
+
+            // Audio Service
+            var audioService = FindFirstObjectByType<AudioService>();
+            if (audioService == null)
+            {
+                audioService = gameObject.AddComponent<AudioService>();
+            }
+            builder.RegisterComponent(audioService).As<IAudioService>();
 
             // Network Infrastructure
             builder.Register<NetworkService>(Lifetime.Singleton).As<INetworkService>();

@@ -54,8 +54,11 @@ namespace Game.Gameplay.Hazards
                 if (rb.TryGetComponent<IGrabbable>(out _) || rb.TryGetComponent<IPushable>(out _) || rb.TryGetComponent<IMagnetic>(out _))
                 {
                     Vector3 resetPos = _objectSafePoint != null ? _objectSafePoint.position : _defaultObjectResetPosition;
-                    rb.linearVelocity = Vector3.zero;
-                    rb.angularVelocity = Vector3.zero;
+                    if (!rb.isKinematic)
+                    {
+                        rb.linearVelocity = Vector3.zero;
+                        rb.angularVelocity = Vector3.zero;
+                    }
                     rb.position = resetPos;
                     rb.transform.position = resetPos;
                 }

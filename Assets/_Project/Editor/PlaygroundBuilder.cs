@@ -218,12 +218,30 @@ namespace Game.Editor
             gameScopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
             gameScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
+            // Find or create [NETWORK_AUDIO_RELAY]
+            var audioRelay = Object.FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
+            if (audioRelay == null)
+            {
+                var audioRelayGo = new GameObject("[NETWORK_AUDIO_RELAY]");
+                audioRelayGo.transform.SetParent(netGroup.transform);
+                audioRelay = audioRelayGo.AddComponent<Game.Network.Audio.NetworkAudioRelay>();
+                Undo.RegisterCreatedObjectUndo(audioRelayGo, "Create [NETWORK_AUDIO_RELAY]");
+            }
+            else
+            {
+                if (audioRelay.transform.parent == null)
+                {
+                    audioRelay.transform.SetParent(netGroup.transform);
+                }
+            }
+
             // Wire RoomLifetimeScope
             RoomLifetimeScope roomScope = Object.FindFirstObjectByType<RoomLifetimeScope>();
             if (roomScope != null)
             {
                 var roomScopeSo = new SerializedObject(roomScope);
                 roomScopeSo.FindProperty("_networkEventRelay").objectReferenceValue = relay;
+                roomScopeSo.FindProperty("_networkAudioRelay").objectReferenceValue = audioRelay;
                 roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
                 EditorUtility.SetDirty(roomScope);
             }
@@ -490,6 +508,22 @@ namespace Game.Editor
             deathSo.FindProperty("_impulseSource").objectReferenceValue = kickImpulse;
             deathSo.ApplyModifiedPropertiesWithoutUndo();
 
+            col.sharedMaterial = Game.Gameplay.PhysicsJuice.PhysicsMaterialFactory.ComedicNormal;
+
+            var impactFeedback = root.AddComponent<Game.Gameplay.Player.Juice.ImpactFeedbackSystem>();
+            var tumble = root.AddComponent<Game.Gameplay.Player.Juice.TumbleController>();
+
+            var impactSo = new SerializedObject(impactFeedback);
+            impactSo.FindProperty("_rigidbody").objectReferenceValue = rb;
+            impactSo.FindProperty("_visualRoot").objectReferenceValue = mesh.transform;
+            impactSo.FindProperty("_impulseSource").objectReferenceValue = kickImpulse;
+            impactSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var tumbleSo = new SerializedObject(tumble);
+            tumbleSo.FindProperty("_rigidbody").objectReferenceValue = rb;
+            tumbleSo.FindProperty("_visualTransform").objectReferenceValue = mesh.transform;
+            tumbleSo.ApplyModifiedPropertiesWithoutUndo();
+
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return prefab;
@@ -556,6 +590,22 @@ namespace Game.Editor
             deathSo.FindProperty("_impulseSource").objectReferenceValue = deathImpulse;
             deathSo.ApplyModifiedPropertiesWithoutUndo();
 
+            col.sharedMaterial = Game.Gameplay.PhysicsJuice.PhysicsMaterialFactory.ComedicNormal;
+
+            var impactFeedback = root.AddComponent<Game.Gameplay.Player.Juice.ImpactFeedbackSystem>();
+            var tumble = root.AddComponent<Game.Gameplay.Player.Juice.TumbleController>();
+
+            var impactSo = new SerializedObject(impactFeedback);
+            impactSo.FindProperty("_rigidbody").objectReferenceValue = rb;
+            impactSo.FindProperty("_visualRoot").objectReferenceValue = torsoMesh.transform;
+            impactSo.FindProperty("_impulseSource").objectReferenceValue = deathImpulse;
+            impactSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var tumbleSo = new SerializedObject(tumble);
+            tumbleSo.FindProperty("_rigidbody").objectReferenceValue = rb;
+            tumbleSo.FindProperty("_visualTransform").objectReferenceValue = torsoMesh.transform;
+            tumbleSo.ApplyModifiedPropertiesWithoutUndo();
+
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return prefab;
@@ -571,6 +621,11 @@ namespace Game.Editor
 
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 2f;
+
+            if (root.TryGetComponent<Collider>(out var boxCol))
+            {
+                boxCol.sharedMaterial = Game.Gameplay.PhysicsJuice.PhysicsMaterialFactory.ComedicNormal;
+            }
 
             AddServerAuthoritativeTransform(root);
             root.AddComponent<GrabbableObject>();
@@ -606,6 +661,11 @@ namespace Game.Editor
             root.name = "KickableObstacle";
             root.transform.localScale = new Vector3(0.9f, 1.2f, 0.9f);
             root.GetComponent<Renderer>().sharedMaterial = mat;
+
+            if (root.TryGetComponent<Collider>(out var kickCol))
+            {
+                kickCol.sharedMaterial = Game.Gameplay.PhysicsJuice.PhysicsMaterialFactory.BouncyRubber;
+            }
 
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 3f;
