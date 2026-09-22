@@ -18,6 +18,8 @@ using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 
 namespace Game.Editor
@@ -31,6 +33,8 @@ namespace Game.Editor
         {
             PlaygroundBuilder.EnsureDirectories();
             if (!Directory.Exists(RoomsDirectory)) Directory.CreateDirectory(RoomsDirectory);
+
+            PauseMenuBuilder.GenerateAllUIPrefabs();
 
             var mats = PlaygroundBuilder.CreateMaterials();
             var prefabs = PlaygroundBuilder.CreatePrefabs(mats);
@@ -673,6 +677,21 @@ namespace Game.Editor
 
             // Configure ExitTrigger
             exitTrigger.Configure(roomCtrl, exitDoor, padRenderer);
+
+            // 6. UI (EventSystem with InputSystemUIInputModule and Canvas_PauseMenu)
+            var uiGroup = new GameObject("--- UI ---");
+
+            var esGo = new GameObject("EventSystem");
+            esGo.transform.SetParent(uiGroup.transform);
+            esGo.AddComponent<EventSystem>();
+            esGo.AddComponent<InputSystemUIInputModule>();
+
+            var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_PauseMenu.prefab");
+            if (pausePrefab != null)
+            {
+                var pauseInstance = (GameObject)PrefabUtility.InstantiatePrefab(pausePrefab, uiGroup.transform);
+                pauseInstance.SetActive(false);
+            }
 
             EditorSceneManager.SaveScene(scene, scenePath);
 

@@ -1,10 +1,18 @@
 using System.IO;
 using Game.Gameplay.UI;
+using Game.Network.Audio;
+using Game.Network.Events;
+using Game.Network.Scopes;
+using Game.Network.Services;
+using PurrNet;
+using PurrNet.Transports;
 using TMPro;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Game.Editor
@@ -76,6 +84,195 @@ namespace Game.Editor
             GeneratePauseMenuPrefab();
 
             Debug.Log("<color=green><b>[TPOB] Sistema Completo de UI Generado (Menú Principal, Opciones, Lobby y Pausa).</b></color>");
+        }
+
+        [MenuItem("TPOB/UI/8. Configurar y Actualizar Escena Boot Completa")]
+        public static void ConfigureCompleteBootScene()
+        {
+            // 1. Asegurar generación de todos los prefabs de UI
+            GenerateAllUIPrefabs();
+
+            // 2. Abrir o crear la escena Boot.unity
+            const string bootPath = "Assets/_Project/Scenes/Boot.unity";
+            EnsureDirectory(Path.GetDirectoryName(bootPath));
+            Scene bootScene;
+            if (File.Exists(bootPath))
+            {
+                bootScene = EditorSceneManager.OpenScene(bootPath, OpenSceneMode.Single);
+            }
+            else
+            {
+                bootScene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            }
+
+            // 3. Infraestructura Persistente de Red (DDOL)
+            var netGroup = GameObject.Find("--- NETWORKING ---");
+            if (netGroup == null)
+            {
+                netGroup = new GameObject("--- NETWORKING ---");
+                Undo.RegisterCreatedObjectUndo(netGroup, "Create --- NETWORKING ---");
+            }
+
+            // NetworkManager siempre en raíz de escena
+            var netManager = Object.FindFirstObjectByType<NetworkManager>();
+            GameObject netManagerGo;
+            if (netManager == null)
+            {
+                netManagerGo = new GameObject("[NETWORK_MANAGER]");
+                netManager = netManagerGo.AddComponent<NetworkManager>();
+                netManagerGo.AddComponent<UDPTransport>();
+                Undo.RegisterCreatedObjectUndo(netManagerGo, "Create [NETWORK_MANAGER]");
+            }
+            else
+            {
+                netManagerGo = netManager.gameObject;
+                if (netManagerGo.GetComponent<UDPTransport>() == null)
+                {
+                    netManagerGo.AddComponent<UDPTransport>();
+                }
+            }
+            if (netManagerGo.transform.parent != null)
+            {
+                netManagerGo.transform.SetParent(null);
+            }
+
+            var rules = AssetDatabase.LoadAssetAtPath<NetworkRules>("Assets/PurrNet/Defaults/NetworkRules/ServerStrict.asset");
+            var visibility = AssetDatabase.LoadAssetAtPath<NetworkVisibilityRuleSet>("Assets/PurrNet/Defaults/VisibilitySets/AlwaysVisible.asset");
+            var netPrefabs = AssetDatabase.LoadAssetAtPath<NetworkPrefabs>("Assets/_Project/Network/NetworkPrefabs.asset");
+
+            var netManagerSo = new SerializedObject(netManager);
+            if (rules != null) netManagerSo.FindProperty("_networkRules").objectReferenceValue = rules;
+            if (visibility != null) netManagerSo.FindProperty("_visibilityRules").objectReferenceValue = visibility;
+            if (netPrefabs != null) netManagerSo.FindProperty("_networkPrefabs").objectReferenceValue = netPrefabs;
+            netManagerSo.FindProperty("_dontDestroyOnLoad").boolValue = true;
+            netManagerSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // GameLifetimeScope
+            var gameScope = Object.FindFirstObjectByType<GameLifetimeScope>();
+            GameObject gameScopeGo;
+            if (gameScope == null)
+            {
+                gameScopeGo = new GameObject("[GAME_LIFETIME_SCOPE]");
+                gameScopeGo.transform.SetParent(netGroup.transform);
+                gameScope = gameScopeGo.AddComponent<GameLifetimeScope>();
+                Undo.RegisterCreatedObjectUndo(gameScopeGo, "Create [GAME_LIFETIME_SCOPE]");
+            }
+            else
+            {
+                gameScopeGo = gameScope.gameObject;
+                if (gameScopeGo.transform.parent == null) gameScopeGo.transform.SetParent(netGroup.transform);
+            }
+
+            var levelManager = Object.FindFirstObjectByType<LevelManager>();
+            if (levelManager == null)
+            {
+                levelManager = gameScopeGo.AddComponent<LevelManager>();
+            }
+
+            var bootstrapper = Object.FindFirstObjectByType<Bootstrapper>();
+            if (bootstrapper == null)
+            {
+                var bootstrapperGo = new GameObject("[BOOTSTRAPPER]");
+                bootstrapperGo.transform.SetParent(netGroup.transform);
+                bootstrapper = bootstrapperGo.AddComponent<Bootstrapper>();
+            }
+
+            var lobbyCtrl = Object.FindFirstObjectByType<LobbyNetworkController>();
+            if (lobbyCtrl == null)
+            {
+                var lobbyCtrlGo = new GameObject("[LOBBY_NETWORK_CONTROLLER]");
+                lobbyCtrlGo.transform.SetParent(netGroup.transform);
+                lobbyCtrl = lobbyCtrlGo.AddComponent<LobbyNetworkController>();
+            }
+
+            var relay = Object.FindFirstObjectByType<NetworkEventRelay>();
+            if (relay == null)
+            {
+                var relayGo = new GameObject("[NETWORK_EVENT_RELAY]");
+                relayGo.transform.SetParent(netGroup.transform);
+                relay = relayGo.AddComponent<NetworkEventRelay>();
+            }
+
+            var audioRelay = Object.FindFirstObjectByType<NetworkAudioRelay>();
+            if (audioRelay == null)
+            {
+                var audioRelayGo = new GameObject("[NETWORK_AUDIO_RELAY]");
+                audioRelayGo.transform.SetParent(netGroup.transform);
+                audioRelay = audioRelayGo.AddComponent<NetworkAudioRelay>();
+            }
+
+            // Conectar GameLifetimeScope
+            var scopeSo = new SerializedObject(gameScope);
+            scopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
+            scopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
+            scopeSo.FindProperty("_lobbyNetworkController").objectReferenceValue = lobbyCtrl;
+            scopeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // 4. Montar Jerarquía Completa de UI
+            EnsureEventSystem();
+
+            var uiGroup = GameObject.Find("--- UI ---");
+            if (uiGroup == null)
+            {
+                uiGroup = new GameObject("--- UI ---");
+                Undo.RegisterCreatedObjectUndo(uiGroup, "Create --- UI ---");
+            }
+
+            var settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
+            var mainMenuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_MainMenu.prefab");
+            var lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_Lobby.prefab");
+            var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
+
+            GameObject settingsInstance = null;
+            var existingSettings = Object.FindFirstObjectByType<SettingsView>();
+            if (existingSettings == null && settingsPrefab != null)
+            {
+                settingsInstance = (GameObject)PrefabUtility.InstantiatePrefab(settingsPrefab, uiGroup.transform);
+                settingsInstance.SetActive(false);
+            }
+            else if (existingSettings != null)
+            {
+                settingsInstance = existingSettings.gameObject;
+                settingsInstance.SetActive(false);
+            }
+
+            var existingMainMenu = Object.FindFirstObjectByType<MainMenuView>();
+            if (existingMainMenu == null && mainMenuPrefab != null)
+            {
+                var mainMenuInstance = (GameObject)PrefabUtility.InstantiatePrefab(mainMenuPrefab, uiGroup.transform);
+                mainMenuInstance.SetActive(true);
+
+                if (settingsInstance != null)
+                {
+                    var mainView = mainMenuInstance.GetComponent<MainMenuView>();
+                    var setView = settingsInstance.GetComponent<SettingsView>();
+                    var so = new SerializedObject(mainView);
+                    so.FindProperty("_settingsDialog").objectReferenceValue = setView;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+
+            var existingLobby = Object.FindFirstObjectByType<LobbyView>();
+            if (existingLobby == null && lobbyPrefab != null)
+            {
+                var lobbyInstance = (GameObject)PrefabUtility.InstantiatePrefab(lobbyPrefab, uiGroup.transform);
+                lobbyInstance.SetActive(false); // Inactivo hasta que GameState == Lobby
+            }
+
+            var existingPause = Object.FindFirstObjectByType<PauseMenuView>();
+            if (existingPause == null && pausePrefab != null)
+            {
+                var pauseInstance = (GameObject)PrefabUtility.InstantiatePrefab(pausePrefab, uiGroup.transform);
+                pauseInstance.SetActive(false);
+            }
+
+            // 5. Guardar la escena Boot
+            EditorSceneManager.MarkSceneDirty(bootScene);
+            EditorSceneManager.SaveScene(bootScene, bootPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log("<color=green><b>[TPOB] ¡Escena Boot.unity configurada y guardada con éxito (Networking DDOL + UI Completa)!</b></color>");
         }
 
         private static GameObject BuildPauseMenuHierarchy(GameObject settingsPrefab)
