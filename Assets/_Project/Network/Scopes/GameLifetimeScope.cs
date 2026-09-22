@@ -85,6 +85,9 @@ namespace Game.Network.Scopes
             }
             builder.RegisterComponent(audioService).As<IAudioService>();
 
+            // Settings Service
+            builder.Register<Game.Core.Settings.SettingsService>(Lifetime.Singleton).As<ISettingsService>();
+
             // Network Infrastructure
             builder.Register<NetworkService>(Lifetime.Singleton).As<INetworkService>();
             builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>();
