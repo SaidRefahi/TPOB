@@ -212,10 +212,25 @@ namespace Game.Editor
                 }
             }
 
+            // Find or create [LOBBY_NETWORK_CONTROLLER]
+            LobbyNetworkController lobbyCtrl = Object.FindFirstObjectByType<LobbyNetworkController>();
+            if (lobbyCtrl == null)
+            {
+                var lobbyCtrlGo = new GameObject("[LOBBY_NETWORK_CONTROLLER]");
+                lobbyCtrlGo.transform.SetParent(netGroup.transform);
+                lobbyCtrl = lobbyCtrlGo.AddComponent<LobbyNetworkController>();
+                Undo.RegisterCreatedObjectUndo(lobbyCtrlGo, "Create [LOBBY_NETWORK_CONTROLLER]");
+            }
+            else if (lobbyCtrl.transform.parent == null)
+            {
+                lobbyCtrl.transform.SetParent(netGroup.transform);
+            }
+
             // Wire GameScope
             var gameScopeSo = new SerializedObject(gameScope);
             gameScopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
             gameScopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
+            gameScopeSo.FindProperty("_lobbyNetworkController").objectReferenceValue = lobbyCtrl;
             gameScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             // Find or create [NETWORK_AUDIO_RELAY]

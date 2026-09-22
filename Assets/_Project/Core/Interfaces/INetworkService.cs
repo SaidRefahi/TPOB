@@ -7,6 +7,7 @@ namespace Game.Core.Interfaces
         bool IsServer { get; }
         bool IsClient { get; }
         bool IsConnected { get; }
+        int LocalPlayerId { get; }
 
         string ServerAddress { get; set; }
         ushort ServerPort { get; set; }

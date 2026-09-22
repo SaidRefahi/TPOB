@@ -28,6 +28,8 @@ namespace Game.Network.UI
         private Vector2 _scrollPosition;
         private bool _showDebugFold;
         private bool _showHelpFold = true;
+        private bool _showSimFold = true;
+        private Game.Network.Services.NetworkSimulationController _simController;
 
         [Inject]
         public void Construct(
@@ -58,6 +60,20 @@ namespace Game.Network.UI
                     }
                 }
             }
+
+            if (_simController == null)
+            {
+                _simController = FindFirstObjectByType<Game.Network.Services.NetworkSimulationController>();
+                if (_simController == null)
+                {
+                    _simController = gameObject.AddComponent<Game.Network.Services.NetworkSimulationController>();
+                }
+            }
+
+            if (FindFirstObjectByType<PerformanceMonitor>() == null)
+            {
+                gameObject.AddComponent<PerformanceMonitor>();
+            }
         }
 
         private void OnGUI()
@@ -66,7 +82,7 @@ namespace Game.Network.UI
 
             bool isConnected = _networkService != null && _networkService.IsConnected;
             float panelWidth = 370f;
-            float panelHeight = isConnected ? 600f : 440f;
+            float panelHeight = isConnected ? 640f : 530f;
 
             GUILayout.BeginArea(new Rect(_guiPosition.x, _guiPosition.y, panelWidth, panelHeight), GUI.skin.box);
             _scrollPosition = GUILayout.BeginScrollView(_scrollPosition);
@@ -76,6 +92,7 @@ namespace Game.Network.UI
             if (!isConnected)
             {
                 DrawConnectionControls();
+                DrawSimulationControls();
             }
             else
             {
@@ -83,6 +100,7 @@ namespace Game.Network.UI
                 DrawPlayersList();
                 DrawActionControls();
                 DrawLevelControls();
+                DrawSimulationControls();
                 DrawDebugControls();
             }
 
@@ -331,6 +349,48 @@ namespace Game.Network.UI
                     }
                 }
             }
+            GUILayout.EndVertical();
+        }
+
+        private void DrawSimulationControls()
+        {
+            if (_simController == null) return;
+
+            GUILayout.Space(6);
+            _showSimFold = GUILayout.Toggle(_showSimFold, "<b>🌐 Simulación de Red (PurrNet)</b>");
+            if (!_showSimFold) return;
+
+            GUILayout.BeginVertical(GUI.skin.box);
+            var (minLat, maxLat, loss) = _simController.GetCurrentSimulationConfig();
+            string statusColor = _simController.IsSimulationActive ? "#FFAA00" : "#55FF55";
+            GUILayout.Label($"Perfil Activo: <color={statusColor}><b>{_simController.ActiveProfile}</b></color>");
+            if (_simController.IsSimulationActive)
+            {
+                GUILayout.Label($"<size=11>Latencia: {minLat}-{maxLat}ms | Pérdida: {loss}%</size>");
+            }
+            else
+            {
+                GUILayout.Label("<size=11>Sin latencia artificial ni pérdida de paquetes.</size>");
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Ideal\n(0ms)", GUILayout.Height(32)))
+            {
+                _simController.ApplyProfile(Game.Network.Services.NetworkSimulationProfile.Ideal);
+            }
+            if (GUILayout.Button("Online\n(50-80ms)", GUILayout.Height(32)))
+            {
+                _simController.ApplyProfile(Game.Network.Services.NetworkSimulationProfile.StandardOnline);
+            }
+            if (GUILayout.Button("QA Estrés\n(100-150ms)", GUILayout.Height(32)))
+            {
+                _simController.ApplyProfile(Game.Network.Services.NetworkSimulationProfile.QAStress);
+            }
+            if (GUILayout.Button("Extremo\n(250-350ms)", GUILayout.Height(32)))
+            {
+                _simController.ApplyProfile(Game.Network.Services.NetworkSimulationProfile.Extreme);
+            }
+            GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
 

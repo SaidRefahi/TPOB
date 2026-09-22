@@ -16,6 +16,17 @@ Este archivo sirve como base de conocimiento viva para cualquier agente de IA o 
      - Si agarra o suelta un objeto con éxito, debe limpiar inmediatamente `_pendingInput.InteractTriggered = false` para no accionar una palanca accidentalmente en el mismo fotograma.
      - Si no hay objeto agarrable al alcance, entonces procede a evaluar mecanismos interactuables.
 2. **Auditoría de Flags:** Cada vez que se defina un `ConsumeXTrigger()`, verificar que exista al menos una asignación a `true` en el manejador del evento de Input.
+3. **Prohibición Absoluta de `UnityEngine.Input` (Legacy):**
+   - El proyecto tiene configurado `Active Input Handling = Input System Package (New)`.
+   - Cualquier invocación a `UnityEngine.Input.GetKeyDown(...)` arroja `InvalidOperationException` en tiempo de ejecución.
+   - Para atajos de teclado, overlays o herramientas de diagnóstico (ej. conmutar `PerformanceMonitor` con `F3`), usar siempre la API del nuevo Input System:
+   ```csharp
+   var keyboard = UnityEngine.InputSystem.Keyboard.current;
+   if (keyboard != null && keyboard.f3Key.wasPressedThisFrame)
+   {
+       _showOverlay = !_showOverlay;
+   }
+   ```
 
 ---
 
@@ -324,5 +335,45 @@ Este archivo sirve como base de conocimiento viva para cualquier agente de IA o 
    ```
 4. **Pool de AudioSources sin Garbage Collection:**
    - Utilizar `UnityEngine.Pool.ObjectPool<AudioSource>` pre-asignado para reproducir sonidos 3D espaciales. La liberación al pool se gestiona en `Update()` mediante un tracking struct (`ActiveSourceTracker`), garantizando CERO allocations durante el juego activo.
+
+---
+
+## 🌐 14. Simulación de Red (PurrNet), Desconexiones Robustas y Auditoría Zero-GC
+
+### ❌ Errores cometidos:
+- **Simulación de red externa en vez del stack nativo:** Intentar introducir delays artificiales con sleeps de sistema o emuladores de paquetes de terceros cuando PurrNet `UDPTransport` ya provee internamente `networkSimulation` con soporte para min/max latency y packet loss.
+- **Desconexión con bloqueo en Fusión:** Si un jugador se desconecta abruptamente mientras el robot está fusionado, dejar al Torso atrapado como hijo del transform de Piernas provoca que el cliente restante no pueda controlar el robot completo o que el Rigidbody permanezca en `isKinematic = true`.
+- **Destrucción de avatares en `onPlayerLeft`:** Destruir los GameObjects de Piernas o Torso cuando un cliente se desconecta rompe las referencias de Cinemachine, RoomController y Spawners para futuros reintentos o reconexiones.
+
+### 🛡️ Reglas de Oro:
+1. **Simulación Nativa PurrNet (`UDPTransport.networkSimulation`):**
+   - Configurar la simulación mediante perfiles (`Ideal = 0ms`, `Online = 50-80ms/1%`, `QA Stress = 100-150ms/2%`, `Extreme = 250-350ms/8%`).
+   - Activar `includeInBuild = true` en `NetworkSimulation` para que las pruebas de estrés funcionen tanto en el editor como en las builds Standalone ejecutables.
+   - Invocar `transport.SetStatisticsEnabled(true)` para registrar y medir la pérdida de paquetes.
+2. **Preservación de Entidades y Liberación de Ownership:**
+   - En `TPOBPlayerSpawner`, al dispararse `nm.onPlayerLeft`:
+     ```csharp
+     if (identity.owner.HasValue && identity.owner.Value == player)
+     {
+         identity.RemoveOwnership();
+     }
+     ```
+   - No destruir el GameObject del avatar; remover el ownership permite que el jugador se reconecte y reclame su rol o que otro cliente tome el control inmediatamente.
+3. **Separación de Emergencia ante Desconexión en Fusión:**
+   - En `RobotCoordinator.UnregisterLegs` y `UnregisterTorso`:
+     ```csharp
+     if (_isFused.value && (isServer || !isSpawned))
+     {
+         TrySeparateOnServer();
+     }
+     ```
+   - Esto garantiza que el Torso se des-emparenta, recupera sus colliders normales, y el Rigidbody vuelve al estado dinámico seguro.
+4. **Auditoría Zero-GC y Monitoreo en Tiempo Real:**
+   - Emplear `ZeroGCAuditor` (`TPOB/4. Auditar Código para Zero-GC`) para validar que los métodos de ciclo de vida en caliente no contengan `new` de clases, búsquedas de escenas (`FindObjectOfType`), concatenaciones de strings o llamadas a LINQ.
+   - Mantener activo `PerformanceMonitor` (conmutable con `F3`) para auditar en tiempo real FPS, consumo de heap Mono, conteo de recolecciones por generación y deltas de memoria por segundo.
+5. **Pipeline de Compilación Standalone Automatizado:**
+   - Asegurar que `StandaloneBuildHelper` (`TPOB/5. Compilar Standalone Windows (x64)`) compile la lista completa de escenas (`Boot.unity` seguido de `Room_01` a `Room_10`).
+   - Usar `TPOB/6. Lanzar 2 Instancias Locales (Host + Cliente)` para levantar automáticamente dos instancias en modo ventana (1280x720) y verificar la sincronización cooperativa en entornos reales de producción.
+
 
 

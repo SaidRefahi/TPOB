@@ -27,6 +27,7 @@ Accede a las diferentes secciones del proyecto mediante los enlaces locales de O
 | [[03_Diagramas]] | **Diagramas de Sistema**: Diagrama de Clases Mermaid y Flujograma del Loop de Gameplay interactivo con soporte nativo de Obsidian. | `Actualizado` |
 | [[04_Plan_de_Implementacion]] | **Programa de Implementación (14 Fases)**: Roadmap de desarrollo paso a paso, complementado para explotar al máximo todos los addons y garantizar Zero-GC en hot paths. | `Producción` |
 | [[05_Plantilla_Para_Notion]] | **Plantilla para Notion**: Documento formateado con callouts, tablas y checkboxes listo para ser importado o copiado a Notion. | `Listo para Exportar` |
+| [[06_UI_Lobby_Pausa_Plan_de_Implementacion]] | **UI, Lobby y Pausa**: Plan de implementación por fases para Menú Principal (Host/Join), Lobby de selección exclusiva (Piernas/Torso con ficha de controles) y Menú de Pausa In-Game. | `Diseño Aprobado` |
 
 ---
 

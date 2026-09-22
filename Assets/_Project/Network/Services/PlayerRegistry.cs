@@ -18,6 +18,7 @@ namespace Game.Network.Services
         public event Action<PlayerSlot> OnPlayerRegistered;
         public event Action<int> OnPlayerUnregistered;
         public event Action<PlayerSlot> OnRoleAssigned;
+        public event Action<PlayerSlot> OnPlayerReadyChanged;
 
         public PlayerRegistry(INetworkService networkService, IGameEventBus eventBus)
         {
@@ -99,7 +100,7 @@ namespace Game.Network.Services
             {
                 if (_players[i].PlayerId == playerId)
                 {
-                    var updated = new PlayerSlot(playerId, newRole, _players[i].IsLocal);
+                    var updated = new PlayerSlot(playerId, newRole, _players[i].IsLocal, _players[i].IsReady);
                     _players[i] = updated;
 
                     if (updated.IsLocal)
@@ -109,6 +110,23 @@ namespace Game.Network.Services
 
                     OnRoleAssigned?.Invoke(updated);
                     _eventBus?.Publish(new PlayerRoleChangedEvent(playerId, newRole));
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool TrySetPlayerReady(int playerId, bool isReady)
+        {
+            for (int i = 0; i < _players.Count; i++)
+            {
+                if (_players[i].PlayerId == playerId)
+                {
+                    var updated = new PlayerSlot(playerId, _players[i].Role, _players[i].IsLocal, isReady);
+                    _players[i] = updated;
+
+                    OnPlayerReadyChanged?.Invoke(updated);
+                    _eventBus?.Publish(new PlayerLobbyStateChangedEvent(playerId, updated.Role, isReady));
                     return true;
                 }
             }

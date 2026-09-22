@@ -14,6 +14,7 @@ namespace Game.Network.Scopes
     {
         [SerializeField] private NetworkManager _networkManager;
         [SerializeField] private LevelManager _levelManager;
+        [SerializeField] private LobbyNetworkController _lobbyNetworkController;
 
         public static GameLifetimeScope Instance { get; private set; }
 
@@ -107,6 +108,13 @@ namespace Game.Network.Scopes
             if (hud != null)
             {
                 builder.RegisterComponent(hud);
+            }
+
+            // Lobby Service
+            var lobbyCtrl = _lobbyNetworkController != null ? _lobbyNetworkController : FindFirstObjectByType<LobbyNetworkController>();
+            if (lobbyCtrl != null)
+            {
+                builder.RegisterComponent(lobbyCtrl).As<ILobbyService>();
             }
         }
     }

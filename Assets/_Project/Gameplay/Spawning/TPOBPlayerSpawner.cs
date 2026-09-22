@@ -93,6 +93,8 @@ namespace Game.Gameplay.Spawning
                 {
                     nm.onPlayerJoined -= HandleServerPlayerJoined;
                     nm.onPlayerJoined += HandleServerPlayerJoined;
+                    nm.onPlayerLeft -= HandleServerPlayerLeft;
+                    nm.onPlayerLeft += HandleServerPlayerLeft;
                 }
             }
 
@@ -136,6 +138,7 @@ namespace Game.Gameplay.Spawning
             {
                 nm.onLocalPlayerReceivedID -= HandleLocalPlayerReceivedId;
                 nm.onPlayerJoined -= HandleServerPlayerJoined;
+                nm.onPlayerLeft -= HandleServerPlayerLeft;
 
                 if (nm.TryGetModule<ScenePlayersModule>(true, out var scenePlayersModule))
                 {
@@ -205,6 +208,32 @@ namespace Game.Gameplay.Spawning
                 if (existingTorso != null && existingTorso.TryGetComponent<NetworkIdentity>(out var torsoId))
                 {
                     torsoId.GiveOwnership(player);
+                }
+            }
+        }
+
+        private void HandleServerPlayerLeft(PlayerID player, bool asServer)
+        {
+            if (!asServer || !isServer) return;
+
+            int playerIdInt = (int)player.id.value;
+            _spawnedPlayers.Remove(playerIdInt);
+
+            var existingLegs = Object.FindFirstObjectByType<LegsController>();
+            if (existingLegs != null && existingLegs.TryGetComponent<NetworkIdentity>(out var legsId))
+            {
+                if (legsId.owner.HasValue && legsId.owner.Value == player)
+                {
+                    legsId.RemoveOwnership();
+                }
+            }
+
+            var existingTorso = Object.FindFirstObjectByType<TorsoController>();
+            if (existingTorso != null && existingTorso.TryGetComponent<NetworkIdentity>(out var torsoId))
+            {
+                if (torsoId.owner.HasValue && torsoId.owner.Value == player)
+                {
+                    torsoId.RemoveOwnership();
                 }
             }
         }

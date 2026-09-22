@@ -587,6 +587,10 @@ namespace Game.Editor
             var gameScope = gameScopeGo.AddComponent<GameLifetimeScope>();
             var levelManager = gameScopeGo.AddComponent<LevelManager>();
 
+            var lobbyCtrlGo = new GameObject("[LOBBY_NETWORK_CONTROLLER]");
+            lobbyCtrlGo.transform.SetParent(netGroup.transform);
+            var lobbyCtrl = lobbyCtrlGo.AddComponent<LobbyNetworkController>();
+
             var bootGo = new GameObject("[BOOTSTRAPPER]");
             bootGo.transform.SetParent(netGroup.transform);
             bootGo.AddComponent<Bootstrapper>();
@@ -594,6 +598,7 @@ namespace Game.Editor
             var gameScopeSo = new SerializedObject(gameScope);
             gameScopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
             gameScopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
+            gameScopeSo.FindProperty("_lobbyNetworkController").objectReferenceValue = lobbyCtrl;
             gameScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             // 5. LIGHTING & CAMERA

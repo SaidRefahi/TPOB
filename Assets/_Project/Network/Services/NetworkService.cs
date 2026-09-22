@@ -29,6 +29,10 @@ namespace Game.Network.Services
         public bool IsConnected => Manager != null && 
             (_cachedManager.serverState == ConnectionState.Connected || _cachedManager.clientState == ConnectionState.Connected);
 
+        public int LocalPlayerId => Manager != null && _cachedManager.isLocalPlayerReady 
+            ? (int)_cachedManager.localPlayer.id.value 
+            : -1;
+
         public event Action OnConnected;
         public event Action OnDisconnected;
         public event Action<int, bool> OnPlayerConnected;

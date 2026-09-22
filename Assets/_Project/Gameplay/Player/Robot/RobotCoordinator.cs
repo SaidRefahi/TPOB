@@ -146,6 +146,10 @@ namespace Game.Gameplay.Player.Robot
         {
             if (_legs == legs)
             {
+                if (_isFused.value && (isServer || !isSpawned))
+                {
+                    TrySeparateOnServer();
+                }
                 _legs = null;
                 RebuildContext();
             }
@@ -166,6 +170,10 @@ namespace Game.Gameplay.Player.Robot
         {
             if (_torso == torso)
             {
+                if (_isFused.value && (isServer || !isSpawned))
+                {
+                    TrySeparateOnServer();
+                }
                 _torso = null;
                 RebuildContext();
             }

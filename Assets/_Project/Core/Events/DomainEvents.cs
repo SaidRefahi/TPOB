@@ -127,5 +127,19 @@ namespace Game.Core.Events
             Pitch = pitch;
         }
     }
+
+    public readonly struct PlayerLobbyStateChangedEvent
+    {
+        public readonly int PlayerId;
+        public readonly PlayerRole Role;
+        public readonly bool IsReady;
+
+        public PlayerLobbyStateChangedEvent(int playerId, PlayerRole role, bool isReady)
+        {
+            PlayerId = playerId;
+            Role = role;
+            IsReady = isReady;
+        }
+    }
 }
 
