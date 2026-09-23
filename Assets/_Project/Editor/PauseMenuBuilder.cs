@@ -120,21 +120,43 @@ namespace Game.Editor
             {
                 netManagerGo = new GameObject("[NETWORK_MANAGER]");
                 netManager = netManagerGo.AddComponent<NetworkManager>();
-                netManagerGo.AddComponent<UDPTransport>();
                 Undo.RegisterCreatedObjectUndo(netManagerGo, "Create [NETWORK_MANAGER]");
             }
             else
             {
                 netManagerGo = netManager.gameObject;
-                if (netManagerGo.GetComponent<UDPTransport>() == null)
-                {
-                    netManagerGo.AddComponent<UDPTransport>();
-                }
             }
+
             if (netManagerGo.transform.parent != null)
             {
                 netManagerGo.transform.SetParent(null);
             }
+
+            // Remover componentes UDP antiguos si existen
+            var oldUdps = netManagerGo.GetComponents<UDPTransport>();
+            for (int i = 0; i < oldUdps.Length; i++)
+            {
+                Object.DestroyImmediate(oldUdps[i]);
+            }
+
+            // Asegurar un único PurrTransport (servidores y relay gratuito de PurrNet)
+            var purrTransports = netManagerGo.GetComponents<PurrTransport>();
+            PurrTransport mainTransport;
+            if (purrTransports.Length == 0)
+            {
+                mainTransport = netManagerGo.AddComponent<PurrTransport>();
+            }
+            else
+            {
+                mainTransport = purrTransports[0];
+                for (int i = 1; i < purrTransports.Length; i++)
+                {
+                    Object.DestroyImmediate(purrTransports[i]);
+                }
+            }
+
+            mainTransport.masterServer = "https://purrtransport.purrservers.com/";
+            mainTransport.attemptDirectConnection = true;
 
             var rules = AssetDatabase.LoadAssetAtPath<NetworkRules>("Assets/PurrNet/Defaults/NetworkRules/ServerStrict.asset");
             var visibility = AssetDatabase.LoadAssetAtPath<NetworkVisibilityRuleSet>("Assets/PurrNet/Defaults/VisibilitySets/AlwaysVisible.asset");
@@ -145,6 +167,15 @@ namespace Game.Editor
             if (visibility != null) netManagerSo.FindProperty("_visibilityRules").objectReferenceValue = visibility;
             if (netPrefabs != null) netManagerSo.FindProperty("_networkPrefabs").objectReferenceValue = netPrefabs;
             netManagerSo.FindProperty("_dontDestroyOnLoad").boolValue = true;
+            netManagerSo.FindProperty("_transport").objectReferenceValue = mainTransport;
+
+            // Desactivar auto-start flags (None = 0) para que el juego arranque en el menú sin conectar prematuramente
+            var clientFlagsProp = netManagerSo.FindProperty("_startClientFlags");
+            if (clientFlagsProp != null) clientFlagsProp.intValue = 0; // StartFlags.None
+
+            var serverFlagsProp = netManagerSo.FindProperty("_startServerFlags");
+            if (serverFlagsProp != null) serverFlagsProp.intValue = 0; // StartFlags.None
+
             netManagerSo.ApplyModifiedPropertiesWithoutUndo();
 
             // GameLifetimeScope
@@ -217,6 +248,14 @@ namespace Game.Editor
                 uiGroup = new GameObject("--- UI ---");
                 Undo.RegisterCreatedObjectUndo(uiGroup, "Create --- UI ---");
             }
+            else
+            {
+                // Limpiar instancias previas bajo --- UI --- para evitar duplicados acumulados
+                for (int i = uiGroup.transform.childCount - 1; i >= 0; i--)
+                {
+                    Object.DestroyImmediate(uiGroup.transform.GetChild(i).gameObject);
+                }
+            }
 
             var settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
             var mainMenuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_MainMenu.prefab");
@@ -224,20 +263,13 @@ namespace Game.Editor
             var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
 
             GameObject settingsInstance = null;
-            var existingSettings = Object.FindFirstObjectByType<SettingsView>();
-            if (existingSettings == null && settingsPrefab != null)
+            if (settingsPrefab != null)
             {
                 settingsInstance = (GameObject)PrefabUtility.InstantiatePrefab(settingsPrefab, uiGroup.transform);
                 settingsInstance.SetActive(false);
             }
-            else if (existingSettings != null)
-            {
-                settingsInstance = existingSettings.gameObject;
-                settingsInstance.SetActive(false);
-            }
 
-            var existingMainMenu = Object.FindFirstObjectByType<MainMenuView>();
-            if (existingMainMenu == null && mainMenuPrefab != null)
+            if (mainMenuPrefab != null)
             {
                 var mainMenuInstance = (GameObject)PrefabUtility.InstantiatePrefab(mainMenuPrefab, uiGroup.transform);
                 mainMenuInstance.SetActive(true);
@@ -252,18 +284,22 @@ namespace Game.Editor
                 }
             }
 
-            var existingLobby = Object.FindFirstObjectByType<LobbyView>();
-            if (existingLobby == null && lobbyPrefab != null)
+            if (lobbyPrefab != null)
             {
                 var lobbyInstance = (GameObject)PrefabUtility.InstantiatePrefab(lobbyPrefab, uiGroup.transform);
-                lobbyInstance.SetActive(false); // Inactivo hasta que GameState == Lobby
+                lobbyInstance.SetActive(true);
+                var canvas = lobbyInstance.GetComponent<Canvas>();
+                if (canvas != null) canvas.enabled = false;
+                var raycaster = lobbyInstance.GetComponent<GraphicRaycaster>();
+                if (raycaster != null) raycaster.enabled = false;
             }
 
-            var existingPause = Object.FindFirstObjectByType<PauseMenuView>();
-            if (existingPause == null && pausePrefab != null)
+            if (pausePrefab != null)
             {
                 var pauseInstance = (GameObject)PrefabUtility.InstantiatePrefab(pausePrefab, uiGroup.transform);
-                pauseInstance.SetActive(false);
+                pauseInstance.SetActive(true);
+                var pauseView = pauseInstance.GetComponent<PauseMenuView>();
+                if (pauseView != null) pauseView.SetPauseActive(false);
             }
 
             // 5. Guardar la escena Boot
@@ -317,10 +353,10 @@ namespace Game.Editor
             vlayout.childForceExpandHeight = false;
 
             // Buttons: Resume, Options, ExitToMenu, ExitToDesktop
-            var resumeBtn = CreateStyledButton(buttonsGo.transform, "Btn_Resume", "▶  REANUDAR MISIÓN", new Color(0.0f, 0.7f, 0.7f, 0.9f), new Color(0.05f, 0.1f, 0.12f));
-            var optionsBtn = CreateStyledButton(buttonsGo.transform, "Btn_Options", "⚙  CONFIGURACIÓN", new Color(0.18f, 0.24f, 0.32f), Color.white);
-            var exitMenuBtn = CreateStyledButton(buttonsGo.transform, "Btn_ExitToMenu", "🚪  ABANDONAR AL MENÚ", new Color(0.35f, 0.22f, 0.05f), new Color(1f, 0.8f, 0.2f));
-            var exitDesktopBtn = CreateStyledButton(buttonsGo.transform, "Btn_ExitToDesktop", "✕  SALIR AL ESCRITORIO", new Color(0.32f, 0.1f, 0.1f), new Color(1f, 0.4f, 0.4f));
+            var resumeBtn = CreateStyledButton(buttonsGo.transform, "Btn_Resume", "REANUDAR MISIÓN", new Color(0.0f, 0.7f, 0.7f, 0.9f), new Color(0.05f, 0.1f, 0.12f));
+            var optionsBtn = CreateStyledButton(buttonsGo.transform, "Btn_Options", "CONFIGURACIÓN", new Color(0.18f, 0.24f, 0.32f), Color.white);
+            var exitMenuBtn = CreateStyledButton(buttonsGo.transform, "Btn_ExitToMenu", "ABANDONAR AL MENÚ", new Color(0.35f, 0.22f, 0.05f), new Color(1f, 0.8f, 0.2f));
+            var exitDesktopBtn = CreateStyledButton(buttonsGo.transform, "Btn_ExitToDesktop", "SALIR AL ESCRITORIO", new Color(0.32f, 0.1f, 0.1f), new Color(1f, 0.4f, 0.4f));
 
             // 5. Settings Modal Dialog (Instantiated inside Canvas)
             GameObject settingsInstance = null;
@@ -407,6 +443,7 @@ namespace Game.Editor
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = textColor;
+            tmp.raycastTarget = false;
 
             return btn;
         }
@@ -427,9 +464,17 @@ namespace Game.Editor
                 Object.DestroyImmediate(legacyModule);
             }
 
-            if (eventSystem.GetComponent<InputSystemUIInputModule>() == null)
+            var inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
+            if (inputModule == null)
             {
-                eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+                inputModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+            }
+
+            inputModule.AssignDefaultActions();
+
+            if (eventSystem.GetComponent<UIInputModuleFixer>() == null)
+            {
+                eventSystem.gameObject.AddComponent<UIInputModuleFixer>();
             }
         }
 

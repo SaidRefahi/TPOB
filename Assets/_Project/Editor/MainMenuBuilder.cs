@@ -57,13 +57,19 @@ namespace Game.Editor
             }
 
             GameObject settingsInstance = null;
-            if (Object.FindFirstObjectByType<SettingsView>() == null)
+            var existingSettings = Object.FindFirstObjectByType<SettingsView>(FindObjectsInactive.Include);
+            if (existingSettings == null)
             {
                 settingsInstance = (GameObject)PrefabUtility.InstantiatePrefab(settingsPrefab, uiRoot.transform);
                 Undo.RegisterCreatedObjectUndo(settingsInstance, "Instantiate Dialog_Settings");
             }
+            else
+            {
+                settingsInstance = existingSettings.gameObject;
+            }
 
-            if (Object.FindFirstObjectByType<MainMenuView>() == null)
+            var existingMainMenu = Object.FindFirstObjectByType<MainMenuView>(FindObjectsInactive.Include);
+            if (existingMainMenu == null)
             {
                 var mainMenuInstance = (GameObject)PrefabUtility.InstantiatePrefab(mainMenuPrefab, uiRoot.transform);
                 Undo.RegisterCreatedObjectUndo(mainMenuInstance, "Instantiate Canvas_MainMenu");
@@ -106,7 +112,14 @@ namespace Game.Editor
             var inputSystemModule = esGo.GetComponent<InputSystemUIInputModule>();
             if (inputSystemModule == null)
             {
-                esGo.AddComponent<InputSystemUIInputModule>();
+                inputSystemModule = esGo.AddComponent<InputSystemUIInputModule>();
+            }
+
+            inputSystemModule.AssignDefaultActions();
+
+            if (esGo.GetComponent<UIInputModuleFixer>() == null)
+            {
+                esGo.AddComponent<UIInputModuleFixer>();
             }
         }
 
@@ -129,6 +142,34 @@ namespace Game.Editor
             var titleText = titleGo.AddComponent<TextMeshProUGUI>();
             titleText.text = "<b><size=38><color=#00FFFF>TWO PILOTS</color>, <color=#FF9900>ONE ROBOT</color></size></b>\n<size=18><color=#8899AA>MISIÓN COOPERATIVA ASIMÉTRICA</color></size>";
             titleText.alignment = TextAlignmentOptions.Center;
+            titleText.raycastTarget = false;
+
+            // IP Info Row (Muestra la IP local del Host y permite copiarla para el amigo)
+            var ipRowGo = CreateUIElement("Row_LocalIP", containerGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(400, 36), new Vector2(0, 160));
+            var ipHlg = ipRowGo.AddComponent<HorizontalLayoutGroup>();
+            ipHlg.spacing = 8;
+            ipHlg.childControlWidth = false;
+            ipHlg.childControlHeight = true;
+            ipHlg.childForceExpandWidth = false;
+            ipHlg.childForceExpandHeight = true;
+
+            var ipTextGo = CreateUIElement("Text_LocalIP", ipRowGo.transform, Vector2.zero, Vector2.one, new Vector2(280, 36), Vector2.zero);
+            var ipTmp = ipTextGo.AddComponent<TextMeshProUGUI>();
+            ipTmp.text = "Código de Sala: <color=#00FFFF>TPOB-XXXX</color>";
+            ipTmp.fontSize = 15;
+            ipTmp.alignment = TextAlignmentOptions.MidlineLeft;
+            ipTmp.raycastTarget = false;
+
+            var copyBtn = CreateButton(ipRowGo.transform, "Btn_CopyIP", "COPIAR", 36, new Color(0.18f, 0.28f, 0.38f));
+            var copyBtnRt = copyBtn.GetComponent<RectTransform>();
+            copyBtnRt.sizeDelta = new Vector2(100, 36);
+            var copyLe = copyBtn.GetComponent<LayoutElement>();
+            if (copyLe != null)
+            {
+                copyLe.minWidth = 100;
+                copyLe.preferredWidth = 100;
+                copyLe.flexibleWidth = 0;
+            }
 
             // Buttons Column
             var buttonsColGo = CreateUIElement("ButtonsColumn", containerGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(400, 320), new Vector2(0, -30));
@@ -139,10 +180,10 @@ namespace Game.Editor
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
-            var hostBtn = CreateButton(buttonsColGo.transform, "Btn_Host", "▶  CREAR PARTIDA (HOST)", 55, new Color(0.12f, 0.28f, 0.22f));
-            var joinBtn = CreateButton(buttonsColGo.transform, "Btn_Join", "⚡  UNIRSE A PARTIDA", 55, new Color(0.15f, 0.22f, 0.32f));
-            var optBtn = CreateButton(buttonsColGo.transform, "Btn_Options", "⚙  OPCIONES", 55, new Color(0.2f, 0.22f, 0.26f));
-            var exitBtn = CreateButton(buttonsColGo.transform, "Btn_Exit", "✕  SALIR DEL JUEGO", 55, new Color(0.28f, 0.12f, 0.12f));
+            var hostBtn = CreateButton(buttonsColGo.transform, "Btn_Host", "CREAR PARTIDA (HOST)", 55, new Color(0.12f, 0.28f, 0.22f));
+            var joinBtn = CreateButton(buttonsColGo.transform, "Btn_Join", "UNIRSE A PARTIDA", 55, new Color(0.15f, 0.22f, 0.32f));
+            var optBtn = CreateButton(buttonsColGo.transform, "Btn_Options", "OPCIONES", 55, new Color(0.2f, 0.22f, 0.26f));
+            var exitBtn = CreateButton(buttonsColGo.transform, "Btn_Exit", "SALIR DEL JUEGO", 55, new Color(0.28f, 0.12f, 0.12f));
 
             // Status Text
             var statusGo = CreateUIElement("Text_Status", containerGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(500, 40), new Vector2(0, 30));
@@ -150,19 +191,27 @@ namespace Game.Editor
             statusText.text = string.Empty;
             statusText.alignment = TextAlignmentOptions.Center;
             statusText.fontSize = 18;
+            statusText.raycastTarget = false;
 
             // Modal Connect
-            var modalRootGo = CreateUIElement("Modal_Connect", canvasGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(460, 320), Vector2.zero);
+            var modalRootGo = CreateUIElement("Modal_Connect", canvasGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(460, 350), Vector2.zero);
             var modalBg = modalRootGo.AddComponent<Image>();
             modalBg.color = new Color(0.08f, 0.11f, 0.16f, 0.98f);
 
             var modalTitleGo = CreateUIElement("Modal_Title", modalRootGo.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(400, 50), new Vector2(0, -35));
             var modalTitleText = modalTitleGo.AddComponent<TextMeshProUGUI>();
-            modalTitleText.text = "<b><size=22><color=#00FFFF>CONECTAR A PARTIDA</color></size></b>";
+            modalTitleText.text = "<b><size=22><color=#00FFFF>UNIRSE A SALA</color></size></b>";
             modalTitleText.alignment = TextAlignmentOptions.Center;
+            modalTitleText.raycastTarget = false;
 
-            var ipInput = CreateInputField(modalRootGo.transform, "Input_IP", "Dirección IP (ej. 127.0.0.1)", "127.0.0.1", new Vector2(0, 40), new Vector2(380, 44));
-            var portInput = CreateInputField(modalRootGo.transform, "Input_Port", "Puerto (ej. 5000)", "5000", new Vector2(0, -15), new Vector2(380, 44));
+            var ipInput = CreateInputField(modalRootGo.transform, "Input_IP", "Código de Sala (ej. TPOB-7821)", string.Empty, new Vector2(0, 55), new Vector2(380, 44));
+            var portInput = CreateInputField(modalRootGo.transform, "Input_Port", "Puerto (opcional)", "5000", new Vector2(0, 0), new Vector2(380, 44));
+
+            var helpTextGo = CreateUIElement("Modal_HelpText", modalRootGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(420, 44), new Vector2(0, 100));
+            var helpTmp = helpTextGo.AddComponent<TextMeshProUGUI>();
+            helpTmp.text = "<size=12><color=#88AACC>Conexión automática en servidores gratuitos de PurrNet.\nIngresa el código que te pasó el Host (sin IP ni programas externos).</color></size>";
+            helpTmp.alignment = TextAlignmentOptions.Center;
+            helpTmp.raycastTarget = false;
 
             var modalBtnRow = CreateUIElement("Modal_Buttons", modalRootGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(380, 50), new Vector2(0, 35));
             var hlg = modalBtnRow.AddComponent<HorizontalLayoutGroup>();
@@ -183,6 +232,9 @@ namespace Game.Editor
             so.FindProperty("_openJoinModalButton").objectReferenceValue = joinBtn;
             so.FindProperty("_optionsButton").objectReferenceValue = optBtn;
             so.FindProperty("_exitButton").objectReferenceValue = exitBtn;
+            so.FindProperty("_localIpText").objectReferenceValue = ipTmp;
+            so.FindProperty("_copyIpButton").objectReferenceValue = copyBtn;
+            so.FindProperty("_connectHelpText").objectReferenceValue = helpTmp;
             so.FindProperty("_connectModalRoot").objectReferenceValue = modalRootGo;
             so.FindProperty("_ipInputField").objectReferenceValue = ipInput;
             so.FindProperty("_portInputField").objectReferenceValue = portInput;
@@ -290,9 +342,9 @@ namespace Game.Editor
 
         private static GameObject CreateUIElement(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 size, Vector2 anchoredPos)
         {
-            var go = new GameObject(name);
+            var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
+            var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = anchorMin;
             rt.anchorMax = anchorMax;
             rt.sizeDelta = size;
@@ -302,23 +354,31 @@ namespace Game.Editor
 
         private static Button CreateButton(Transform parent, string name, string label, float height, Color bgColor)
         {
-            var go = new GameObject(name);
+            var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(0, height);
+            var rt = go.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(400, height);
+
+            var le = go.AddComponent<LayoutElement>();
+            le.minHeight = height;
+            le.preferredHeight = height;
+            le.flexibleWidth = 1f;
 
             var img = go.AddComponent<Image>();
             img.color = bgColor;
+            img.raycastTarget = true;
 
             var btn = go.AddComponent<Button>();
             var colors = btn.colors;
+            colors.normalColor = Color.white;
             colors.highlightedColor = bgColor * 1.3f;
             colors.pressedColor = bgColor * 0.8f;
             btn.colors = colors;
+            btn.targetGraphic = img;
 
-            var textGo = new GameObject("Text");
+            var textGo = new GameObject("Text", typeof(RectTransform));
             textGo.transform.SetParent(go.transform, false);
-            var textRt = textGo.AddComponent<RectTransform>();
+            var textRt = textGo.GetComponent<RectTransform>();
             textRt.anchorMin = Vector2.zero;
             textRt.anchorMax = Vector2.one;
             textRt.sizeDelta = Vector2.zero;
@@ -328,6 +388,7 @@ namespace Game.Editor
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.fontSize = 18;
             tmp.color = Color.white;
+            tmp.raycastTarget = false;
 
             return btn;
         }
@@ -357,6 +418,7 @@ namespace Game.Editor
             tmp.fontSize = 17;
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
+            tmp.raycastTarget = false;
 
             // Placeholder component
             var phGo = new GameObject("Placeholder");
@@ -371,6 +433,7 @@ namespace Game.Editor
             phTmp.fontSize = 17;
             phTmp.color = new Color(0.5f, 0.6f, 0.7f, 0.5f);
             phTmp.alignment = TextAlignmentOptions.MidlineLeft;
+            phTmp.raycastTarget = false;
 
             input.textComponent = tmp;
             input.placeholder = phTmp;

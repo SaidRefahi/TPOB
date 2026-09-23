@@ -375,5 +375,101 @@ Este archivo sirve como base de conocimiento viva para cualquier agente de IA o 
    - Asegurar que `StandaloneBuildHelper` (`TPOB/5. Compilar Standalone Windows (x64)`) compile la lista completa de escenas (`Boot.unity` seguido de `Room_01` a `Room_10`).
    - Usar `TPOB/6. Lanzar 2 Instancias Locales (Host + Cliente)` para levantar automáticamente dos instancias en modo ventana (1280x720) y verificar la sincronización cooperativa en entornos reales de producción.
 
+---
 
+## 🧩 15. Prohibición de APIs de Unity en Constructores e Inicializadores de Campo de MonoBehaviour
 
+### ❌ Error cometido:
+- Declarar `private string _cachedRoomCode = "TPOB-" + UnityEngine.Random.Range(1000, 9999);` como campo en `MainMenuPresenter`.
+- En C#, los inicializadores de campo se ejecutan dentro del constructor por defecto (`.ctor()`). Unity prohíbe invocar la mayoría de sus APIs nativas (incluyendo `Random.Range`, `GameObject`, `Transform`, etc.) desde constructores de MonoBehaviours durante la deserialización o instanciación, arrojando:
+  `UnityException: RandomRangeInt is not allowed to be called from a MonoBehaviour constructor (or instance field initializer), call it in Awake or Start instead.`
+
+### 🛡️ Reglas de Oro:
+1. **Cero Invocaciones a Unity APIs en Inicializadores de Campo:**
+   - Los campos de clases que hereden de `MonoBehaviour` o `NetworkBehaviour` deben inicializarse únicamente con valores constantes o literales primitivos (`null`, `0`, `string.Empty`).
+   - Jamás invocar métodos como `Random.Range`, `Shader.PropertyToID`, `Color`, etc. en la declaración del campo.
+2. **Inicialización Perezosa o en Métodos de Ciclo de Vida:**
+   - Trasladar toda generación aleatoria o cálculo a `Awake()`, `Start()`, o propiedades / métodos seguros tipo *lazy initialization*:
+   ```csharp
+   private string _cachedRoomCode;
+
+   private string GetRoomCode()
+   {
+       if (string.IsNullOrEmpty(_cachedRoomCode))
+       {
+           _cachedRoomCode = "TPOB-" + UnityEngine.Random.Range(1000, 9999);
+       }
+       return _cachedRoomCode;
+   }
+   ```
+
+---
+
+## 📐 16. Layout Groups, Botones con Altura 0 y Búsqueda de Inactivos en Builders
+
+### ❌ Error cometido:
+- **Colapso a Altura 0 en Botones:** En `MainMenuBuilder` y `LobbyBuilder`, se creó un `VerticalLayoutGroup` con `childControlHeight = true` y `childForceExpandHeight = false`. Los botones hijos creados proceduralmente no tenían componente `LayoutElement`. Como `Image` y `Button` no implementan altura preferida por defecto, Unity colapsó el `RectTransform.sizeDelta.y` de todos los botones a `0`.
+- **Consecuencia:** Visualmente el texto de TextMeshProUGUI se dibujaba (por desbordamiento), pero la caja interactuable del botón (`Image`) medía 0 píxeles de alto. Al hacer clic, los raycasts pasaban de largo hacia el fondo vacío (`Text` tenía `raycastTarget = false`), haciendo que ningún botón del menú respondiera a clics en la build.
+- **Acumulación de Canvases Inactivos en Escena:** `Object.FindFirstObjectByType<T>()` sin `FindObjectsInactive.Include` ignora objetos inactivos. Al re-ejecutar builders, Canvases inactivos como `Dialog_Settings` o `Canvas_Lobby` no eran detectados y se instanciaban copias duplicadas indefinidamente bajo `--- UI ---`.
+
+### 🛡️ Reglas de Oro:
+1. **`LayoutElement` Obligatorio bajo Layout Groups:**
+   - Todo elemento UI procedural que viva dentro de un `VerticalLayoutGroup` o `HorizontalLayoutGroup` con `childControlHeight = true` o `childControlWidth = true` DEBE tener un componente `LayoutElement` con sus dimensiones mínimas y preferidas explícitas:
+   ```csharp
+   var le = go.AddComponent<LayoutElement>();
+   le.minHeight = height;
+   le.preferredHeight = height;
+   le.flexibleWidth = 1f;
+   ```
+2. **Creación con `typeof(RectTransform)`:**
+   - Crear GameObjects de UI siempre con `new GameObject(name, typeof(RectTransform))` para garantizar su naturaleza UI desde el primer fotograma.
+3. **Búsqueda de Entidades Inactivas y Limpieza de UI previa:**
+   - Al buscar componentes que puedan estar desactivados en escena, usar `Object.FindFirstObjectByType<T>(FindObjectsInactive.Include)`.
+   - En builders que configuran escenas (`ConfigureCompleteBootScene`), limpiar siempre los hijos existentes del contenedor `--- UI ---` antes de instanciar prefabs nuevos para evitar duplicados residuales.
+
+---
+
+## 🔗 17. Fusión Multijugador: Ownership de Coordinador, Despacho de Input en Gameplay y Umbrales de Proximidad
+
+### ❌ Errores cometidos:
+- **Métodos Huérfanos sin Enlace de Input:** Declarar `RequestFusion()` y `RequestSeparation()` en los controladores y coordinadores pero nunca invocarlos desde el bucle de input (`Update`), haciendo imposible que los jugadores ejecuten la mecánica en una build jugable.
+- **`[ServerRpc]` de Fusión sin `requireOwnership: false` en Objetos Neutrales:** `RobotCoordinator` pertenece a la escena (Host). Un cliente remoto que invocaba `RequestFusionServerRpc()` era rechazado en silencio por PurrNet por no ser dueño de la entidad.
+- **Umbral de Distancia Estricto sin Tolerancia Vertical:** Calcular la distancia tridimensional entre el Torso en el suelo (`y = 0.5`) y el conector superior de las Piernas (`y = 1.8`) con un radio estricto de 3.5m reducía el margen de maniobra en el suelo a escasos 3.2m, fallando en silencio sin advertencias ni feedback al jugador.
+
+### 🛡️ Reglas de Oro:
+1. **Auditoría de Despacho de Comandos:**
+   - Todo comando o mecánica cooperativa central (`FuseCommand`, `SeparateCommand`) debe tener su canal directo en el `InputReader` (`ConsumeFuseTrigger()`) y ser despachado en el bucle principal de control.
+2. **`requireOwnership: false` en Coordinadores de Escena:**
+   - En `NetworkBehaviour`s neutrales de sala (`RobotCoordinator`, `LevelManager`, `PuzzleMechanism`), marcar SIEMPRE `[ServerRpc(Channel.ReliableOrdered, requireOwnership: false)]` para que cualquiera de los clientes conectados pueda disparar la acción.
+3. **Márgenes de Proximidad Generosos y Diagnóstico Visible:**
+   - Usar un umbral de proximidad de al menos **`4.5m`** (`_maxFusionDistance = 4.5f`) para acomodar diferencias de altura entre socket y suelo.
+   - En caso de rechazo autoritativo en servidor, emitir siempre un `Debug.LogWarning` con la distancia exacta medida y las referencias comprobadas para facilitar el diagnóstico en `Player.log`.
+
+---
+
+## 🖥️ 18. Ciclo de Vida de UI, GameObjects Inactivos en Escena y Transición al Lobby
+
+### ❌ Error cometido:
+- **GameObjects de Canvas Inactivos en Escena (`m_IsActive: 0`):** Al guardar la escena `Boot.unity` desde builders (`LobbyBuilder`, `PauseMenuBuilder`), se invocaba `lobbyInstance.SetActive(false);`. Esto grababa el prefab `Canvas_Lobby` en la escena con `m_IsActive: 0`.
+- **Muerte de Ciclo de Vida de MonoBehaviours:** En Unity, cuando un GameObject arranca desactivado en la jerarquía, sus MonoBehaviours (`LobbyPresenter`, `LobbyView`) **NUNCA ejecutan `Awake()`, `Start()` ni `OnEnable()`**.
+- **Consecuencia:** `LobbyPresenter` jamás se suscribió a `_gameManager.OnGameStateChanged`. Cuando el jugador pulsaba "Host" o "Connect", `GameManager` cambiaba el estado a `GameState.Lobby`. `MainMenuPresenter` recibía el evento y se apagaba a sí mismo (`_view.SetActive(false)`), pero `Canvas_Lobby` nunca despertaba ni recibía la señal, dejando la pantalla completamente negra y vacía.
+
+### 🛡️ Reglas de Oro:
+1. **Gestión de Visibilidad con `Canvas.enabled` en vez de `gameObject.SetActive`:**
+   - En pantallas complejas o canvases gobernados por Presenters/Servicios (`Canvas_Lobby`, `Canvas_PauseMenu`, `Canvas_MainMenu`), **mantener siempre el GameObject raíz activo (`activeSelf = true`)**.
+   - Para ocultar o mostrar la pantalla, conmutar únicamente `Canvas.enabled = active` y `GraphicRaycaster.enabled = active` (o `CanvasGroup.alpha` y `blocksRaycasts`):
+   ```csharp
+   public void SetActive(bool active)
+   {
+       if (_canvas != null) _canvas.enabled = active;
+       if (_raycaster != null) _raycaster.enabled = active;
+       if (!gameObject.activeSelf) gameObject.SetActive(true);
+   }
+   ```
+   - Esto garantiza 0 draw calls y 0 intercepciones de clics mientras esté oculto, pero mantiene los scripts vivos en memoria escuchando eventos de red y cambios de estado.
+2. **Fail-Safe en Presenters Emisores:**
+   - Cuando un Presenter (`MainMenuPresenter`) oculte su vista por un cambio de estado hacia otra pantalla (`GameState.Lobby`), buscar defensivamente la vista destino mediante `Object.FindFirstObjectByType<LobbyView>(FindObjectsInactive.Include)` y asegurar explícitamente su activación y refresco (`lobbyView.SetActive(true); presenter.RefreshUI();`).
+3. **Verificación de Conexión Síncrona en NetworkService:**
+   - Al llamar `StartHost()` o `StartClient()`, si el `NetworkManager` ya pasa síncronamente al estado `Connected`, disparar de inmediato `OnConnected?.Invoke()` para garantizar que la transición de estado nunca dependa exclusivamente de un callback asíncrono tardío.
+4. **Exhibición Visible del Código de Sala en el Lobby:**
+   - El lobby debe mostrar de forma prominente el código de sala generado (`CÓDIGO DE SALA: TPOB-XXXX (Compártelo con tu compañero)`) para que el anfitrión pueda dictárselo a su compañero sin necesidad de salir del lobby ni recurrir a herramientas externas.

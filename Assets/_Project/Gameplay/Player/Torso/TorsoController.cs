@@ -215,6 +215,18 @@ namespace Game.Gameplay.Player.Torso
                 return;
             }
 
+            if (_inputReader.ConsumeFuseTrigger())
+            {
+                if (_isFused)
+                {
+                    RequestSeparation();
+                }
+                else
+                {
+                    RequestFusion();
+                }
+            }
+
             TorsoInputData inputData = new TorsoInputData(
                 _inputReader.MoveInput,
                 _inputReader.LookInput,
@@ -608,7 +620,7 @@ namespace Game.Gameplay.Player.Torso
 
         public bool IsClimbing => _isClimbing;
         public bool IsFused => _isFused;
-        public bool CanFuse => _coordinator != null && _coordinator.CanFuse();
+        public bool CanFuse => (_coordinator != null || (_coordinator = FindFirstObjectByType<RobotCoordinator>()) != null) && _coordinator.CanFuse();
 
         public void SetCoordinator(RobotCoordinator coordinator)
         {
@@ -674,17 +686,35 @@ namespace Game.Gameplay.Player.Torso
 
         public void RequestFusion()
         {
+            if (_coordinator == null)
+            {
+                _coordinator = FindFirstObjectByType<RobotCoordinator>();
+            }
+
             if (_coordinator != null)
             {
                 _coordinator.RequestFusion();
+            }
+            else
+            {
+                Debug.LogWarning("[TorsoController] Cannot RequestFusion: RobotCoordinator not found in scene.");
             }
         }
 
         public void RequestSeparation()
         {
+            if (_coordinator == null)
+            {
+                _coordinator = FindFirstObjectByType<RobotCoordinator>();
+            }
+
             if (_coordinator != null)
             {
                 _coordinator.RequestSeparation();
+            }
+            else
+            {
+                Debug.LogWarning("[TorsoController] Cannot RequestSeparation: RobotCoordinator not found in scene.");
             }
         }
 

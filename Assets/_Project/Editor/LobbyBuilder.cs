@@ -46,10 +46,14 @@ namespace Game.Editor
                 lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LobbyPrefabPath);
             }
 
-            if (Object.FindFirstObjectByType<LobbyView>() == null && lobbyPrefab != null)
+            if (Object.FindFirstObjectByType<LobbyView>(FindObjectsInactive.Include) == null && lobbyPrefab != null)
             {
                 var lobbyInstance = (GameObject)PrefabUtility.InstantiatePrefab(lobbyPrefab, uiRoot.transform);
-                lobbyInstance.SetActive(false); // Inactive initially, shown when GameState.Lobby
+                lobbyInstance.SetActive(true);
+                var canvas = lobbyInstance.GetComponent<Canvas>();
+                if (canvas != null) canvas.enabled = false;
+                var raycaster = lobbyInstance.GetComponent<GraphicRaycaster>();
+                if (raycaster != null) raycaster.enabled = false;
                 Undo.RegisterCreatedObjectUndo(lobbyInstance, "Instantiate Canvas_Lobby");
             }
 
@@ -86,19 +90,19 @@ namespace Game.Editor
             var legsCard = BuildRoleCard(
                 cardsRowGo.transform,
                 "Card_Legs",
-                "🦵 PIERNAS (LEGS)",
+                "PIERNAS (LEGS)",
                 new Color(0f, 1f, 1f),
                 new Color(0.06f, 0.12f, 0.15f),
                 "<b>Misión:</b> Locomoción ágil, saltos de altura, sprint continuo y demolición física.",
-                "• <b>Salto / Doble Salto</b>: Supera desniveles y plataformas altas.\n" +
-                "• <b>Sprint Rápido</b>: Cruza compuertas temporizadas a alta velocidad.\n" +
-                "• <b>Patada Física</b>: Empuja bloques, cajas pesadas y activa botones.\n" +
-                "• <b>Fusión / Base</b>: Chasis motriz que transporta al Torso acoplado.",
-                "• <b>[WASD] / [Stick Izq]</b>: Moverse y posicionarse\n" +
-                "• <b>[Espacio] / [Botón A]</b>: Saltar / Doble salto en el aire\n" +
-                "• <b>[Shift] / [Gatillo Izq]</b>: Sprint / Carrera rápida\n" +
-                "• <b>[F] / [Botón X]</b>: Patada física de impacto\n" +
-                "• <b>[R] / [Botón Y]</b>: Acople / Desacople con Torso",
+                "- <b>Salto / Doble Salto</b>: Supera desniveles y plataformas altas.\n" +
+                "- <b>Sprint Rápido</b>: Cruza compuertas temporizadas a alta velocidad.\n" +
+                "- <b>Patada Física</b>: Empuja bloques, cajas pesadas y activa botones.\n" +
+                "- <b>Fusión / Base</b>: Chasis motriz que transporta al Torso acoplado.",
+                "- <b>[WASD] / [Stick Izq]</b>: Moverse y posicionarse\n" +
+                "- <b>[Espacio] / [Botón A]</b>: Saltar / Doble salto en el aire\n" +
+                "- <b>[Shift] / [Gatillo Izq]</b>: Sprint / Carrera rápida\n" +
+                "- <b>[F] / [Botón X]</b>: Patada física de impacto\n" +
+                "- <b>[R] / [Botón Y]</b>: Acople / Desacople con Torso",
                 out var legsBtn,
                 out var legsStatus,
                 out var legsCanvasGroup,
@@ -110,19 +114,19 @@ namespace Game.Editor
             var torsoCard = BuildRoleCard(
                 cardsRowGo.transform,
                 "Card_Torso",
-                "🤖 TORSO (TORSO)",
+                "TORSO (TORSO)",
                 new Color(1f, 0.6f, 0f),
                 new Color(0.15f, 0.1f, 0.05f),
                 "<b>Misión:</b> Puntería 360°, manipulación electromagnética y resolución balística.",
-                "• <b>Torreta Libre</b>: Giro omnidireccional 360° independiente del chasis.\n" +
-                "• <b>Agarre y Lanzamiento</b>: Manipulación balística precisa de objetos y llaves.\n" +
-                "• <b>Rayo Magnético</b>: Haz tractor continuo para atraer objetos distantes.\n" +
-                "• <b>Modo Oruga</b>: Rueda por ductos estrechos cuando está desacoplado.",
-                "• <b>[Mouse] / [Stick Der]</b>: Apuntar retícula en 360°\n" +
-                "• <b>[Click Izq / E] / [Gatillo Der]</b>: Agarrar / Soltar / Interactuar\n" +
-                "• <b>[Click Der / Q] / [Botón RB]</b>: Lanzar con impulso cargado\n" +
-                "• <b>[Shift / C] / [Gatillo Izq]</b>: Activar Rayo Magnético tractor\n" +
-                "• <b>[R] / [Botón Y]</b>: Acople / Desacople con Piernas",
+                "- <b>Torreta Libre</b>: Giro omnidireccional 360° independiente del chasis.\n" +
+                "- <b>Agarre y Lanzamiento</b>: Manipulación balística precisa de objetos y llaves.\n" +
+                "- <b>Rayo Magnético</b>: Haz tractor continuo para atraer objetos distantes.\n" +
+                "- <b>Modo Oruga</b>: Rueda por ductos estrechos cuando está desacoplado.",
+                "- <b>[Mouse] / [Stick Der]</b>: Apuntar retícula en 360°\n" +
+                "- <b>[Click Izq / E] / [Gatillo Der]</b>: Agarrar / Soltar / Interactuar\n" +
+                "- <b>[Click Der / Q] / [Botón RB]</b>: Lanzar con impulso cargado\n" +
+                "- <b>[Shift / C] / [Gatillo Izq]</b>: Activar Rayo Magnético tractor\n" +
+                "- <b>[R] / [Botón Y]</b>: Acople / Desacople con Piernas",
                 out var torsoBtn,
                 out var torsoStatus,
                 out var torsoCanvasGroup,
@@ -150,10 +154,10 @@ namespace Game.Editor
             btnHlg.childForceExpandWidth = true;
             btnHlg.childForceExpandHeight = true;
 
-            var leaveBtn = CreateButton(btnRowGo.transform, "Btn_LeaveLobby", "← SALIR AL MENÚ", 48, new Color(0.25f, 0.12f, 0.12f));
+            var leaveBtn = CreateButton(btnRowGo.transform, "Btn_LeaveLobby", "SALIR AL MENÚ", 48, new Color(0.25f, 0.12f, 0.12f));
             var readyBtn = CreateButton(btnRowGo.transform, "Btn_ToggleReady", "CONFIRMAR (LISTO)", 48, new Color(0.12f, 0.35f, 0.22f));
             var readyTmp = readyBtn.GetComponentInChildren<TextMeshProUGUI>();
-            var startBtn = CreateButton(btnRowGo.transform, "Btn_StartGame", "▶  INICIAR OPERACIÓN", 48, new Color(0.12f, 0.45f, 0.35f));
+            var startBtn = CreateButton(btnRowGo.transform, "Btn_StartGame", "INICIAR OPERACIÓN", 48, new Color(0.12f, 0.45f, 0.35f));
 
             // Wire SerializedObject
             var so = new SerializedObject(lobbyView);
@@ -278,9 +282,9 @@ namespace Game.Editor
 
         private static GameObject CreateUIElement(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 size, Vector2 anchoredPos)
         {
-            var go = new GameObject(name);
+            var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
+            var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = anchorMin;
             rt.anchorMax = anchorMax;
             rt.sizeDelta = size;
@@ -290,23 +294,31 @@ namespace Game.Editor
 
         private static Button CreateButton(Transform parent, string name, string label, float height, Color bgColor)
         {
-            var go = new GameObject(name);
+            var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(0, height);
+            var rt = go.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(250, height);
+
+            var le = go.AddComponent<LayoutElement>();
+            le.minHeight = height;
+            le.preferredHeight = height;
+            le.flexibleWidth = 1f;
 
             var img = go.AddComponent<Image>();
             img.color = bgColor;
+            img.raycastTarget = true;
 
             var btn = go.AddComponent<Button>();
             var colors = btn.colors;
+            colors.normalColor = Color.white;
             colors.highlightedColor = bgColor * 1.35f;
             colors.pressedColor = bgColor * 0.75f;
             btn.colors = colors;
+            btn.targetGraphic = img;
 
-            var textGo = new GameObject("Text");
+            var textGo = new GameObject("Text", typeof(RectTransform));
             textGo.transform.SetParent(go.transform, false);
-            var textRt = textGo.AddComponent<RectTransform>();
+            var textRt = textGo.GetComponent<RectTransform>();
             textRt.anchorMin = Vector2.zero;
             textRt.anchorMax = Vector2.one;
             textRt.sizeDelta = Vector2.zero;
@@ -316,6 +328,7 @@ namespace Game.Editor
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.fontSize = 17;
             tmp.color = Color.white;
+            tmp.raycastTarget = false;
 
             return btn;
         }

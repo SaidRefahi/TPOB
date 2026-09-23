@@ -38,10 +38,8 @@ namespace Game.Gameplay.UI
             RefreshUI();
 
             // Set initial visibility based on game state
-            if (_gameManager != null)
-            {
-                _view.SetActive(_gameManager.CurrentState == GameState.Lobby);
-            }
+            bool isLobby = _gameManager != null && _gameManager.CurrentState == GameState.Lobby;
+            _view.SetActive(isLobby);
         }
 
         private void OnDestroy()
@@ -196,6 +194,13 @@ namespace Game.Gameplay.UI
 
             bool isLocalLegs = localId >= 0 && legsId == localId;
             bool isLocalTorso = localId >= 0 && torsoId == localId;
+
+            // Update Room Code Header
+            string roomCode = _networkService != null ? _networkService.RoomName : string.Empty;
+            if (_view.RoomCodeText != null && !string.IsNullOrEmpty(roomCode))
+            {
+                _view.RoomCodeText.text = $"<b><size=34><color=#00FFFF>SALA DE PREPARACIÓN</color></size></b>\n<size=18><color=#FFFFFF>CÓDIGO DE SALA: </color><color=#00FFFF><b>{roomCode}</b></color> <color=#8899AA>(Compártelo con tu compañero)</color></size>";
+            }
 
             // Update Cards
             _view.UpdateCard(PlayerRole.Legs, legsId != -1, legsReady, isLocalLegs);

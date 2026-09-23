@@ -66,6 +66,12 @@ namespace Game.Network.Services
             _cachedManager.onClientConnectionState += HandleClientConnectionState;
             _cachedManager.onPlayerJoined += HandlePlayerJoined;
             _cachedManager.onPlayerLeft += HandlePlayerLeft;
+
+            if (_cachedManager.serverState == ConnectionState.Connected || _cachedManager.clientState == ConnectionState.Connected)
+            {
+                Debug.Log("[NetworkService] Manager bound while already connected; notifying OnConnected.");
+                OnConnected?.Invoke();
+            }
         }
 
         private void UnbindManager()
@@ -77,6 +83,26 @@ namespace Game.Network.Services
             _cachedManager.onPlayerJoined -= HandlePlayerJoined;
             _cachedManager.onPlayerLeft -= HandlePlayerLeft;
             _cachedManager = null;
+        }
+
+        private string _fallbackRoomName = "TPOB-ROOM";
+
+        public string RoomName
+        {
+            get
+            {
+                var purr = GetPurrTransport();
+                return purr != null ? purr.roomName : _fallbackRoomName;
+            }
+            set
+            {
+                _fallbackRoomName = value;
+                var purr = GetPurrTransport();
+                if (purr != null)
+                {
+                    purr.roomName = value;
+                }
+            }
         }
 
         public string ServerAddress
@@ -113,6 +139,14 @@ namespace Game.Network.Services
             }
         }
 
+        private PurrTransport GetPurrTransport()
+        {
+            EnsureManager();
+            if (_cachedManager == null) return null;
+            if (_cachedManager.transport is PurrTransport purr) return purr;
+            return _cachedManager.GetComponent<PurrTransport>();
+        }
+
         private UDPTransport GetUDPTransport()
         {
             EnsureManager();
@@ -124,10 +158,30 @@ namespace Game.Network.Services
         public void StartHost()
         {
             EnsureManager();
-            if (_cachedManager == null) return;
+            if (_cachedManager == null)
+            {
+                Debug.LogError("[NetworkService] Cannot StartHost: NetworkManager not found!");
+                return;
+            }
+
+            var purr = GetPurrTransport();
+            if (purr != null)
+            {
+                if (string.IsNullOrWhiteSpace(purr.roomName))
+                {
+                    purr.roomName = !string.IsNullOrWhiteSpace(_fallbackRoomName) ? _fallbackRoomName : "TPOB-ROOM";
+                }
+                purr.attemptDirectConnection = true;
+                purr.masterServer = "https://purrtransport.purrservers.com/";
+            }
 
             _cachedManager.StartServer();
             _cachedManager.StartClient();
+
+            if (_cachedManager.serverState == ConnectionState.Connected || _cachedManager.clientState == ConnectionState.Connected)
+            {
+                OnConnected?.Invoke();
+            }
         }
 
         public void StartHost(ushort port)
@@ -136,18 +190,58 @@ namespace Game.Network.Services
             StartHost();
         }
 
+        public void StartHostWithRoom(string roomName)
+        {
+            RoomName = roomName;
+            StartHost();
+        }
+
         public void StartClient()
         {
             EnsureManager();
-            if (_cachedManager == null) return;
+            if (_cachedManager == null)
+            {
+                Debug.LogError("[NetworkService] Cannot StartClient: NetworkManager not found!");
+                return;
+            }
+
+            var purr = GetPurrTransport();
+            if (purr != null)
+            {
+                if (string.IsNullOrWhiteSpace(purr.roomName))
+                {
+                    purr.roomName = !string.IsNullOrWhiteSpace(_fallbackRoomName) ? _fallbackRoomName : "TPOB-ROOM";
+                }
+                purr.attemptDirectConnection = true;
+                purr.masterServer = "https://purrtransport.purrservers.com/";
+            }
 
             _cachedManager.StartClient();
+
+            if (_cachedManager.clientState == ConnectionState.Connected)
+            {
+                OnConnected?.Invoke();
+            }
         }
 
         public void StartClient(string address, ushort port)
         {
-            ServerAddress = address;
-            ServerPort = port;
+            var purr = GetPurrTransport();
+            if (purr != null)
+            {
+                RoomName = address;
+            }
+            else
+            {
+                ServerAddress = address;
+                ServerPort = port;
+            }
+            StartClient();
+        }
+
+        public void StartClientWithRoom(string roomName)
+        {
+            RoomName = roomName;
             StartClient();
         }
 
@@ -168,14 +262,19 @@ namespace Game.Network.Services
 
         private void EnsureManager()
         {
-            if (_cachedManager == null && NetworkManager.main != null)
+            if (_cachedManager == null)
             {
-                BindManager(NetworkManager.main);
+                var nm = NetworkManager.main != null ? NetworkManager.main : UnityEngine.Object.FindFirstObjectByType<NetworkManager>();
+                if (nm != null)
+                {
+                    BindManager(nm);
+                }
             }
         }
 
         private void HandleServerConnectionState(ConnectionState state)
         {
+            Debug.Log($"[NetworkService] Server Connection State: {state}");
             if (state == ConnectionState.Connected)
             {
                 OnConnected?.Invoke();
@@ -188,6 +287,7 @@ namespace Game.Network.Services
 
         private void HandleClientConnectionState(ConnectionState state)
         {
+            Debug.Log($"[NetworkService] Client Connection State: {state}");
             if (state == ConnectionState.Connected)
             {
                 OnConnected?.Invoke();

@@ -20,6 +20,11 @@ namespace Game.Gameplay.UI
         [SerializeField] private Button _connectConfirmButton;
         [SerializeField] private Button _connectCancelButton;
 
+        [Header("Información de Red e IP Local")]
+        [SerializeField] private TextMeshProUGUI _localIpText;
+        [SerializeField] private Button _copyIpButton;
+        [SerializeField] private TextMeshProUGUI _connectHelpText;
+
         [Header("Diálogo de Opciones")]
         [SerializeField] private SettingsView _settingsDialog;
 
@@ -36,11 +41,36 @@ namespace Game.Gameplay.UI
         public TMP_InputField PortInputField => _portInputField;
         public Button ConnectConfirmButton => _connectConfirmButton;
         public Button ConnectCancelButton => _connectCancelButton;
+        public TextMeshProUGUI ConnectHelpText => _connectHelpText;
+
+        public TextMeshProUGUI LocalIpText => _localIpText;
+        public Button CopyIpButton => _copyIpButton;
 
         public SettingsView SettingsDialog => _settingsDialog;
         public TextMeshProUGUI StatusFeedbackText => _statusFeedbackText;
 
-        public void SetActive(bool active) => gameObject.SetActive(active);
+        private Canvas _canvas;
+        private GraphicRaycaster _raycaster;
+
+        private void Awake()
+        {
+            _canvas = GetComponent<Canvas>();
+            _raycaster = GetComponent<GraphicRaycaster>();
+        }
+
+        public void SetActive(bool active)
+        {
+            if (_canvas == null) _canvas = GetComponent<Canvas>();
+            if (_raycaster == null) _raycaster = GetComponent<GraphicRaycaster>();
+
+            if (_canvas != null) _canvas.enabled = active;
+            if (_raycaster != null) _raycaster.enabled = active;
+
+            if (!gameObject.activeSelf)
+            {
+                gameObject.SetActive(true);
+            }
+        }
 
         public void SetStatusFeedback(string message, Color color)
         {

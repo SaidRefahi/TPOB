@@ -29,6 +29,12 @@ namespace Game.Gameplay.UI
         [SerializeField] private TextMeshProUGUI _matchStatusText;
         [SerializeField] private Button _leaveLobbyButton;
 
+        [Header("Información de Sala")]
+        [SerializeField] private TextMeshProUGUI _roomCodeText;
+
+        private Canvas _canvas;
+        private GraphicRaycaster _raycaster;
+
         public Button SelectLegsButton => _selectLegsButton;
         public TextMeshProUGUI LegsStatusText => _legsStatusText;
         public CanvasGroup LegsCanvasGroup => _legsCanvasGroup;
@@ -47,7 +53,45 @@ namespace Game.Gameplay.UI
         public TextMeshProUGUI MatchStatusText => _matchStatusText;
         public Button LeaveLobbyButton => _leaveLobbyButton;
 
-        public void SetActive(bool active) => gameObject.SetActive(active);
+        public TextMeshProUGUI RoomCodeText
+        {
+            get
+            {
+                if (_roomCodeText == null)
+                {
+                    var header = transform.Find("Background/Header");
+                    if (header != null)
+                    {
+                        _roomCodeText = header.GetComponent<TextMeshProUGUI>();
+                    }
+                }
+                return _roomCodeText;
+            }
+        }
+
+        private void Awake()
+        {
+            _canvas = GetComponent<Canvas>();
+            _raycaster = GetComponent<GraphicRaycaster>();
+
+            // Start with canvas hidden while keeping GameObject active so Presenters/listeners stay alive
+            if (_canvas != null) _canvas.enabled = false;
+            if (_raycaster != null) _raycaster.enabled = false;
+        }
+
+        public void SetActive(bool active)
+        {
+            if (_canvas == null) _canvas = GetComponent<Canvas>();
+            if (_raycaster == null) _raycaster = GetComponent<GraphicRaycaster>();
+
+            if (_canvas != null) _canvas.enabled = active;
+            if (_raycaster != null) _raycaster.enabled = active;
+
+            if (!gameObject.activeSelf)
+            {
+                gameObject.SetActive(true);
+            }
+        }
 
         public void UpdateCard(PlayerRole role, bool isOccupied, bool isReady, bool isLocal)
         {
@@ -68,8 +112,8 @@ namespace Game.Gameplay.UI
                 cg.alpha = 1f;
                 btn.interactable = !isReady;
                 text.text = isReady
-                    ? "<color=#55FF55><b>✔ TU SELECCIÓN (LISTO / CONFIRMADO)</b></color>"
-                    : "<color=#00FFFF><b>● TU SELECCIÓN (PENDIENTE DE LISTO)</b></color>";
+                    ? "<color=#55FF55><b>[LISTO] TU SELECCIÓN CONFIRMADA</b></color>"
+                    : "<color=#00FFFF><b>[ELEGIDO] TU SELECCIÓN (PENDIENTE DE LISTO)</b></color>";
             }
             else
             {
@@ -77,7 +121,7 @@ namespace Game.Gameplay.UI
                 cg.alpha = isReady ? 0.45f : 0.8f;
                 btn.interactable = false;
                 text.text = isReady
-                    ? "<color=#FF5555><b>🔒 OCUPADO POR COMPAÑERO (CONFIRMADO)</b></color>"
+                    ? "<color=#FF5555><b>[OCUPADO] CONFIRMADO POR COMPAÑERO</b></color>"
                     : "<color=#FFAA00><b>COMPAÑERO ELIGIENDO...</b></color>";
             }
         }

@@ -58,8 +58,29 @@ namespace Game.Gameplay.UI
             }
         }
 
+        private string _cachedRoomCode;
+
+        private string GetRoomCode()
+        {
+            if (string.IsNullOrEmpty(_cachedRoomCode))
+            {
+                _cachedRoomCode = "TPOB-" + UnityEngine.Random.Range(1000, 9999);
+            }
+            return _cachedRoomCode;
+        }
+
         private void InitializeView()
         {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+
+            string roomCode = GetRoomCode();
+
+            if (_view.LocalIpText != null)
+            {
+                _view.LocalIpText.text = $"Código de Sala: <color=#00FFFF><b>{roomCode}</b></color>";
+            }
+
             if (_view.ConnectModalRoot != null)
             {
                 _view.ConnectModalRoot.SetActive(false);
@@ -72,7 +93,7 @@ namespace Game.Gameplay.UI
 
             if (_view.IpInputField != null && string.IsNullOrEmpty(_view.IpInputField.text))
             {
-                _view.IpInputField.text = "127.0.0.1";
+                _view.IpInputField.text = string.Empty;
             }
 
             if (_view.PortInputField != null && string.IsNullOrEmpty(_view.PortInputField.text))
@@ -90,6 +111,9 @@ namespace Game.Gameplay.UI
 
             if (_view.OpenJoinModalButton != null)
                 _view.OpenJoinModalButton.onClick.AddListener(HandleOpenJoinModalClicked);
+
+            if (_view.CopyIpButton != null)
+                _view.CopyIpButton.onClick.AddListener(HandleCopyCodeClicked);
 
             if (_view.ConnectConfirmButton != null)
                 _view.ConnectConfirmButton.onClick.AddListener(HandleConnectConfirmClicked);
@@ -124,6 +148,9 @@ namespace Game.Gameplay.UI
             if (_view.OpenJoinModalButton != null)
                 _view.OpenJoinModalButton.onClick.RemoveListener(HandleOpenJoinModalClicked);
 
+            if (_view.CopyIpButton != null)
+                _view.CopyIpButton.onClick.RemoveListener(HandleCopyCodeClicked);
+
             if (_view.ConnectConfirmButton != null)
                 _view.ConnectConfirmButton.onClick.RemoveListener(HandleConnectConfirmClicked);
 
@@ -147,14 +174,26 @@ namespace Game.Gameplay.UI
             }
         }
 
+        private void HandleCopyCodeClicked()
+        {
+            string code = GetRoomCode();
+            GUIUtility.systemCopyBuffer = code;
+            _view.SetStatusFeedback($"¡Código de sala {code} copiado al portapapeles!", new Color(0.4f, 1f, 0.4f));
+        }
+
         private void HandleHostClicked()
         {
-            ushort port = GetPortFromInput();
-            _view.SetStatusFeedback($"Iniciando servidor Host en puerto {port}...", new Color(0.3f, 1f, 0.5f));
+            ResolveDependencies();
+            string code = GetRoomCode();
+            _view.SetStatusFeedback($"Creando sala '{code}' en PurrNet... Pásale este código a tu amigo.", new Color(0.3f, 1f, 0.5f));
 
             if (_networkService != null)
             {
-                _networkService.StartHost(port);
+                _networkService.StartHostWithRoom(code);
+            }
+            else
+            {
+                _view.SetStatusFeedback("Error: Servicio de red no inicializado.", Color.red);
             }
         }
 
@@ -168,13 +207,12 @@ namespace Game.Gameplay.UI
 
         private void HandleConnectConfirmClicked()
         {
-            string ip = _view.IpInputField != null && !string.IsNullOrWhiteSpace(_view.IpInputField.text)
+            ResolveDependencies();
+            string roomCode = _view.IpInputField != null && !string.IsNullOrWhiteSpace(_view.IpInputField.text)
                 ? _view.IpInputField.text.Trim()
-                : "127.0.0.1";
+                : GetRoomCode();
 
-            ushort port = GetPortFromInput();
-
-            _view.SetStatusFeedback($"Conectando a {ip}:{port}...", new Color(1f, 0.8f, 0.2f));
+            _view.SetStatusFeedback($"Conectando a sala '{roomCode}' en servidores de PurrNet...", new Color(1f, 0.8f, 0.2f));
 
             if (_view.ConnectModalRoot != null)
             {
@@ -183,7 +221,11 @@ namespace Game.Gameplay.UI
 
             if (_networkService != null)
             {
-                _networkService.StartClient(ip, port);
+                _networkService.StartClientWithRoom(roomCode);
+            }
+            else
+            {
+                _view.SetStatusFeedback("Error: Servicio de red no inicializado.", Color.red);
             }
         }
 
@@ -217,6 +259,21 @@ namespace Game.Gameplay.UI
             if (newState == GameState.Lobby || newState == GameState.InGame)
             {
                 _view.SetActive(false);
+
+                if (newState == GameState.Lobby)
+                {
+                    // Fail-safe: ensure LobbyView is enabled and refreshed
+                    var lobbyView = Object.FindFirstObjectByType<LobbyView>(FindObjectsInactive.Include);
+                    if (lobbyView != null)
+                    {
+                        lobbyView.gameObject.SetActive(true);
+                        lobbyView.SetActive(true);
+                        if (lobbyView.TryGetComponent<LobbyPresenter>(out var presenter))
+                        {
+                            presenter.RefreshUI();
+                        }
+                    }
+                }
             }
             else if (newState == GameState.Booting)
             {
@@ -228,7 +285,7 @@ namespace Game.Gameplay.UI
         private void HandleNetworkDisconnected()
         {
             _view.SetActive(true);
-            _view.SetStatusFeedback("Desconectado de la partida.", new Color(1f, 0.4f, 0.4f));
+            _view.SetStatusFeedback("Desconectado de la partida o conexión terminada.", new Color(1f, 0.4f, 0.4f));
         }
 
         private ushort GetPortFromInput()

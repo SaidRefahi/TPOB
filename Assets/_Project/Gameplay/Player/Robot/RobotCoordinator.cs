@@ -30,7 +30,7 @@ namespace Game.Gameplay.Player.Robot
         [SerializeField] private FusionSocket _socket;
 
         [Group("Configuración")]
-        [SerializeField] private float _maxFusionDistance = 3.5f;
+        [SerializeField] private float _maxFusionDistance = 4.5f;
 
         [Group("Estado Sincronizado")]
         [SerializeField] private SyncVar<bool> _isFused = new(false);
@@ -179,6 +179,18 @@ namespace Game.Gameplay.Player.Robot
             }
         }
 
+        public void SetLegs(LegsController legs)
+        {
+            _legs = legs;
+            RebuildContext();
+        }
+
+        public void SetTorso(TorsoController torso)
+        {
+            _torso = torso;
+            RebuildContext();
+        }
+
         public void SetSocket(FusionSocket socket)
         {
             _socket = socket;
@@ -219,7 +231,7 @@ namespace Game.Gameplay.Player.Robot
             }
         }
 
-        [ServerRpc(Channel.ReliableOrdered)]
+        [ServerRpc(Channel.ReliableOrdered, requireOwnership: false)]
         private void RequestFusionServerRpc(RPCInfo info = default)
         {
             TryFuseOnServer();
@@ -229,6 +241,14 @@ namespace Game.Gameplay.Player.Robot
         {
             if (!CanFuse())
             {
+                float sqrDist = -1f;
+                if (_legs != null && _torso != null)
+                {
+                    var targetSocket = _socket != null ? _socket : _legs.FusionSocket;
+                    Vector3 socketPos = targetSocket != null ? targetSocket.AttachPoint.position : _legs.transform.position;
+                    sqrDist = (_torso.transform.position - socketPos).sqrMagnitude;
+                }
+                Debug.LogWarning($"[RobotCoordinator] Cannot fuse: isFused={_isFused.value}, legs={_legs != null}, torso={_torso != null}, sqrDist={sqrDist:F2} (maxSqr={_maxFusionDistance * _maxFusionDistance:F2})");
                 return;
             }
 
@@ -272,7 +292,7 @@ namespace Game.Gameplay.Player.Robot
             }
         }
 
-        [ServerRpc(Channel.ReliableOrdered)]
+        [ServerRpc(Channel.ReliableOrdered, requireOwnership: false)]
         private void RequestSeparationServerRpc(RPCInfo info = default)
         {
             TrySeparateOnServer();
@@ -282,6 +302,7 @@ namespace Game.Gameplay.Player.Robot
         {
             if (!_isFused.value)
             {
+                Debug.LogWarning("[RobotCoordinator] Cannot separate: Robot is not fused.");
                 return;
             }
 

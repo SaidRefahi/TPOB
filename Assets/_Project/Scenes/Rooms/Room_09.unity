@@ -740,7 +740,7 @@ MonoBehaviour:
   _legs: {fileID: 0}
   _torso: {fileID: 0}
   _socket: {fileID: 0}
-  _maxFusionDistance: 3.5
+  _maxFusionDistance: 4.5
   _isFused:
     _value: 0
     _ownerAuth: 0

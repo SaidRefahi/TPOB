@@ -11,6 +11,7 @@ namespace Game.Core.Interfaces
 
         string ServerAddress { get; set; }
         ushort ServerPort { get; set; }
+        string RoomName { get; set; }
 
         event Action OnConnected;
         event Action OnDisconnected;
@@ -19,8 +20,10 @@ namespace Game.Core.Interfaces
 
         void StartHost();
         void StartHost(ushort port);
+        void StartHostWithRoom(string roomName);
         void StartClient();
         void StartClient(string address, ushort port);
+        void StartClientWithRoom(string roomName);
         void Disconnect();
     }
 }

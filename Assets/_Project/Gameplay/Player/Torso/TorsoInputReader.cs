@@ -14,6 +14,7 @@ namespace Game.Gameplay.Player.Torso
         private InputAction _grabAction;
         private InputAction _throwAction;
         private InputAction _magnetAction;
+        private InputAction _fuseAction;
 
         private Vector2 _moveInput;
         private Vector2 _lookInput;
@@ -21,6 +22,7 @@ namespace Game.Gameplay.Player.Torso
         private bool _throwTriggered;
         private bool _magnetHeld;
         private bool _interactTriggered;
+        private bool _fuseTriggered;
 
         public Vector2 MoveInput => _moveInput;
         public Vector2 LookInput => _lookInput;
@@ -47,6 +49,28 @@ namespace Game.Gameplay.Player.Torso
             return true;
         }
 
+        public bool ConsumeFuseTrigger()
+        {
+            if (!_fuseTriggered) return false;
+            _fuseTriggered = false;
+            return true;
+        }
+
+        private void Update()
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+            {
+                _fuseTriggered = true;
+            }
+
+            var gamepad = Gamepad.current;
+            if (gamepad != null && gamepad.buttonNorth.wasPressedThisFrame)
+            {
+                _fuseTriggered = true;
+            }
+        }
+
         private void OnEnable()
         {
             if (_inputActions == null) return;
@@ -59,6 +83,7 @@ namespace Game.Gameplay.Player.Torso
                 _grabAction = torsoMap.FindAction("Interact", false);
                 _throwAction = torsoMap.FindAction("Throw", false);
                 _magnetAction = torsoMap.FindAction("Magnet", false);
+                _fuseAction = torsoMap.FindAction("Fuse", false);
             }
             else
             {
@@ -67,6 +92,7 @@ namespace Game.Gameplay.Player.Torso
                 _grabAction = _inputActions.FindAction("Player/Interact", false);
                 _throwAction = _inputActions.FindAction("Player/Attack", false);
                 _magnetAction = _inputActions.FindAction("Player/Crouch", false);
+                _fuseAction = _inputActions.FindAction("Player/Fuse", false);
             }
 
             if (_moveAction != null)
@@ -100,6 +126,12 @@ namespace Game.Gameplay.Player.Torso
                 _magnetAction.performed += HandleMagnetPerformed;
                 _magnetAction.canceled += HandleMagnetCanceled;
                 _magnetAction.Enable();
+            }
+
+            if (_fuseAction != null)
+            {
+                _fuseAction.performed += HandleFusePerformed;
+                _fuseAction.Enable();
             }
         }
 
@@ -138,12 +170,19 @@ namespace Game.Gameplay.Player.Torso
                 _magnetAction.Disable();
             }
 
+            if (_fuseAction != null)
+            {
+                _fuseAction.performed -= HandleFusePerformed;
+                _fuseAction.Disable();
+            }
+
             _moveInput = Vector2.zero;
             _lookInput = Vector2.zero;
             _grabTriggered = false;
             _throwTriggered = false;
             _magnetHeld = false;
             _interactTriggered = false;
+            _fuseTriggered = false;
         }
 
         private void HandleMovePerformed(InputAction.CallbackContext ctx) => _moveInput = ctx.ReadValue<Vector2>();
@@ -158,5 +197,6 @@ namespace Game.Gameplay.Player.Torso
         private void HandleThrowPerformed(InputAction.CallbackContext ctx) => _throwTriggered = true;
         private void HandleMagnetPerformed(InputAction.CallbackContext ctx) => _magnetHeld = true;
         private void HandleMagnetCanceled(InputAction.CallbackContext ctx) => _magnetHeld = false;
+        private void HandleFusePerformed(InputAction.CallbackContext ctx) => _fuseTriggered = true;
     }
 }

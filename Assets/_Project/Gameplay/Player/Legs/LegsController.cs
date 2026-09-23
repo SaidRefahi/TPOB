@@ -217,7 +217,23 @@ namespace Game.Gameplay.Player.Legs
                 {
                     _commandInvoker.Execute(new KickCommand());
                 }
+
+                if (_inputReader.ConsumeFuseTrigger())
+                {
+                    if (_isFused)
+                        _commandInvoker.Execute(new SeparateCommand());
+                    else
+                        _commandInvoker.Execute(new FuseCommand());
+                }
                 return;
+            }
+
+            if (_inputReader.ConsumeFuseTrigger())
+            {
+                if (_isFused)
+                    RequestSeparation();
+                else
+                    RequestFusion();
             }
 
             LegsInputData inputData = new LegsInputData(
@@ -450,7 +466,7 @@ namespace Game.Gameplay.Player.Legs
 
         public FusionSocket FusionSocket => _fusionSocket;
         public bool IsFused => _isFused;
-        public bool CanFuse => _coordinator != null && _coordinator.CanFuse();
+        public bool CanFuse => (_coordinator != null || (_coordinator = FindFirstObjectByType<RobotCoordinator>()) != null) && _coordinator.CanFuse();
 
         public void SetCoordinator(RobotCoordinator coordinator)
         {
@@ -484,17 +500,35 @@ namespace Game.Gameplay.Player.Legs
 
         public void RequestFusion()
         {
+            if (_coordinator == null)
+            {
+                _coordinator = FindFirstObjectByType<RobotCoordinator>();
+            }
+
             if (_coordinator != null)
             {
                 _coordinator.RequestFusion();
+            }
+            else
+            {
+                Debug.LogWarning("[LegsController] Cannot RequestFusion: RobotCoordinator not found in scene.");
             }
         }
 
         public void RequestSeparation()
         {
+            if (_coordinator == null)
+            {
+                _coordinator = FindFirstObjectByType<RobotCoordinator>();
+            }
+
             if (_coordinator != null)
             {
                 _coordinator.RequestSeparation();
+            }
+            else
+            {
+                Debug.LogWarning("[LegsController] Cannot RequestSeparation: RobotCoordinator not found in scene.");
             }
         }
 

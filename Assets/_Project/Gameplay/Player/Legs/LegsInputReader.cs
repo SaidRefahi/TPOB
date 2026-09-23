@@ -13,11 +13,13 @@ namespace Game.Gameplay.Player.Legs
         private InputAction _jumpAction;
         private InputAction _kickAction;
         private InputAction _sprintAction;
+        private InputAction _fuseAction;
 
         private Vector2 _moveInput;
         private bool _jumpTriggered;
         private bool _kickTriggered;
         private bool _sprintHeld;
+        private bool _fuseTriggered;
 
         public Vector2 MoveInput => _moveInput;
         public bool IsSprintHeld => _sprintHeld;
@@ -44,6 +46,32 @@ namespace Game.Gameplay.Player.Legs
             return true;
         }
 
+        public bool ConsumeFuseTrigger()
+        {
+            if (!_fuseTriggered)
+            {
+                return false;
+            }
+
+            _fuseTriggered = false;
+            return true;
+        }
+
+        private void Update()
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+            {
+                _fuseTriggered = true;
+            }
+
+            var gamepad = Gamepad.current;
+            if (gamepad != null && gamepad.buttonNorth.wasPressedThisFrame)
+            {
+                _fuseTriggered = true;
+            }
+        }
+
         private void OnEnable()
         {
             if (_inputActions == null)
@@ -58,6 +86,7 @@ namespace Game.Gameplay.Player.Legs
                 _jumpAction = legsMap.FindAction("Jump", false);
                 _kickAction = legsMap.FindAction("Kick", false);
                 _sprintAction = legsMap.FindAction("Sprint", false);
+                _fuseAction = legsMap.FindAction("Fuse", false);
             }
             else
             {
@@ -65,6 +94,7 @@ namespace Game.Gameplay.Player.Legs
                 _jumpAction = _inputActions.FindAction("Player/Jump", false);
                 _kickAction = _inputActions.FindAction("Player/Attack", false);
                 _sprintAction = _inputActions.FindAction("Player/Sprint", false);
+                _fuseAction = _inputActions.FindAction("Player/Fuse", false);
             }
 
             if (_moveAction != null)
@@ -91,6 +121,12 @@ namespace Game.Gameplay.Player.Legs
                 _sprintAction.performed += HandleSprintPerformed;
                 _sprintAction.canceled += HandleSprintCanceled;
                 _sprintAction.Enable();
+            }
+
+            if (_fuseAction != null)
+            {
+                _fuseAction.performed += HandleFusePerformed;
+                _fuseAction.Enable();
             }
         }
 
@@ -122,10 +158,17 @@ namespace Game.Gameplay.Player.Legs
                 _sprintAction.Disable();
             }
 
+            if (_fuseAction != null)
+            {
+                _fuseAction.performed -= HandleFusePerformed;
+                _fuseAction.Disable();
+            }
+
             _moveInput = Vector2.zero;
             _jumpTriggered = false;
             _kickTriggered = false;
             _sprintHeld = false;
+            _fuseTriggered = false;
         }
 
         private void HandleMovePerformed(InputAction.CallbackContext context)
@@ -156,6 +199,11 @@ namespace Game.Gameplay.Player.Legs
         private void HandleSprintCanceled(InputAction.CallbackContext context)
         {
             _sprintHeld = false;
+        }
+
+        private void HandleFusePerformed(InputAction.CallbackContext context)
+        {
+            _fuseTriggered = true;
         }
     }
 }
