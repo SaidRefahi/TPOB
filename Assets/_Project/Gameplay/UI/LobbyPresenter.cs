@@ -40,6 +40,10 @@ namespace Game.Gameplay.UI
             // Set initial visibility based on game state
             bool isLobby = _gameManager != null && _gameManager.CurrentState == GameState.Lobby;
             _view.SetActive(isLobby);
+            if (isLobby)
+            {
+                _lobbyService?.RequestSync();
+            }
         }
 
         private void OnDestroy()
@@ -49,23 +53,70 @@ namespace Game.Gameplay.UI
 
         private void ResolveDependencies()
         {
-            if (_lobbyService != null && _networkService != null && _gameManager != null) return;
-
-            var scopes = Object.FindObjectsByType<LifetimeScope>(FindObjectsSortMode.None);
-            for (int i = 0; i < scopes.Length; i++)
+            if (_lobbyService == null || _networkService == null || _gameManager == null)
             {
-                if (scopes[i] != null && scopes[i].Container != null)
+                var scopes = Object.FindObjectsByType<LifetimeScope>(FindObjectsSortMode.None);
+                for (int i = 0; i < scopes.Length; i++)
                 {
-                    try
+                    if (scopes[i] != null && scopes[i].Container != null)
                     {
-                        if (_lobbyService == null) _lobbyService = scopes[i].Container.Resolve<ILobbyService>();
-                        if (_networkService == null) _networkService = scopes[i].Container.Resolve<INetworkService>();
-                        if (_gameManager == null) _gameManager = scopes[i].Container.Resolve<IGameManager>();
-                        if (_lobbyService != null && _networkService != null && _gameManager != null) break;
+                        try
+                        {
+                            if (_lobbyService == null)
+                            {
+                                _lobbyService = scopes[i].Container.Resolve<ILobbyService>();
+                                HookLobbyEvents();
+                            }
+                            if (_networkService == null)
+                            {
+                                _networkService = scopes[i].Container.Resolve<INetworkService>();
+                                HookNetworkEvents();
+                            }
+                            if (_gameManager == null)
+                            {
+                                _gameManager = scopes[i].Container.Resolve<IGameManager>();
+                                HookGameManagerEvents();
+                            }
+                            if (_lobbyService != null && _networkService != null && _gameManager != null) break;
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
             }
+
+            if (_lobbyService == null)
+            {
+                var lobbyCtrl = Object.FindFirstObjectByType<Game.Network.Services.LobbyNetworkController>();
+                if (lobbyCtrl != null)
+                {
+                    _lobbyService = lobbyCtrl;
+                    HookLobbyEvents();
+                }
+            }
+        }
+
+        private void HookLobbyEvents()
+        {
+            if (_lobbyService == null) return;
+            _lobbyService.OnPlayerLobbyStateChanged -= HandlePlayerLobbyStateChanged;
+            _lobbyService.OnPlayerLobbyStateChanged += HandlePlayerLobbyStateChanged;
+
+            _lobbyService.OnBothPlayersReadyStatusChanged -= HandleBothPlayersReadyStatusChanged;
+            _lobbyService.OnBothPlayersReadyStatusChanged += HandleBothPlayersReadyStatusChanged;
+        }
+
+        private void HookNetworkEvents()
+        {
+            if (_networkService == null) return;
+            _networkService.OnPlayerConnected -= HandlePlayerConnected;
+            _networkService.OnPlayerConnected += HandlePlayerConnected;
+        }
+
+        private void HookGameManagerEvents()
+        {
+            if (_gameManager == null) return;
+            _gameManager.OnGameStateChanged -= HandleGameStateChanged;
+            _gameManager.OnGameStateChanged += HandleGameStateChanged;
         }
 
         private void SubscribeEvents()
@@ -85,20 +136,9 @@ namespace Game.Gameplay.UI
             if (_view.LeaveLobbyButton != null)
                 _view.LeaveLobbyButton.onClick.AddListener(HandleLeaveLobbyClicked);
 
-            if (_lobbyService != null)
-            {
-                _lobbyService.OnPlayerLobbyStateChanged -= HandlePlayerLobbyStateChanged;
-                _lobbyService.OnPlayerLobbyStateChanged += HandlePlayerLobbyStateChanged;
-
-                _lobbyService.OnBothPlayersReadyStatusChanged -= HandleBothPlayersReadyStatusChanged;
-                _lobbyService.OnBothPlayersReadyStatusChanged += HandleBothPlayersReadyStatusChanged;
-            }
-
-            if (_gameManager != null)
-            {
-                _gameManager.OnGameStateChanged -= HandleGameStateChanged;
-                _gameManager.OnGameStateChanged += HandleGameStateChanged;
-            }
+            HookLobbyEvents();
+            HookNetworkEvents();
+            HookGameManagerEvents();
         }
 
         private void UnsubscribeEvents()
@@ -122,6 +162,11 @@ namespace Game.Gameplay.UI
             {
                 _lobbyService.OnPlayerLobbyStateChanged -= HandlePlayerLobbyStateChanged;
                 _lobbyService.OnBothPlayersReadyStatusChanged -= HandleBothPlayersReadyStatusChanged;
+            }
+
+            if (_networkService != null)
+            {
+                _networkService.OnPlayerConnected -= HandlePlayerConnected;
             }
 
             if (_gameManager != null)
@@ -155,6 +200,12 @@ namespace Game.Gameplay.UI
             _networkService?.Disconnect();
         }
 
+        private void HandlePlayerConnected(int playerId, bool isLocal)
+        {
+            _lobbyService?.RequestSync();
+            RefreshUI();
+        }
+
         private void HandlePlayerLobbyStateChanged(int playerId, PlayerRole role, bool isReady)
         {
             RefreshUI();
@@ -170,6 +221,7 @@ namespace Game.Gameplay.UI
             if (newState == GameState.Lobby)
             {
                 _view.SetActive(true);
+                _lobbyService?.RequestSync();
                 RefreshUI();
             }
             else
@@ -184,16 +236,55 @@ namespace Game.Gameplay.UI
 
             ResolveDependencies();
 
-            int localId = _networkService != null ? _networkService.LocalPlayerId : -1;
-
             int legsId = _lobbyService != null ? _lobbyService.LegsPlayerId : -1;
             int torsoId = _lobbyService != null ? _lobbyService.TorsoPlayerId : -1;
             bool legsReady = _lobbyService != null && _lobbyService.LegsReady;
             bool torsoReady = _lobbyService != null && _lobbyService.TorsoReady;
             bool bothReady = _lobbyService != null && _lobbyService.AreBothPlayersReady;
 
-            bool isLocalLegs = localId >= 0 && legsId == localId;
-            bool isLocalTorso = localId >= 0 && torsoId == localId;
+            int localId = -1;
+            if (_networkService != null && _networkService.LocalPlayerId >= 0)
+            {
+                localId = _networkService.LocalPlayerId;
+            }
+            else
+            {
+                var nm = PurrNet.NetworkManager.main;
+                if (nm != null)
+                {
+                    if (nm.isLocalPlayerReady)
+                    {
+                        localId = (int)nm.localPlayer.id.value;
+                    }
+                    else if (nm.isServer)
+                    {
+                        localId = 0;
+                    }
+                }
+            }
+
+            bool isHost = (_networkService != null && _networkService.IsServer) || (PurrNet.NetworkManager.main != null && PurrNet.NetworkManager.main.isServer);
+
+            bool isLocalLegs;
+            bool isLocalTorso;
+
+            if (localId >= 0)
+            {
+                isLocalLegs = (legsId == localId);
+                isLocalTorso = (torsoId == localId);
+            }
+            else if (isHost)
+            {
+                isLocalLegs = (legsId == 0);
+                isLocalTorso = (torsoId == 0);
+            }
+            else
+            {
+                // Client whose localId hasn't resolved yet:
+                // Host is ID 0. If slot is 0, it's definitely the host (teammate, NOT local).
+                isLocalLegs = (legsId > 0);
+                isLocalTorso = (torsoId > 0);
+            }
 
             // Update Room Code Header
             string roomCode = _networkService != null ? _networkService.RoomName : string.Empty;
@@ -212,7 +303,6 @@ namespace Game.Gameplay.UI
             _view.SetReadyButtonState(isLocalReady, hasSelectedRole);
 
             // Update Start Game Button (Host only)
-            bool isHost = _networkService != null && _networkService.IsServer;
             _view.SetStartButtonInteractable(bothReady, isHost);
 
             // Update Match Status Text

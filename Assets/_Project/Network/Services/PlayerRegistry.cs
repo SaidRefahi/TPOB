@@ -113,7 +113,21 @@ namespace Game.Network.Services
                     return true;
                 }
             }
-            return false;
+
+            int localId = _networkService != null ? _networkService.LocalPlayerId : -1;
+            bool isLocal = (localId >= 0 && playerId == localId);
+            var newSlot = new PlayerSlot(playerId, newRole, isLocal, false);
+            _players.Add(newSlot);
+
+            if (isLocal)
+            {
+                LocalRole = newRole;
+            }
+
+            OnPlayerRegistered?.Invoke(newSlot);
+            OnRoleAssigned?.Invoke(newSlot);
+            _eventBus?.Publish(new PlayerRoleChangedEvent(playerId, newRole));
+            return true;
         }
 
         public bool TrySetPlayerReady(int playerId, bool isReady)
@@ -130,7 +144,16 @@ namespace Game.Network.Services
                     return true;
                 }
             }
-            return false;
+
+            int localId = _networkService != null ? _networkService.LocalPlayerId : -1;
+            bool isLocal = (localId >= 0 && playerId == localId);
+            var newSlot = new PlayerSlot(playerId, PlayerRole.None, isLocal, isReady);
+            _players.Add(newSlot);
+
+            OnPlayerRegistered?.Invoke(newSlot);
+            OnPlayerReadyChanged?.Invoke(newSlot);
+            _eventBus?.Publish(new PlayerLobbyStateChangedEvent(playerId, PlayerRole.None, isReady));
+            return true;
         }
 
         public void SwapRoles()

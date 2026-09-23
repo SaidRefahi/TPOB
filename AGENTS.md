@@ -473,3 +473,29 @@ Este archivo sirve como base de conocimiento viva para cualquier agente de IA o 
    - Al llamar `StartHost()` o `StartClient()`, si el `NetworkManager` ya pasa síncronamente al estado `Connected`, disparar de inmediato `OnConnected?.Invoke()` para garantizar que la transición de estado nunca dependa exclusivamente de un callback asíncrono tardío.
 4. **Exhibición Visible del Código de Sala en el Lobby:**
    - El lobby debe mostrar de forma prominente el código de sala generado (`CÓDIGO DE SALA: TPOB-XXXX (Compártelo con tu compañero)`) para que el anfitrión pueda dictárselo a su compañero sin necesidad de salir del lobby ni recurrir a herramientas externas.
+
+---
+
+## 🤝 19. Sincronización Bidireccional en Lobby, Autoridad de Remitente (`RPCInfo`) y Conexión de Clientes
+
+### ❌ Errores cometidos:
+- **Servidor mudo ante la llegada del cliente:** `LobbyNetworkController.OnSpawned()` sólo transmitía el estado del lobby una vez al inicio del host. Estaba suscrito a `nm.onPlayerLeft`, pero **nunca a `nm.onPlayerJoined`**. Cuando el cliente se unía, el servidor no emitía el estado actual, dejando al cliente en blanco con `_legsPlayerId = -1` y `_torsoPlayerId = -1` sin ver las elecciones del host.
+- **Descarte silencioso de clics por `localId < 0`:** En `SelectRole` y `ToggleReady`, el cliente ejecutaba `int localId = GetLocalPlayerId(); if (localId < 0) return;`. Dado que `NetworkManager.isLocalPlayerReady` tarda unos fotogramas tras la conexión en confirmar el handshake, `GetLocalPlayerId()` retornaba `-1`, abortando la llamada y dejando los botones del cliente completamente inertes.
+- **Anti-patrón de identificación de cliente por argumento:** Pasar `int playerId` informado por el propio cliente a un `[ServerRpc]` en vez de leer la autoridad de PurrNet (`RPCInfo info = default`). Si el cliente no sabía su ID o enviaba `-1`, el servidor no podía asignarlo o lo rechazaba.
+- **Suscripción estática única en Presenter:** `LobbyPresenter.Start()` sólo intentaba resolver dependencias y suscribirse una vez. Si `_lobbyService` se resolvía después, los eventos `OnPlayerLobbyStateChanged` nunca se escuchaban.
+
+### 🛡️ Reglas de Oro:
+1. **Emisión Inmediata en `onPlayerJoined`:**
+   - En todo controlador de sala/lobby autoritativo en el servidor, suscribirse tanto a `nm.onPlayerJoined` como a `nm.onPlayerLeft` y llamar a `BroadcastLobbyState()` de inmediato al detectar una nueva conexión.
+2. **Petición Explícita de Estado (`RequestSync`):**
+   - Implementar `void RequestSync();` en `ILobbyService` respaldado por un `[ServerRpc(requireOwnership: false)] RequestSyncServerRpc()`.
+   - El cliente debe invocar `RequestSync()` en `OnSpawned()`, al transicionar a `GameState.Lobby` y al recibir `OnPlayerConnected`.
+3. **Autoridad de Remitente con `RPCInfo info = default`:**
+   - Los ServerRpc para acciones de jugador en objetos de escena deben recibir `RPCInfo info = default`.
+   - En el servidor, si `info.sender.id.value > 0`, ese valor es inequívocamente el ID del cliente remoto. Si es 0 y `isServer`, es el host local.
+4. **PROHIBIDO Descartar Clics por Falta de ID Local:**
+   - Los métodos de acción (`SelectRole`, `ToggleReady`) deben enviar siempre el RPC al servidor (`RequestRoleSelectionServerRpc(role, localId)`), delegando en el servidor la resolución autoritativa del remitente mediante `RPCInfo`.
+5. **Enganche Dinámico de Eventos en Presenters:**
+   - Siempre que `ResolveDependencies()` obtenga una referencia a `_lobbyService` o `_networkService`, debe enganchar inmediatamente sus eventos delegados (`HookLobbyEvents()`, `HookNetworkEvents()`).
+6. **Cálculo Robusto de Selección Local vs Compañero en `RefreshUI()`:**
+   - Distinguir el rol local contra el rol del compañero con fail-safes basados en `isHost`: si el cliente aún no tiene `localId`, el slot ocupado por el Host (ID 0) es reconocido inequívocamente como compañero, permitiendo al cliente elegir el otro rol libremente.

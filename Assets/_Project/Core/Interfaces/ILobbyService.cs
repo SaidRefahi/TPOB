@@ -17,5 +17,6 @@ namespace Game.Core.Interfaces
         void SelectRole(PlayerRole role);
         void ToggleReady();
         void StartGame();
+        void RequestSync();
     }
 }

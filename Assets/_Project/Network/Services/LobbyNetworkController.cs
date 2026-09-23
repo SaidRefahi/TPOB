@@ -60,16 +60,21 @@ namespace Game.Network.Services
             ResolveDependenciesIfNeeded();
 
             var nm = networkManager != null ? networkManager : NetworkManager.main;
-            if (nm != null && isServer)
+            if (nm != null)
             {
-                nm.onPlayerLeft -= HandleServerPlayerLeft;
-                nm.onPlayerLeft += HandleServerPlayerLeft;
-            }
+                if (isServer)
+                {
+                    nm.onPlayerJoined -= HandleServerPlayerJoined;
+                    nm.onPlayerJoined += HandleServerPlayerJoined;
+                    nm.onPlayerLeft -= HandleServerPlayerLeft;
+                    nm.onPlayerLeft += HandleServerPlayerLeft;
 
-            // Sync initial state if server
-            if (isServer)
-            {
-                BroadcastLobbyState();
+                    BroadcastLobbyState();
+                }
+                else
+                {
+                    RequestSync();
+                }
             }
         }
 
@@ -78,6 +83,7 @@ namespace Game.Network.Services
             var nm = networkManager != null ? networkManager : NetworkManager.main;
             if (nm != null)
             {
+                nm.onPlayerJoined -= HandleServerPlayerJoined;
                 nm.onPlayerLeft -= HandleServerPlayerLeft;
             }
 
@@ -86,7 +92,7 @@ namespace Game.Network.Services
 
         private void ResolveDependenciesIfNeeded()
         {
-            if (_playerRegistry != null && _levelManager != null) return;
+            if (_playerRegistry != null && _levelManager != null && _networkService != null) return;
 
             var scopes = UnityEngine.Object.FindObjectsByType<VContainer.Unity.LifetimeScope>(FindObjectsSortMode.None);
             for (int i = 0; i < scopes.Length; i++)
@@ -98,11 +104,17 @@ namespace Game.Network.Services
                         if (_playerRegistry == null) _playerRegistry = scopes[i].Container.Resolve<IPlayerRegistry>();
                         if (_levelManager == null) _levelManager = scopes[i].Container.Resolve<ILevelManager>();
                         if (_networkService == null) _networkService = scopes[i].Container.Resolve<INetworkService>();
-                        if (_playerRegistry != null && _levelManager != null) break;
+                        if (_playerRegistry != null && _levelManager != null && _networkService != null) break;
                     }
                     catch { }
                 }
             }
+        }
+
+        private void HandleServerPlayerJoined(PlayerID player, bool isReconnect, bool asServer)
+        {
+            if (!asServer || !isServer) return;
+            BroadcastLobbyState();
         }
 
         private void HandleServerPlayerLeft(PlayerID player, bool asServer)
@@ -134,19 +146,29 @@ namespace Game.Network.Services
 
         #region ILobbyService Public API
 
+        public void RequestSync()
+        {
+            if (isServer)
+            {
+                BroadcastLobbyState();
+            }
+            else if (isSpawned)
+            {
+                RequestSyncServerRpc();
+            }
+        }
+
         public void SelectRole(PlayerRole role)
         {
+            ResolveDependenciesIfNeeded();
             int localId = GetLocalPlayerId();
-            if (localId < 0) return;
-
-            RequestRoleSelectionServerRpc(localId, role);
+            RequestRoleSelectionServerRpc(role, localId);
         }
 
         public void ToggleReady()
         {
+            ResolveDependenciesIfNeeded();
             int localId = GetLocalPlayerId();
-            if (localId < 0) return;
-
             RequestToggleReadyServerRpc(localId);
         }
 
@@ -163,9 +185,16 @@ namespace Game.Network.Services
             }
 
             var nm = networkManager != null ? networkManager : NetworkManager.main;
-            if (nm != null && nm.isLocalPlayerReady)
+            if (nm != null)
             {
-                return (int)nm.localPlayer.id.value;
+                if (nm.isLocalPlayerReady)
+                {
+                    return (int)nm.localPlayer.id.value;
+                }
+                if (nm.isServer)
+                {
+                    return 0;
+                }
             }
 
             return -1;
@@ -176,12 +205,26 @@ namespace Game.Network.Services
         #region ServerRpc
 
         [ServerRpc(requireOwnership: false)]
-        public void RequestRoleSelectionServerRpc(int playerId, PlayerRole requestedRole)
+        public void RequestSyncServerRpc()
+        {
+            if (!isServer) return;
+            BroadcastLobbyState();
+        }
+
+        [ServerRpc(requireOwnership: false)]
+        public void RequestRoleSelectionServerRpc(PlayerRole requestedRole, int clientReportedId = -1, RPCInfo info = default)
         {
             if (!isServer) return;
 
-            // Exclusive Role Validation:
-            // If requested role is already taken AND confirmed by the other player, reject selection
+            int playerId = ResolveSenderPlayerId(info, clientReportedId);
+            if (playerId < 0) return;
+
+            ApplyRoleSelection(playerId, requestedRole);
+            BroadcastLobbyState();
+        }
+
+        private void ApplyRoleSelection(int playerId, PlayerRole requestedRole)
+        {
             if (requestedRole == PlayerRole.Legs)
             {
                 if (_legsPlayerId != -1 && _legsPlayerId != playerId && _legsReady)
@@ -189,7 +232,6 @@ namespace Game.Network.Services
                     return;
                 }
 
-                // If other player has legs unconfirmed, displace them to torso
                 if (_legsPlayerId != -1 && _legsPlayerId != playerId)
                 {
                     _torsoPlayerId = _legsPlayerId;
@@ -212,7 +254,6 @@ namespace Game.Network.Services
                     return;
                 }
 
-                // If other player has torso unconfirmed, displace them to legs
                 if (_torsoPlayerId != -1 && _torsoPlayerId != playerId)
                 {
                     _legsPlayerId = _torsoPlayerId;
@@ -228,14 +269,15 @@ namespace Game.Network.Services
                 _torsoPlayerId = playerId;
                 _torsoReady = false;
             }
-
-            BroadcastLobbyState();
         }
 
         [ServerRpc(requireOwnership: false)]
-        public void RequestToggleReadyServerRpc(int playerId)
+        public void RequestToggleReadyServerRpc(int clientReportedId = -1, RPCInfo info = default)
         {
             if (!isServer) return;
+
+            int playerId = ResolveSenderPlayerId(info, clientReportedId);
+            if (playerId < 0) return;
 
             if (_legsPlayerId == playerId)
             {
@@ -245,12 +287,34 @@ namespace Game.Network.Services
             {
                 _torsoReady = !_torsoReady;
             }
-            else
-            {
-                return;
-            }
 
             BroadcastLobbyState();
+        }
+
+        private int ResolveSenderPlayerId(RPCInfo info, int clientReportedId)
+        {
+            if (info.sender.id.value > 0)
+            {
+                return (int)info.sender.id.value;
+            }
+
+            if (clientReportedId > 0)
+            {
+                return clientReportedId;
+            }
+
+            if (isServer)
+            {
+                return 0;
+            }
+
+            int localId = GetLocalPlayerId();
+            if (localId >= 0)
+            {
+                return localId;
+            }
+
+            return -1;
         }
 
         [ServerRpc(requireOwnership: false)]
@@ -262,7 +326,7 @@ namespace Game.Network.Services
 
             if (_levelManager != null)
             {
-                _levelManager.LoadRoomAsync(0, this.GetCancellationTokenOnDestroy()).Forget();
+                _levelManager.LoadRoomAsync(0).Forget();
             }
             else
             {
