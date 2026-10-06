@@ -5,52 +5,61 @@
 
 ---
 
-## 📊 Dashboard de Fases y Progreso
+## 📊 Dashboard de Fases y Progreso (Campaña Principal)
 
-- [x] **Fase 1:** Configuración inicial del proyecto e integración de PurrNet & VContainer (Completada)
-- [x] **Fase 2:** Capa Global: GameManager y LevelManager con UniTask (Completada)
-- [x] **Fase 3:** Capa de Sala: RoomController, Spawning y State Pattern (Completada)
-- [x] **Fase 4:** Movimiento y habilidades Jugador 1 (Piernas: Locomoción y Patada) (Completada)
-- [x] **Fase 5:** Movimiento y habilidades Jugador 2 (Torso: Agarre, Imán y Palancas) (Completada)
-- [x] **Fase 6:** Sistema de Comandos desacoplado de red (Command Pattern & Structs) (Completada)
-- [x] **Fase 7:** Fusión y Separación del Robot (Hierarchy & Rigidbody Sync) (Completada)
-- [x] **Fase 8:** Cinemachine 3.x Adaptativa (TargetGroup Fusión/Separación e Impulsos) (Completada)
-- [x] **Fase 9:** Sistema de Eventos en Red (GameEventBus + NetworkEventRelay) (Completada)
-- [x] **Fase 11:** Muerte, Reaparición y Checkpoints (UniTask Respawn Flow) (Completada)
-- [x] **Fase 12:** Diseño de Niveles y Progresión (10 Salas de Prueba) (Completada)
-- [x] **Fase 13:** Física Emergente, Comedia, Ragdolls y Jugo Audiovisual (Completada)
-- [x] **Fase 14:** Testing de Red, Optimización Zero-GC y Build Final (Completada)
+- [x] **Fase 1:** Configuración inicial del proyecto e integración de PurrNet & VContainer `[COMPLETADA]`
+- [x] **Fase 2:** Capa Global: GameManager y LevelManager con UniTask `[COMPLETADA]`
+- [x] **Fase 3:** Capa de Sala: RoomController, Spawning y State Pattern `[COMPLETADA]`
+- [x] **Fase 4:** Movimiento y habilidades Jugador 1 (Piernas: Locomoción y Patada) `[COMPLETADA]`
+- [x] **Fase 5:** Movimiento y habilidades Jugador 2 (Torso: Agarre, Imán y Palancas) `[COMPLETADA]`
+- [x] **Fase 6:** Sistema de Comandos desacoplado de red (Command Pattern & Structs) `[COMPLETADA]`
+- [x] **Fase 7:** Fusión y Separación del Robot (Hierarchy & Rigidbody Sync) `[COMPLETADA]`
+- [x] **Fase 8:** Cinemachine 3.x Adaptativa (TargetGroup Fusión/Separación e Impulsos) `[COMPLETADA]`
+- [x] **Fase 9:** Sistema de Eventos en Red (GameEventBus + NetworkEventRelay) `[COMPLETADA]`
+- [x] **Fase 10:** Composite Pattern y Mecanismos de Puzzle (And/Or, Sockets, Compuertas) `[COMPLETADA]`
+- [x] **Fase 11:** Muerte, Reaparición y Checkpoints (UniTask Respawn Flow) `[COMPLETADA]`
+- [x] **Fase 12:** Diseño de Niveles y Progresión (10 Salas de Prueba) `[COMPLETADA]`
+- [x] **Fase 13:** Física Emergente, Comedia, Ragdolls/Tumble y Jugo Audiovisual `[COMPLETADA]`
+- [x] **Fase 14:** Testing de Red, Optimización Zero-GC y Build Final `[COMPLETADA]`
+
+## 🎮 Dashboard de UI, Menús y Lobby (Multijugador)
+
+- [x] **UI Fase 1:** Infraestructura de Red y Datos del Lobby (`LobbyNetworkController`, `PlayerSlot.IsReady`) `[COMPLETADA]`
+- [x] **UI Fase 2:** Menú Principal y Diálogo de Opciones (`MainMenuView`, `SettingsView`, Host/Join) `[COMPLETADA]`
+- [x] **UI Fase 3:** Lobby de Pre-Ingreso y Selección Exclusiva (`LobbyView`, Tarjetas de Habilidades) `[COMPLETADA]`
+- [x] **UI Fase 4:** Menú de Pausa In-Game (`PauseMenuView`, Suspensión no destructiva de inputs) `[COMPLETADA]`
+- [x] **UI Fase 5:** Automatización y Wiring en Unity (`LobbyBuilder`, `MainMenuBuilder`, `PauseMenuBuilder`) `[COMPLETADA]`
 
 ---
 
 ## 🛠️ Detalle de las Fases de Desarrollo
 
-### 🔹 Fase 1: Infraestructura Core y Red Inicial
+### 🔹 Fase 1: Infraestructura Core y Red Inicial `[COMPLETADA]`
 * **Objetivo:** Ensamblados modulares (`Game.Core`, `Game.Network`, `Game.Gameplay`) y conexión básica de red con PurrNet.
 * **Integración:** `GameLifetimeScope` (VContainer) para servicios globales sin Singletons estáticos.
 * **Entregable:** 2 instancias sincronizando un `NetworkIdentity` en local.
 
-### 🔹 Fase 2: Capa Global (Game & Level Managers)
+### 🔹 Fase 2: Capa Global (Game & Level Managers) `[COMPLETADA]`
 * **Objetivo:** Orquestación macro del ciclo de juego y carga asíncrona de escenas.
 * **Integración:** `networkManager.sceneModule.LoadSceneAsync` encapsulado con `UniTask`.
 * **Entregable:** Servidor comanda avance de salas con ambos clientes cargando la escena de forma sincronizada.
 
-### 🔹 Fase 3: Capa de Sala (RoomController)
+### 🔹 Fase 3: Capa de Sala (RoomController) `[COMPLETADA]`
 * **Objetivo:** Ciclo de vida determinista de sala (`RoomInactive -> RoomActive -> RoomCompleted -> RoomTransitioning`).
 * **Integración:** `RoomLifetimeScope` de VContainer y `SyncVar<RoomState>`. Botones `[Button]` de Tri-Inspector para depuración rápida.
 * **Entregable:** Carga de sala posiciona a ambos jugadores en `SpawnPoint` y activa la sala.
 
-### 🔹 Fase 4: Jugador 1 (Piernas: Locomoción y Fuerza)
+### 🔹 Fase 4: Jugador 1 (Piernas: Locomoción y Fuerza) `[COMPLETADA]`
 * **Objetivo:** Control físico autoritativo del movimiento, salto y patada contundente.
 * **Integración:** `UnityEngine.InputSystem`, transmisión de structs `LegsInputData` en `onTick` vía `[ServerRpc(Channel.Unreliable)]`, `NetworkTransform` y queries físicas `Physics.RaycastNonAlloc`.
 * **Entregable:** Piernas camina, salta y patea obstáculos con física fluida replicada en clientes.
 
-### 🔹 Fase 5: Jugador 2 (Torso: Manipulación y Precisión)
+### 🔹 Fase 5: Jugador 2 (Torso: Manipulación y Precisión) `[COMPLETADA]`
 * **Objetivo:** Apuntado libre en 360°, agarre, lanzamiento y rayo magnético.
 * **Integración:** `Physics.OverlapSphereNonAlloc` para detección, validación autoritativa en servidor y efectos procedurales con DOTween.
 * **Entregable:** Torso agarra cajas, lanza objetos en parábola y atrae llaves magnéticas sin atravesar paredes.
 
-### 🔹 Fase 6: Sistema de Comandos (Command Pattern)
+### 🔹 Fase 6: Sistema de Comandos (Command Pattern) `[COMPLETADA]`
 * **Objetivo:** Desacoplar la recepción de entradas del transporte de red y la física.
 * **Integración:** `IPlayerCommand`, `CommandInvoker` y structs serializables por valor para Cero Asignaciones en el heap.
 * **Entregable:** Nuevas habilidades se integran implementando `IPlayerCommand` sin tocar el código de red.

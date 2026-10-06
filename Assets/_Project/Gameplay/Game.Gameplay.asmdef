@@ -11,7 +11,8 @@
         "Unity.InputSystem",
         "Unity.Cinemachine",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.Animation.Rigging"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

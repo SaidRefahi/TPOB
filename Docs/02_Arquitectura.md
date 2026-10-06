@@ -64,15 +64,17 @@ TPOB adopta un modelo **Servidor-Autoritativo con Simulación de Física Central
 
 ## 💉 2. Inyección de Dependencias con VContainer
 
-Siguiendo el principio del Manifiesto de Ingeniería: *"Prefer Service Locator or DI over Singletons"*, se eliminan los Singletons estáticos con `DontDestroyOnLoad`. La resolución de dependencias se gestiona mediante la jerarquía de scopes de **VContainer**:
+Siguiendo el principio del Manifiesto de Ingeniería: *"Prefer Dependency Inversion and Service Locator over Singletons"*, se eliminan por completo los Singletons estáticos con `DontDestroyOnLoad` y estados globales mutables. La resolución de dependencias se gestiona mediante la jerarquía de scopes de **VContainer**:
 
 ```
                        ┌──────────────────────────────────────┐
                        │          GameLifetimeScope           │  (Root Scope - DontDestroyOnLoad)
-                       │  • INetworkManagerWrapper            │
+                       │  • INetworkService                   │
+                       │  • ILobbyService (Pure C# Domain)    │
                        │  • IPlayerRegistry                   │
                        │  • IAudioService                     │
-                       │  • GameEventBus                      │
+                       │  • ISettingsService                  │
+                       │  • IGameEventBus                     │
                        └──────────────────┬───────────────────┘
                                           │
                                           ▼ (Hereda e inyecta en cada escena)
@@ -86,8 +88,17 @@ Siguiendo el principio del Manifiesto de Ingeniería: *"Prefer Service Locator o
 ```
 
 ### Ventajas de VContainer frente a Singletons:
-* **Desacoplamiento Total:** Los controladores de sala y jugadores reciben interfaces (`IPlayerRegistry`, `GameEventBus`) por constructor o método `[Inject]`, facilitando pruebas unitarias y mocking.
+* **Desacoplamiento Total:** Los controladores de sala, presentadores de UI y jugadores reciben interfaces (`IPlayerRegistry`, `ILobbyService`, `IGameEventBus`) estrictamente por constructor o método `[Inject]`, eliminando búsquedas en caliente y facilitando pruebas unitarias.
 * **Ciclo de Vida Limpio:** Al descargar una sala y cargar la siguiente, el `RoomLifetimeScope` destruye limpiamente sus suscripciones sin dejar referencias colgantes en memoria.
+
+### 🛡️ Patrón Arquitectónico: Separación de Servicios de Dominio vs. Entidades Volátiles de Red
+Un error común en redes autoritativas es registrar `MonoBehaviour` de red (`NetworkBehaviour`) directamente en el contenedor raíz IoC (`builder.RegisterComponent(mono)`). Dado que PurrNet destruye todos los GameObjects de red de una sesión al desconectar (`HierarchyPool.Dispose`), el contenedor queda con referencias a objetos muertos de Unity (dangling references).
+
+TPOB implementa una **Inversión de Dependencias en 4 Capas**:
+1. **Abstracción Formal (`ILobbyService`):** Expone contratos limpios y agnósticos al motor de red (`SelectRole`, `ToggleReady`, eventos de sincronización).
+2. **Servicio de Dominio C# Puro (`LobbyService`):** Clase C# pura administrada por VContainer (`Lifetime.Singleton`), persistente durante toda la ejecución de la app. Gestiona el estado lógico y expone `BindNetworkController(ILobbyNetworkHandler)` y `UnbindNetworkController(ILobbyNetworkHandler)`.
+3. **Ejecutor de Red Volátil (`LobbyNetworkController`):** Prefab instanciado y spawneado dinámicamente por PurrNet solo cuando una sesión de host/cliente está activa. En `OnSpawned()` se enlaza al servicio; en `OnDespawned()` se desenlaza de forma segura.
+4. **Capa de Presentación (`LobbyPresenter` & `LobbyView`):** Consume únicamente `ILobbyService` inyectado por VContainer. Permanece 100% inmune a desconexiones, reconexiones o destrucciones de jerarquías de red.
 
 ---
 

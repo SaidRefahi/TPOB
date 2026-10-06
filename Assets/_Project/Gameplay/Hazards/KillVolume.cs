@@ -38,7 +38,7 @@ namespace Game.Gameplay.Hazards
             // 1. Detect Players / Damageables
             if (other.TryGetComponent<IDamageable>(out var damageable) ||
                 (other.attachedRigidbody != null && other.attachedRigidbody.TryGetComponent<IDamageable>(out damageable)) ||
-                (other.GetComponentInParent<IDamageable>() is { } pDamageable && (damageable = pDamageable) != null))
+                (other.transform.parent != null && other.transform.parent.TryGetComponent<IDamageable>(out damageable)))
             {
                 if (damageable.IsAlive)
                 {

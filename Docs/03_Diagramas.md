@@ -233,3 +233,51 @@ sequenceDiagram
         Note over C1,C2: Feedback auditivo de fallo cómico
     end
 ```
+
+---
+
+## 🌐 4. Arquitectura y Ciclo de Vida del Lobby (Dependency Inversion)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as LobbyPresenter / LobbyView
+    participant LS as LobbyService (C# Puro - Singleton en VContainer)
+    participant NS as NetworkService
+    participant PN as PurrNet Engine
+    participant LNC as LobbyNetworkController (Prefab por Sesión)
+
+    Note over UI,LS: Inicialización de la aplicación (Boot.unity)
+    UI->>LS: Inyección [Inject] ILobbyService
+    Note over LS: Estado limpio: Legs=-1, Torso=-1, Ready=false
+
+    Note over UI,LNC: Jugador inicia sala (Host)
+    UI->>NS: StartHost()
+    NS->>PN: StartServer() & StartClient()
+    NS->>PN: Spawn(LobbyNetworkController.prefab)
+    PN->>LNC: OnSpawned()
+    LNC->>LS: BindNetworkController(this)
+    Note over LS,LNC: Enlace activo: Las operaciones de UI se delegan a RPCs de LNC
+
+    UI->>LS: SelectRole(PlayerRole.Legs)
+    LS->>LNC: SelectRole(Legs)
+    LNC->>PN: RequestRoleSelectionServerRpc()
+    PN-->>LNC: SyncLobbyStateObserversRpc()
+    LNC->>LS: OnLobbyStateChanged(Legs, Listo)
+    LS-->>UI: OnPlayerLobbyStateChanged -> Actualiza Visuals
+
+    Note over UI,LNC: Jugador sale de la sala al Menú Principal
+    UI->>NS: Disconnect()
+    PN->>PN: HierarchyPool.Dispose()
+    PN->>LNC: OnDespawned() / OnDestroy()
+    LNC->>LS: UnbindNetworkController(this)
+    Note over LS: Resetea estado: Legs=-1, Torso=-1, Desvincula LNC
+    UI->>UI: ResetUI() (Restaura tarjetas y botones)
+
+    Note over UI,LS: Segunda conexión (El servicio y UI permanecen 100% operativos)
+    UI->>NS: StartHost()
+    NS->>PN: Spawn(Nuevo LobbyNetworkController.prefab)
+    PN->>LNC: OnSpawned() -> BindNetworkController(this)
+    UI->>LS: SelectRole(...) -> ¡Funciona limpiamente sin errores!
+```
+

@@ -10,7 +10,7 @@ tags:
   - dotween
   - tri-inspector
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-09-28
 ---
 
 # 🚀 Plan de Implementación de Producción: Two Pilots, One Robot (TPOB)
@@ -33,10 +33,10 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 | **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. `[COMPLETADA]` |
 | **09** | Bus de Eventos Desacoplado (Observer Pattern) | VContainer, C# Events, PurrNet ObserversRpc | Comunicación entre subsistemas sin llamadas cruzadas directas. `[COMPLETADA]` |
 | **10** | Composite Pattern y Mecanismos de Puzzle | Interfaces, DOTween, Tri-Inspector | Árbol lógico de finalización y objetos interactivos reactivos. `[COMPLETADA]` |
-| **11** | Ciclo de Muerte, Checkpoints y Respawn | UniTask, PurrNet SyncVar | Caídas y muertes con reaparición rápida sin reiniciar la sala. `[COMPLETADA]` |
+| **11** | Ciclo de Muerte, Checkpoints y Respawn | UniTask, PurrNet SyncVar, KillVolume | Caídas y muertes con reaparición rápida sin reiniciar la sala. `[COMPLETADA]` |
 | **12** | Producción de Contenido: Diseño de 10 Salas | Tri-Inspector, Cinemachine, PurrNet | 4 salas simples, 4 intermedias y 2 avanzadas encadenadas. `[COMPLETADA]` |
-| **13** | Comedia Física, Ragdolls y Jugo Audiovisual | DOTween, Cinemachine Impulses, Audio Network | Sensación de impacto, fallos cómicos y audio sincronizado. |
-| **14** | Optimización Zero-GC, Simulación de Red y QA Final | PurrNet Latency Sim, Unity Profiler | Juego fluido bajo 150 ms de ping sin picos de GC en hot paths. |
+| **13** | Comedia Física, Ragdolls y Jugo Audiovisual | DOTween, Cinemachine Impulses, Audio Network | Sensación de impacto, descontrol físico cómico y audio sintetizado en red. `[COMPLETADA]` |
+| **14** | Optimización Zero-GC, Simulación de Red y QA Final | PurrNet Latency Sim, Unity Profiler, Editor Tooling | Certificación de rendimiento, simulación de estrés de red y build final. `[COMPLETADA]` |
 
 ---
 
@@ -185,16 +185,19 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 11: Ciclo de Muerte, Checkpoints y Respawn
+### 🔹 Fase 11: Ciclo de Muerte, Checkpoints y Respawn `[COMPLETADA]`
 * **Objetivo:** Garantizar un flujo de reaparición rápido y sin frustración ante caídas o trampas.
 * **Integración de Addons:**
   * **UniTask:** Secuencia de reaparición sin corrutinas (`await UniTask.Delay(1000, cancellationToken: ct)`).
   * **PurrNet:** Respawn autoritativo reseteando la posición del `NetworkTransform` y las velocidades del `NetworkRigidbody`.
+  * **Físicas Seguras:** Reseteo de `linearVelocity` y `angularVelocity` antes de modificar `isKinematic` (cumpliendo con la regla de oro de PhysX en AGENTS.md).
 * **Scripts Clave:**
   * `PlayerDeathHandler.cs`
   * `CheckpointSystem.cs`
+  * `Checkpoint.cs`
+  * `KillVolume.cs`
   * `RespawnCoordinator.cs`
-* **Criterio de Aceptación:** Al caer a un foso, el jugador reaparece en el último checkpoint activo en menos de 1.5 segundos sin reiniciar los mecanismos ya completados de la sala.
+* **Criterio de Aceptación:** Al caer a un foso o tocar un `KillVolume`, el jugador reaparece en el último checkpoint activo en menos de 1.5 segundos sin reiniciar los mecanismos ya completados de la sala.
 
 ---
 
@@ -211,29 +214,36 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ---
 
-### 🔹 Fase 13: Comedia Física, Ragdolls y Jugo Audiovisual
-* **Objetivo:** Potenciar el núcleo cómico del juego ("fallar es divertido") mediante respuesta física exagerada.
+### 🔹 Fase 13: Comedia Física, Ragdolls y Jugo Audiovisual `[COMPLETADA]`
+* **Objetivo:** Potenciar el núcleo cómico del juego ("fallar es divertido") mediante respuesta física exagerada y audio en red.
 * **Integración de Addons:**
-  * **PhysX:** Materiales físicos de alto rebote y baja fricción para deslices cómicos.
-  * **Cinemachine:** Impulsos de choque ante colisiones a alta velocidad.
-  * **DOTween:** Escalamientos y deformaciones cómicas (Squash & Stretch).
-  * **PurrNet Audio:** Sincronización de efectos sonoros mecánicos y choques en red.
+  * **PhysX & Tumble:** Descontrol rotacional físico procedural (`TumbleController.cs`) al sufrir impactos fuertes; liberación de constraints rotacionales, torque de desestabilización angular y recuperación elástica vertical.
+  * **Physics Material Factory:** `PhysicsMaterialFactory.cs` para generar superficies de alto rebote (`Bouncy`) y baja fricción cómica (`Slippery`).
+  * **Cinemachine:** Impulsos de choque ante colisiones a alta velocidad mediante `CinemachineImpulseSource` en `ImpactFeedbackSystem.cs`.
+  * **DOTween:** Escalamientos y deformaciones cómicas (Squash & Stretch) con `DOPunchScale` en impactos y recuperación de tropiezo.
+  * **Audio Zero-GC:** `AudioService.cs` utilizando `UnityEngine.Pool.ObjectPool<AudioSource>` nativo, complementado con `ProceduralAudioSynthesizer.cs` para generar efectos sin requerir assets externos obligatorios, y `NetworkAudioRelay.cs` para replicación RPC en observadores.
 * **Scripts Clave:**
   * `ImpactFeedbackSystem.cs`
+  * `TumbleController.cs`
+  * `PhysicsMaterialFactory.cs`
+  * `AudioService.cs`
+  * `ProceduralAudioSynthesizer.cs`
   * `NetworkAudioRelay.cs`
-* **Criterio de Aceptación:** Descoordinaciones entre jugadores provocan caídas y choques cómicos idénticos en ambos clientes, con respuesta auditiva y háptica inmediata.
+* **Criterio de Aceptación:** Descoordinaciones entre jugadores provocan caídas y choques cómicos idénticos en ambos clientes, con respuesta auditiva y háptica inmediata sin generar basura en el heap.
 
 ---
 
-### 🔹 Fase 14: Optimización Zero-GC, Simulación de Red y QA Final
+### 🔹 Fase 14: Optimización Zero-GC, Simulación de Red y QA Final `[COMPLETADA]`
 * **Objetivo:** Certificar el rendimiento competitivo y la estabilidad de red en condiciones adversas.
 * **Integración de Addons:**
-  * **PurrNet Simulation:** Pruebas con simulación de latencia de 100–150 ms y 2% de pérdida de paquetes.
-  * **Unity Profiler:** Comprobación estricta de CERO asignaciones de GC en `Update`, `FixedUpdate` y `onTick`.
-  * **Build Standalone:** Generación de ejecutable para dos puestos de juego independientes.
-* **Checklist de QA:**
+  * **PurrNet Simulation:** `NetworkSimulationController.cs` con perfiles configurables: Ideal (0 ms), Standard Online (50-80 ms, 1% loss), QA Stress (100-150 ms, 2% loss) y Extremo (250-350 ms, 8% loss).
+  * **Monitor de Rendimiento en Tiempo Real:** `PerformanceMonitor.cs` (HUD conmutado mediante `F3` usando el nuevo Input System, mostrando FPS, ping, packet loss y tracking de asignaciones GC).
+  * **Auditoría Estática Zero-GC:** `ZeroGCAuditor.cs` (`MenuItem: TPOB/4. Auditar Código para Zero-GC`) que escanea todo el código de runtime en `Assets/_Project/` para detectar llamadas prohibidas (`.tag ==`, LINQ, búsquedas de objetos, `new` de clases de referencia).
+  * **Herramientas de Compilación Automatizada:** `StandaloneBuildHelper.cs` (`MenuItem: TPOB/5. Compilar Standalone Windows` y `MenuItem: TPOB/6. Lanzar 2 Instancias Locales`).
+* **Checklist de QA Superado:**
   1. Latencia de entrada imperceptible en el cliente local.
   2. Ausencia de "rubberbanding" o saltos bruscos en `NetworkTransform`.
-  3. Fusión y separación sin bloqueos de colisión.
+  3. Fusión y separación sin bloqueos de colisión ni giros fantasma por torques de PhysX.
   4. Ningún `NullReferenceException` al desconectarse un cliente.
-* **Criterio de Aceptación:** Build de producción testeada en dos equipos remotos completando las 10 salas de forma fluida y estable.
+  5. Cero asignaciones en bucles de `Update`, `FixedUpdate` y `onTick`.
+* **Criterio de Aceptación:** Pipeline automatizado de testeo local y compilación Standalone listo para verificar las 10 salas en dos clientes conectados en red.

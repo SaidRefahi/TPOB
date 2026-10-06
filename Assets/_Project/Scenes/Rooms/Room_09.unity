@@ -1384,7 +1384,7 @@ MonoBehaviour:
   autoInjectGameObjects: []
   _networkManager: {fileID: 387094444}
   _levelManager: {fileID: 779865288}
-  _lobbyNetworkController: {fileID: 0}
+  _lobbyNetworkControllerPrefab: {fileID: 0}
 --- !u!1 &892618478
 GameObject:
   m_ObjectHideFlags: 0
@@ -1664,9 +1664,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2034800681774007981, guid: 92850992d4dd63749b5f6888faccd1e8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.02
+      objectReference: {fileID: 0}
     - target: {fileID: 7386868171144708469, guid: 92850992d4dd63749b5f6888faccd1e8, type: 3}
       propertyPath: m_Name
       value: SeeSawPlatform
+      objectReference: {fileID: 0}
+    - target: {fileID: 8913636490945882746, guid: 92850992d4dd63749b5f6888faccd1e8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.42
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

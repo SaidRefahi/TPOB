@@ -41,16 +41,22 @@ namespace Game.Network.Services
         private IPlayerRegistry _playerRegistry;
         private ILevelManager _levelManager;
         private INetworkService _networkService;
+        private LobbyService _lobbyService;
 
         [Inject]
         public void Construct(
             IPlayerRegistry playerRegistry = null,
             ILevelManager levelManager = null,
-            INetworkService networkService = null)
+            INetworkService networkService = null,
+            ILobbyService lobbyService = null)
         {
             _playerRegistry = playerRegistry;
             _levelManager = levelManager;
             _networkService = networkService;
+            if (lobbyService is LobbyService ls)
+            {
+                _lobbyService = ls;
+            }
         }
 
         protected override void OnSpawned()
@@ -58,6 +64,7 @@ namespace Game.Network.Services
             base.OnSpawned();
 
             ResolveDependenciesIfNeeded();
+            _lobbyService?.BindNetworkController(this);
 
             var nm = networkManager != null ? networkManager : NetworkManager.main;
             if (nm != null)
@@ -78,6 +85,25 @@ namespace Game.Network.Services
             }
         }
 
+        protected override void OnDespawned()
+        {
+            var nm = networkManager != null ? networkManager : NetworkManager.main;
+            if (nm != null)
+            {
+                nm.onPlayerJoined -= HandleServerPlayerJoined;
+                nm.onPlayerLeft -= HandleServerPlayerLeft;
+            }
+
+            _lobbyService?.UnbindNetworkController(this);
+
+            _legsPlayerId = -1;
+            _legsReady = false;
+            _torsoPlayerId = -1;
+            _torsoReady = false;
+
+            base.OnDespawned();
+        }
+
         protected override void OnDestroy()
         {
             var nm = networkManager != null ? networkManager : NetworkManager.main;
@@ -87,12 +113,14 @@ namespace Game.Network.Services
                 nm.onPlayerLeft -= HandleServerPlayerLeft;
             }
 
+            _lobbyService?.UnbindNetworkController(this);
+
             base.OnDestroy();
         }
 
         private void ResolveDependenciesIfNeeded()
         {
-            if (_playerRegistry != null && _levelManager != null && _networkService != null) return;
+            if (_playerRegistry != null && _levelManager != null && _networkService != null && _lobbyService != null) return;
 
             var scopes = UnityEngine.Object.FindObjectsByType<VContainer.Unity.LifetimeScope>(FindObjectsSortMode.None);
             for (int i = 0; i < scopes.Length; i++)
@@ -104,7 +132,12 @@ namespace Game.Network.Services
                         if (_playerRegistry == null) _playerRegistry = scopes[i].Container.Resolve<IPlayerRegistry>();
                         if (_levelManager == null) _levelManager = scopes[i].Container.Resolve<ILevelManager>();
                         if (_networkService == null) _networkService = scopes[i].Container.Resolve<INetworkService>();
-                        if (_playerRegistry != null && _levelManager != null && _networkService != null) break;
+                        if (_lobbyService == null)
+                        {
+                            var svc = scopes[i].Container.Resolve<ILobbyService>();
+                            if (svc is LobbyService concreteLobby) _lobbyService = concreteLobby;
+                        }
+                        if (_playerRegistry != null && _levelManager != null && _networkService != null && _lobbyService != null) break;
                     }
                     catch { }
                 }
@@ -371,6 +404,8 @@ namespace Game.Network.Services
             OnPlayerLobbyStateChanged?.Invoke(legsId, PlayerRole.Legs, legsReady);
             OnPlayerLobbyStateChanged?.Invoke(torsoId, PlayerRole.Torso, torsoReady);
             OnBothPlayersReadyStatusChanged?.Invoke(AreBothPlayersReady);
+
+            _lobbyService?.UpdateLobbyState(legsId, legsReady, torsoId, torsoReady);
         }
 
         #endregion

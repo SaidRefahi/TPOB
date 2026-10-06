@@ -1,0 +1,7 @@
+<Project>
+  <!-- Auto-configured by /setup-unity-project to ensure Roslyn Analyzers load in MSBuild and ULSM workspaces -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <Analyzer Include="$(MSBuildThisFileDirectory)Assets\Analyzers\Microsoft.Unity.Analyzers.dll" Condition="Exists('$(MSBuildThisFileDirectory)Assets\Analyzers\Microsoft.Unity.Analyzers.dll')" />
+    <Analyzer Include="$(MSBuildThisFileDirectory)Assets\Analyzers\Antigravity.Unity.Analyzers.dll" Condition="Exists('$(MSBuildThisFileDirectory)Assets\Analyzers\Antigravity.Unity.Analyzers.dll') And ($(MSBuildProjectName.StartsWith('Game.')) Or $(MSBuildProjectName.StartsWith('Assembly-CSharp')))" />
+  </ItemGroup>
+</Project>

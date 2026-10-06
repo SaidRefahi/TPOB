@@ -29,11 +29,10 @@ namespace Game.Network.UI
 
         private long _lastGcMemory;
 
-        public bool ShowOverlay
-        {
-            get => _showOverlay;
-            set => _showOverlay = value;
-        }
+        public bool ShowOverlay => _showOverlay;
+
+        public void SetShowOverlay(bool show) => _showOverlay = show;
+        public void ToggleOverlay() => _showOverlay = !_showOverlay;
 
         public float CurrentFps => _currentFps;
         public long MonoMemoryMb => _monoUsedMemoryMb;

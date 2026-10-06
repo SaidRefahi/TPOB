@@ -87,6 +87,19 @@ namespace Game.Gameplay.UI
             if (_canvas != null) _canvas.enabled = active;
             if (_raycaster != null) _raycaster.enabled = active;
 
+            if (!active)
+            {
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                if (eventSystem != null)
+                {
+                    var selected = eventSystem.currentSelectedGameObject;
+                    if (selected != null && selected.transform.IsChildOf(transform))
+                    {
+                        eventSystem.SetSelectedGameObject(null);
+                    }
+                }
+            }
+
             if (!gameObject.activeSelf)
             {
                 gameObject.SetActive(true);
@@ -154,6 +167,19 @@ namespace Game.Gameplay.UI
             {
                 _startGameButton.gameObject.SetActive(isHost);
                 _startGameButton.interactable = isInteractable;
+            }
+        }
+
+        public void ResetUI()
+        {
+            UpdateCard(PlayerRole.Legs, false, false, false);
+            UpdateCard(PlayerRole.Torso, false, false, false);
+            SetReadyButtonState(false, false);
+            SetStartButtonInteractable(false, false);
+            SetMatchStatus("Esperando conexión o asignación de roles...", Color.white);
+            if (RoomCodeText != null)
+            {
+                RoomCodeText.text = "<b><size=34><color=#00FFFF>SALA DE PREPARACIÓN</color></size></b>\n<size=18><color=#FFFFFF>CÓDIGO DE SALA: </color><color=#00FFFF><b>---</b></color></size>";
             }
         }
     }

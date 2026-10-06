@@ -14,7 +14,9 @@
         "Unity.Cinemachine",
         "Unity.Cinemachine.Editor",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.Animation.Rigging",
+        "Unity.Animation.Rigging.Editor"
     ],
     "includePlatforms": [
         "Editor"

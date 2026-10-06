@@ -3,6 +3,7 @@
     "com.codewriter.triinspector": "https://github.com/codewriter-packages/Tri-Inspector.git",
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
     "com.unity.ai.navigation": "2.0.9",
+    "com.unity.animation.rigging": "1.4.1",
     "com.unity.cinemachine": "3.1.7",
     "com.unity.collab-proxy": "2.11.3",
     "com.unity.collections": "2.6.8",

@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using Game.Core.Events;
 using Game.Core.Interfaces;
 using PurrNet;
@@ -38,9 +39,12 @@ namespace Game.Network.Services
         public event Action<int, bool> OnPlayerConnected;
         public event Action<int> OnPlayerDisconnected;
 
-        public NetworkService(IGameEventBus eventBus)
+        private readonly GameObject _lobbyPrefab;
+
+        public NetworkService(IGameEventBus eventBus, GameObject lobbyPrefab = null)
         {
             _eventBus = eventBus;
+            _lobbyPrefab = lobbyPrefab;
             InitializeManager();
         }
 
@@ -164,6 +168,33 @@ namespace Game.Network.Services
                 return;
             }
 
+            if (_cachedManager.serverState == ConnectionState.Disconnecting ||
+                _cachedManager.clientState == ConnectionState.Disconnecting)
+            {
+                WaitAndStartHostAsync().Forget();
+                return;
+            }
+
+            ExecuteStartHost();
+        }
+
+        private async UniTaskVoid WaitAndStartHostAsync()
+        {
+            while (_cachedManager != null &&
+                   (_cachedManager.serverState == ConnectionState.Disconnecting ||
+                    _cachedManager.clientState == ConnectionState.Disconnecting))
+            {
+                await UniTask.Yield();
+            }
+
+            if (_cachedManager != null)
+            {
+                ExecuteStartHost();
+            }
+        }
+
+        private void ExecuteStartHost()
+        {
             var purr = GetPurrTransport();
             if (purr != null)
             {
@@ -180,6 +211,7 @@ namespace Game.Network.Services
 
             if (_cachedManager.serverState == ConnectionState.Connected || _cachedManager.clientState == ConnectionState.Connected)
             {
+                EnsureLobbyControllerSpawned();
                 OnConnected?.Invoke();
             }
         }
@@ -205,6 +237,30 @@ namespace Game.Network.Services
                 return;
             }
 
+            if (_cachedManager.clientState == ConnectionState.Disconnecting)
+            {
+                WaitAndStartClientAsync().Forget();
+                return;
+            }
+
+            ExecuteStartClient();
+        }
+
+        private async UniTaskVoid WaitAndStartClientAsync()
+        {
+            while (_cachedManager != null && _cachedManager.clientState == ConnectionState.Disconnecting)
+            {
+                await UniTask.Yield();
+            }
+
+            if (_cachedManager != null)
+            {
+                ExecuteStartClient();
+            }
+        }
+
+        private void ExecuteStartClient()
+        {
             var purr = GetPurrTransport();
             if (purr != null)
             {
@@ -245,18 +301,30 @@ namespace Game.Network.Services
             StartClient();
         }
 
+        private bool _isDisconnecting;
+
         public void Disconnect()
         {
+            EnsureManager();
             if (_cachedManager == null) return;
+            if (_isDisconnecting) return;
+            _isDisconnecting = true;
 
-            if (_cachedManager.isServer)
+            try
             {
-                _cachedManager.StopServer();
+                if (_cachedManager.serverState != ConnectionState.Disconnected)
+                {
+                    _cachedManager.StopServer();
+                }
+
+                if (_cachedManager.clientState != ConnectionState.Disconnected)
+                {
+                    _cachedManager.StopClient();
+                }
             }
-
-            if (_cachedManager.isClient)
+            finally
             {
-                _cachedManager.StopClient();
+                _isDisconnecting = false;
             }
         }
 
@@ -277,11 +345,37 @@ namespace Game.Network.Services
             Debug.Log($"[NetworkService] Server Connection State: {state}");
             if (state == ConnectionState.Connected)
             {
+                EnsureLobbyControllerSpawned();
                 OnConnected?.Invoke();
             }
             else if (state == ConnectionState.Disconnected)
             {
-                OnDisconnected?.Invoke();
+                if (_cachedManager == null || !_cachedManager.isClient || _cachedManager.clientState == ConnectionState.Disconnected)
+                {
+                    OnDisconnected?.Invoke();
+                }
+            }
+        }
+
+        private void EnsureLobbyControllerSpawned()
+        {
+            if (_cachedManager == null || !_cachedManager.isServer) return;
+
+            var existing = UnityEngine.Object.FindFirstObjectByType<LobbyNetworkController>();
+            if (existing != null && existing.isSpawned)
+            {
+                return;
+            }
+
+            GameObject prefabToSpawn = _lobbyPrefab;
+            if (prefabToSpawn != null)
+            {
+                var instance = UnityEngine.Object.Instantiate(prefabToSpawn);
+                _cachedManager.Spawn(instance);
+            }
+            else
+            {
+                Debug.LogWarning("[NetworkService] Cannot spawn LobbyNetworkController: No lobbyPrefab provided to NetworkService.");
             }
         }
 
@@ -294,7 +388,10 @@ namespace Game.Network.Services
             }
             else if (state == ConnectionState.Disconnected)
             {
-                OnDisconnected?.Invoke();
+                if (_cachedManager == null || !_cachedManager.isServer || _cachedManager.serverState == ConnectionState.Disconnected)
+                {
+                    OnDisconnected?.Invoke();
+                }
             }
         }
 

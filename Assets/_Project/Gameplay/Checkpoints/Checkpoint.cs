@@ -96,8 +96,8 @@ namespace Game.Gameplay.Checkpoints
             if (_isActive) return;
 
             if (other.CompareTag("Player") ||
-                other.GetComponentInParent<Core.Interfaces.IDamageable>() != null ||
-                other.attachedRigidbody != null && other.attachedRigidbody.GetComponent<Core.Interfaces.IDamageable>() != null)
+                other.TryGetComponent<Core.Interfaces.IDamageable>(out _) ||
+                (other.attachedRigidbody != null && other.attachedRigidbody.TryGetComponent<Core.Interfaces.IDamageable>(out _)))
             {
                 var system = FindFirstObjectByType<CheckpointSystem>();
                 if (system != null)

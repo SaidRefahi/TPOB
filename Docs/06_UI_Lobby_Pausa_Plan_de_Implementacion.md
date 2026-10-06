@@ -9,7 +9,7 @@ tags:
   - vcontainer
   - roadmap
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-28
 ---
 
 # 🎮 Documentación Técnica y Plan de Implementación: Menú Principal, Lobby y Menú de Pausa
@@ -65,15 +65,15 @@ stateDiagram-v2
 
 | Fase | Denominación | Stack Tecnológico | Entregable Principal |
 | :---: | :--- | :--- | :--- |
-| **Fase 1** | **Infraestructura de Datos, Red y Eventos** | PurrNet, VContainer, C# Structs | `LobbyNetworkController`, extensión de `PlayerSlot` (`IsReady`), RPCs autoritativos con `bufferLast: true`. |
-| **Fase 2** | **Menú Principal y Sistema de Opciones** | UGUI, TextMeshPro, IAudioService, PlayerPrefs | `Canvas_MainMenu`, conexión IP/puerto, diálogo modal de opciones (Audio, Video, Sensibilidad) y salida. |
-| **Fase 3** | **Lobby de Pre-Ingreso y Selección Exclusiva** | PurrNet ServerRpc, ObserversRpc, DOTween | `Canvas_Lobby`, tarjetas interactivas de *Piernas* y *Torso*, visualizador de controles/lore, exclusión mutua y arranque de Sala 1. |
-| **Fase 4** | **Menú de Pausa In-Game y Desconexión Limpia** | UnityEngine.InputSystem, INetworkService | `Canvas_PauseMenu`, overlay con cursor liberado, suspensión local de `LegsInputReader`/`TorsoInputReader` y salida segura. |
-| **Fase 5** | **Integración de Prefabs, Escenas y Automatización** | Game.Editor, CanvasScaler, Unity Build Settings | Prefabs estandarizados a 1080p, wiring en `GameLifetimeScope` y botones de prueba en Unity Editor. |
+| **Fase 1** | **Infraestructura de Datos, Red y Eventos** | PurrNet, VContainer, C# Structs | `LobbyNetworkController`, extensión de `PlayerSlot` (`IsReady`), RPCs autoritativos con `bufferLast: true`. `[COMPLETADA]` |
+| **Fase 2** | **Menú Principal y Sistema de Opciones** | UGUI, TextMeshPro, IAudioService, PlayerPrefs | `Canvas_MainMenu`, conexión IP/puerto, diálogo modal de opciones (Audio, Video, Sensibilidad) y salida. `[COMPLETADA]` |
+| **Fase 3** | **Lobby de Pre-Ingreso y Selección Exclusiva** | PurrNet ServerRpc, ObserversRpc, DOTween | `Canvas_Lobby`, tarjetas interactivas de *Piernas* y *Torso*, visualizador de controles/lore, exclusión mutua y arranque de Sala 1. `[COMPLETADA]` |
+| **Fase 4** | **Menú de Pausa In-Game y Desconexión Limpia** | UnityEngine.InputSystem, INetworkService | `Canvas_PauseMenu`, overlay con cursor liberado, suspensión local de `LegsInputReader`/`TorsoInputReader` y salida segura. `[COMPLETADA]` |
+| **Fase 5** | **Integración de Prefabs, Escenas y Automatización** | Game.Editor, CanvasScaler, Unity Build Settings | Prefabs estandarizados a 1080p, wiring en `GameLifetimeScope` y botones de prueba en Unity Editor. `[COMPLETADA]` |
 
 ---
 
-## ⚙️ FASE 1: Infraestructura de Datos, Red y Eventos
+## ⚙️ FASE 1: Infraestructura de Datos, Red y Eventos `[COMPLETADA]`
 
 ### 1.1 Objetivo
 Establecer la sincronización autoritativa del estado de selección de roles en PurrNet antes de instanciar los avatares físicos en la escena de juego.
@@ -225,9 +225,21 @@ namespace Game.Network.Services
 }
 ```
 
+### 1.5 Servicio de Dominio C# Puro: `LobbyService.cs` (Dependency Inversion Pura)
+Ruta: `Assets/_Project/Network/Services/LobbyService.cs`
+
+Para resolver el problema del ciclo de vida donde PurrNet destruye los GameObjects de red (`LobbyNetworkController`) al desconectarse del host (`HierarchyPool.Dispose`), se implementa una separación estricta mediante **Dependency Inversion**:
+1. **`ILobbyService`:** Contrato formal expuesto a la capa de UI (`LobbyPresenter`).
+2. **`LobbyService`:** Clase C# pura gestionada por VContainer (`Lifetime.Singleton`), persistente durante toda la vida de la aplicación sin acoplamiento a GameObjects de escena ni Singletons estáticos.
+3. **Enlace Dinámico de Sesión:**
+   - Al spawnearse una partida en red, `LobbyNetworkController` se enlaza en runtime con `_lobbyService.BindNetworkController(this)`.
+   - Al desconectarse o cerrarse la sala, se desvincula limpiamente con `_lobbyService.UnbindNetworkController(this)` y resetea el estado visual y lógico.
+   - Si no hay controlador de red activo (ej. en el Menú Principal), las llamadas a `SelectRole()` o `ToggleReady()` no provocan excepciones de RPCs no spawneados.
+4. **Reinicio de UI (`ResetUI`):** `LobbyView` incorpora un método explícito para restaurar el estado visual inicial al desconectarse o regresar al menú principal.
+
 ---
 
-## 🖥️ FASE 2: Menú Principal y Sistema de Opciones
+## 🖥️ FASE 2: Menú Principal y Sistema de Opciones `[COMPLETADA]`
 
 ### 2.1 Objetivo
 Diseñar una interfaz responsiva que permita:
@@ -370,7 +382,7 @@ Permite calibrar y persistir:
 
 ---
 
-## 🤝 FASE 3: Lobby de Pre-Ingreso y Selección Exclusiva
+## 🤝 FASE 3: Lobby de Pre-Ingreso y Selección Exclusiva `[COMPLETADA]`
 
 ### 3.1 Objetivo
 Permitir que los dos jugadores:
@@ -503,7 +515,7 @@ namespace Game.Gameplay.UI
 
 ---
 
-## ⏸️ FASE 4: Menú de Pausa In-Game y Desconexión Limpia
+## ⏸️ FASE 4: Menú de Pausa In-Game y Desconexión Limpia `[COMPLETADA]`
 
 ### 4.1 Objetivo
 1. Desplegar un menú modal con las opciones: **Continuar**, **Opciones** y **Salir al Menú Principal**.
@@ -612,7 +624,7 @@ namespace Game.Gameplay.UI
 
 ---
 
-## 🏗️ FASE 5: Integración de Prefabs, Escenas y Automatización
+## 🏗️ FASE 5: Integración de Prefabs, Escenas y Automatización `[COMPLETADA]`
 
 ### 5.1 Estructura en la Escena `Boot.unity`
 En `Boot.unity` (la escena índice 0):

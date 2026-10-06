@@ -450,7 +450,10 @@ namespace Game.Gameplay.Player.Robot
             else
             {
                 var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
-                relay?.BroadcastPlayerDied(new PlayerDiedEvent(1, PlayerRole.Legs, pos, DeathCause.Hazard));
+                if (relay != null)
+                {
+                    relay.BroadcastPlayerDied(new PlayerDiedEvent(1, PlayerRole.Legs, pos, DeathCause.Hazard));
+                }
             }
         }
 
@@ -467,7 +470,10 @@ namespace Game.Gameplay.Player.Robot
             else
             {
                 var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
-                relay?.BroadcastPlayerDied(new PlayerDiedEvent(2, PlayerRole.Torso, pos, DeathCause.Hazard));
+                if (relay != null)
+                {
+                    relay.BroadcastPlayerDied(new PlayerDiedEvent(2, PlayerRole.Torso, pos, DeathCause.Hazard));
+                }
             }
         }
 
@@ -484,7 +490,10 @@ namespace Game.Gameplay.Player.Robot
             else
             {
                 var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
-                relay?.BroadcastPlayerRespawned(new PlayerRespawnedEvent(1, PlayerRole.Legs, pos));
+                if (relay != null)
+                {
+                    relay.BroadcastPlayerRespawned(new PlayerRespawnedEvent(1, PlayerRole.Legs, pos));
+                }
             }
         }
 
@@ -501,7 +510,10 @@ namespace Game.Gameplay.Player.Robot
             else
             {
                 var relay = Object.FindFirstObjectByType<Game.Network.Events.NetworkEventRelay>();
-                relay?.BroadcastPlayerRespawned(new PlayerRespawnedEvent(2, PlayerRole.Torso, pos));
+                if (relay != null)
+                {
+                    relay.BroadcastPlayerRespawned(new PlayerRespawnedEvent(2, PlayerRole.Torso, pos));
+                }
             }
         }
     }

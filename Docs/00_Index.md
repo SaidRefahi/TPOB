@@ -7,7 +7,7 @@ tags:
   - architecture
   - gdd
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-09-28
 ---
 
 # 🤖 Two Pilots, One Robot (TPOB) — Centro de Documentación
@@ -25,9 +25,10 @@ Accede a las diferentes secciones del proyecto mediante los enlaces locales de O
 | [[01_GDD]] | **Game Design Document (GDD)** completo: Concepto, roles (Piernas y Torso), estados de Fusión/Separación, matriz de 10 interacciones, filosofía de comedia física y diseño de 10 salas. | `Aprobado` |
 | [[02_Arquitectura]] | **Informe de Arquitectura de Software**: Integración autoritativa con **PurrNet**, Inyección de Dependencias con **VContainer**, Modelo asíncrono Zero-GC con **UniTask**, Cámara dinámica con **Cinemachine 3.x**, Juicing con **DOTween**, Inspector tooling con **Tri-Inspector** y Patrones de Diseño (Command, Strategy, Observer, Composite, State). | `Completado` |
 | [[03_Diagramas]] | **Diagramas de Sistema**: Diagrama de Clases Mermaid y Flujograma del Loop de Gameplay interactivo con soporte nativo de Obsidian. | `Actualizado` |
-| [[04_Plan_de_Implementacion]] | **Programa de Implementación (14 Fases)**: Roadmap de desarrollo paso a paso, complementado para explotar al máximo todos los addons y garantizar Zero-GC en hot paths. | `Producción` |
-| [[05_Plantilla_Para_Notion]] | **Plantilla para Notion**: Documento formateado con callouts, tablas y checkboxes listo para ser importado o copiado a Notion. | `Listo para Exportar` |
-| [[06_UI_Lobby_Pausa_Plan_de_Implementacion]] | **UI, Lobby y Pausa**: Plan de implementación por fases para Menú Principal (Host/Join), Lobby de selección exclusiva (Piernas/Torso con ficha de controles) y Menú de Pausa In-Game. | `Diseño Aprobado` |
+| [[04_Plan_de_Implementacion]] | **Programa de Implementación (14 Fases)**: Roadmap de desarrollo paso a paso, complementado para explotar al máximo todos los addons y garantizar Zero-GC en hot paths. | `100% Completado` |
+| [[05_Plantilla_Para_Notion]] | **Plantilla para Notion**: Documento formateado con callouts, tablas y checkboxes listo para ser importado o copiado a Notion. | `100% Completado` |
+| [[06_UI_Lobby_Pausa_Plan_de_Implementacion]] | **UI, Lobby y Pausa**: Plan de implementación por fases para Menú Principal (Host/Join), Lobby de selección exclusiva (Piernas/Torso con ficha de controles) y Menú de Pausa In-Game. | `100% Implementado` |
+| [[07_Animacion_Procedural_Piernas_Plan_de_Implementacion]] | **Animación Procedural de Piernas y NetworkBones**: Plan de animación procedural cuadrúpeda (marcha torpe 1 pata a la vez, salto, patada) con **Unity Animation Rigging** y sincronización de red con **PurrNet NetworkBones**. | `Propuesto para Revisión` |
 
 ---
 

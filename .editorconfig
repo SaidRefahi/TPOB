@@ -1,0 +1,99 @@
+# Unity Project .editorconfig
+# Managed by /setup-unity-project
+# Enforces Microsoft.Unity.Analyzers and Antigravity.Unity.Analyzers for active [ENFORCEABLE] rules
+
+root = true
+
+[*.cs]
+
+# ==============================================================================
+# ENFORCEABLE RULES - NATIVE MICROSOFT.UNITY.ANALYZERS (ERROR)
+# ==============================================================================
+
+# Rule 3.3 (performance-hotpaths.md): Tag Comparisons via CompareTag
+dotnet_diagnostic.UNT0002.severity = error
+
+# Rule 4.1 (physics-and-math.md): UnityEngine.Object Null Checks (??, ?., ??=)
+dotnet_diagnostic.UNT0007.severity = error
+dotnet_diagnostic.UNT0008.severity = error
+dotnet_diagnostic.UNT0023.severity = error
+
+# Rule 1.1 (physics-and-math.md): NonAlloc Physics Queries
+dotnet_diagnostic.UNT0028.severity = error
+
+# Rule 3.5 (performance-hotpaths.md): Precalculation of Animator and Shader Property Hashes
+dotnet_diagnostic.UNT0041.severity = error
+dotnet_diagnostic.UNT0046.severity = error
+
+# ==============================================================================
+# ENFORCEABLE RULES - CUSTOM ANTIGRAVITY.UNITY.ANALYZERS (ERROR)
+# ==============================================================================
+
+# Rule 4.1 (core-architecture.md): Shallow Inheritance Depth (max 1 level)
+dotnet_diagnostic.AGY0001.severity = error
+
+# Rule 5.1 (core-architecture.md): Encapsulate Serialized Fields ([SerializeField] private)
+dotnet_diagnostic.AGY0002.severity = error
+
+# Rule 5.2 (core-architecture.md): Read-Only Property External Access
+dotnet_diagnostic.AGY0003.severity = error
+
+# Rule 2.2 (performance-hotpaths.md): Prohibit LINQ in Hot Paths
+dotnet_diagnostic.AGY0011.severity = error
+
+# Rule 3.2 (performance-hotpaths.md): Prohibit GetComponent in Hot Paths (cache in Awake)
+dotnet_diagnostic.AGY0012.severity = error
+
+# Rule 2.1 (performance-hotpaths.md): Prohibit Reference Type Instantiation in Hot Paths
+dotnet_diagnostic.AGY0013.severity = error
+
+# Rule 2.3 (performance-hotpaths.md): Prohibit String Manipulation & Logging in Hot Paths
+dotnet_diagnostic.AGY0014.severity = error
+
+# Rule 2.4 (performance-hotpaths.md): Prohibit Value Type Boxing in Hot Paths
+dotnet_diagnostic.AGY0015.severity = error
+
+# Rule 2.5 (performance-hotpaths.md): Prohibit Closures & Lambdas in Hot Paths
+dotnet_diagnostic.AGY0016.severity = error
+
+# Rule 3.1 (input-and-events.md): Named Event Handlers Required (no inline lambdas in +=)
+dotnet_diagnostic.AGY0021.severity = error
+
+# Rule 2.1 (physics-and-math.md): Distance Comparisons via .sqrMagnitude
+dotnet_diagnostic.AGY0031.severity = error
+
+# ==============================================================================
+# GUIDED / INFORMATIONAL RULES (WARNING)
+# ==============================================================================
+
+# Rule 3.1 (performance-hotpaths.md): Reusable Yield Instruction Caching [GUIDED]
+dotnet_diagnostic.UNT0038.severity = warning
+
+# UI Text temporary string optimization (informational / warning)
+dotnet_diagnostic.UNT0044.severity = warning
+
+# ==============================================================================
+# THIRD-PARTY VENDOR CODE & PLUGINS EXCLUSIONS
+# ==============================================================================
+
+[Assets/{PurrNet,Plugins,TextMesh Pro,TutorialInfo}/**.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.AGY0001.severity = none
+dotnet_diagnostic.AGY0002.severity = none
+dotnet_diagnostic.AGY0003.severity = none
+dotnet_diagnostic.AGY0011.severity = none
+dotnet_diagnostic.AGY0012.severity = none
+dotnet_diagnostic.AGY0013.severity = none
+dotnet_diagnostic.AGY0014.severity = none
+dotnet_diagnostic.AGY0015.severity = none
+dotnet_diagnostic.AGY0016.severity = none
+dotnet_diagnostic.AGY0021.severity = none
+dotnet_diagnostic.AGY0031.severity = none
+dotnet_diagnostic.UNT0002.severity = none
+dotnet_diagnostic.UNT0007.severity = none
+dotnet_diagnostic.UNT0008.severity = none
+dotnet_diagnostic.UNT0023.severity = none
+dotnet_diagnostic.UNT0028.severity = none
+dotnet_diagnostic.UNT0041.severity = none
+dotnet_diagnostic.UNT0046.severity = none

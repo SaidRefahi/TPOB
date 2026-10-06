@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "05_Plantilla_Para_Notion.md",
+                "file": "04_Plan_de_Implementacion.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "05_Plantilla_Para_Notion"
+              "title": "04_Plan_de_Implementacion"
             }
           }
         ]
@@ -190,7 +190,12 @@
   },
   "active": "3076e4d416b15a8c",
   "lastOpenFiles": [
+    "03_Diagramas.md",
+    "02_Arquitectura.md",
+    "01_GDD.md",
     "04_Plan_de_Implementacion.md",
-    "05_Plantilla_Para_Notion.md"
+    "05_Plantilla_Para_Notion.md",
+    "06_UI_Lobby_Pausa_Plan_de_Implementacion.md",
+    "00_Index.md"
   ]
 }

@@ -107,6 +107,8 @@ namespace Game.Gameplay.Player.Legs
         public bool IsGrounded => _isGrounded;
         public bool IsSprinting => _pendingInput.SprintHeld;
         public bool CanKick => Time.time >= _nextKickTime;
+        public float WalkSpeed => _walkSpeed;
+        public float SprintSpeed => _sprintSpeed;
 
         public event Action OnKicked;
 
@@ -130,6 +132,7 @@ namespace Game.Gameplay.Player.Legs
             if (_rigidbody != null)
             {
                 _baseMass = _rigidbody.mass;
+                _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
             }
 
             if (_fusionSocket == null)
@@ -282,8 +285,16 @@ namespace Game.Gameplay.Player.Legs
                 return;
             }
 
+            if (_rigidbody == null)
+            {
+                return;
+            }
+
+            // Both server and client compute ground contact so animations and prediction are always synchronized
+            UpdateGroundStatus();
+
             bool isSimulated = !isSpawned || isServer;
-            if (!isSimulated || _rigidbody == null)
+            if (!isSimulated)
             {
                 return;
             }
@@ -293,10 +304,15 @@ namespace Game.Gameplay.Player.Legs
                 return;
             }
 
-            UpdateGroundStatus();
             ApplyLocomotion();
             ApplyJumpAndGravity();
             ApplyKick();
+
+            // Zero residual angular velocity to prevent PhysX contact torque from spinning the robot when idle
+            if (!_rigidbody.isKinematic)
+            {
+                _rigidbody.angularVelocity = Vector3.zero;
+            }
         }
 
         private void UpdateGroundStatus()
@@ -433,7 +449,10 @@ namespace Game.Gameplay.Player.Legs
             {
                 _audioRelay = FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
             }
-            _audioRelay?.PlayNetworkAudio(cue, position, 0.9f, 1f);
+            if (_audioRelay != null)
+            {
+                _audioRelay.PlayNetworkAudio(cue, position, 0.9f, 1f);
+            }
         }
 
         private void TriggerKickImpulse()

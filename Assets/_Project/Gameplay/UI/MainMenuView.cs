@@ -66,6 +66,19 @@ namespace Game.Gameplay.UI
             if (_canvas != null) _canvas.enabled = active;
             if (_raycaster != null) _raycaster.enabled = active;
 
+            if (!active)
+            {
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                if (eventSystem != null)
+                {
+                    var selected = eventSystem.currentSelectedGameObject;
+                    if (selected != null && selected.transform.IsChildOf(transform))
+                    {
+                        eventSystem.SetSelectedGameObject(null);
+                    }
+                }
+            }
+
             if (!gameObject.activeSelf)
             {
                 gameObject.SetActive(true);

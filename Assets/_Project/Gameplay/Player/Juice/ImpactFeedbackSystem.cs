@@ -171,7 +171,10 @@ namespace Game.Gameplay.Player.Juice
             else
             {
                 var audioService = FindFirstObjectByType<AudioService>();
-                audioService?.PlaySfx(cue, position, volume, pitch);
+                if (audioService != null)
+                {
+                    audioService.PlaySfx(cue, position, volume, pitch);
+                }
             }
         }
     }

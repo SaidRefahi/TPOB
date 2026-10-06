@@ -752,7 +752,10 @@ namespace Game.Gameplay.Player.Torso
             {
                 _audioRelay = FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
             }
-            _audioRelay?.PlayNetworkAudio(Game.Core.Enums.AudioCue.Kick, hitPoint, 1f, 1f);
+            if (_audioRelay != null)
+            {
+                _audioRelay.PlayNetworkAudio(Game.Core.Enums.AudioCue.Kick, hitPoint, 1f, 1f);
+            }
         }
 
         [ServerRpc(requireOwnership: false)]

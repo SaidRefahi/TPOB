@@ -43,8 +43,7 @@ namespace Game.Gameplay.Rooms.Conditions
             {
                 if (_conditions[i] != null)
                 {
-                    int index = i;
-                    _conditions[i].OnConditionChanged += _ => HandleSubConditionChanged(index);
+                    _conditions[i].OnConditionChanged += OnSubConditionChanged;
                 }
             }
         }
@@ -57,22 +56,27 @@ namespace Game.Gameplay.Rooms.Conditions
             {
                 if (_conditions[i] != null)
                 {
-                    _conditions[i].OnConditionChanged -= _ => { };
+                    _conditions[i].OnConditionChanged -= OnSubConditionChanged;
                 }
             }
         }
 
-        private void HandleSubConditionChanged(int index)
+        private void OnSubConditionChanged(bool _)
         {
-            if (index >= 0 && index < _activationTimes.Length)
+            if (_conditions == null || _activationTimes == null) return;
+
+            for (int i = 0; i < _conditions.Length && i < _activationTimes.Length; i++)
             {
-                if (_conditions[index].IsSatisfied)
+                if (_conditions[i] != null && _conditions[i].IsSatisfied)
                 {
-                    _activationTimes[index] = Time.time;
+                    if (_activationTimes[i] < 0f)
+                    {
+                        _activationTimes[i] = Time.time;
+                    }
                 }
                 else
                 {
-                    _activationTimes[index] = -999f;
+                    _activationTimes[i] = -999f;
                 }
             }
 

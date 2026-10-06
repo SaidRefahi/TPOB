@@ -208,13 +208,13 @@ namespace Game.Editor
                 bootstrapper = bootstrapperGo.AddComponent<Bootstrapper>();
             }
 
-            var lobbyCtrl = Object.FindFirstObjectByType<LobbyNetworkController>();
-            if (lobbyCtrl == null)
+            var sceneLobbyCtrl = Object.FindFirstObjectByType<LobbyNetworkController>();
+            if (sceneLobbyCtrl != null)
             {
-                var lobbyCtrlGo = new GameObject("[LOBBY_NETWORK_CONTROLLER]");
-                lobbyCtrlGo.transform.SetParent(netGroup.transform);
-                lobbyCtrl = lobbyCtrlGo.AddComponent<LobbyNetworkController>();
+                Object.DestroyImmediate(sceneLobbyCtrl.gameObject);
             }
+
+            var lobbyControllerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LobbyNetworkController.prefab");
 
             var relay = Object.FindFirstObjectByType<NetworkEventRelay>();
             if (relay == null)
@@ -236,7 +236,8 @@ namespace Game.Editor
             var scopeSo = new SerializedObject(gameScope);
             scopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
             scopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
-            scopeSo.FindProperty("_lobbyNetworkController").objectReferenceValue = lobbyCtrl;
+            var lobbyPrefabProp = scopeSo.FindProperty("_lobbyNetworkControllerPrefab");
+            if (lobbyPrefabProp != null) lobbyPrefabProp.objectReferenceValue = lobbyControllerPrefab;
             scopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             // 4. Montar Jerarquía Completa de UI

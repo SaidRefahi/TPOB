@@ -83,16 +83,6 @@ namespace Game.Gameplay.UI
                     }
                 }
             }
-
-            if (_lobbyService == null)
-            {
-                var lobbyCtrl = Object.FindFirstObjectByType<Game.Network.Services.LobbyNetworkController>();
-                if (lobbyCtrl != null)
-                {
-                    _lobbyService = lobbyCtrl;
-                    HookLobbyEvents();
-                }
-            }
         }
 
         private void HookLobbyEvents()
@@ -110,6 +100,8 @@ namespace Game.Gameplay.UI
             if (_networkService == null) return;
             _networkService.OnPlayerConnected -= HandlePlayerConnected;
             _networkService.OnPlayerConnected += HandlePlayerConnected;
+            _networkService.OnDisconnected -= HandleNetworkDisconnected;
+            _networkService.OnDisconnected += HandleNetworkDisconnected;
         }
 
         private void HookGameManagerEvents()
@@ -167,6 +159,7 @@ namespace Game.Gameplay.UI
             if (_networkService != null)
             {
                 _networkService.OnPlayerConnected -= HandlePlayerConnected;
+                _networkService.OnDisconnected -= HandleNetworkDisconnected;
             }
 
             if (_gameManager != null)
@@ -197,7 +190,31 @@ namespace Game.Gameplay.UI
 
         private void HandleLeaveLobbyClicked()
         {
-            _networkService?.Disconnect();
+            if (_view != null)
+            {
+                _view.ResetUI();
+                _view.SetActive(false);
+            }
+            UIInputModuleFixer.EnsureUIFocusAndInput();
+
+            if (_networkService != null && (_networkService.IsConnected || _networkService.IsServer || _networkService.IsClient))
+            {
+                _networkService.Disconnect();
+            }
+            else if (_gameManager != null)
+            {
+                _gameManager.ChangeState(GameState.Booting);
+            }
+        }
+
+        private void HandleNetworkDisconnected()
+        {
+            if (_view != null)
+            {
+                _view.ResetUI();
+                _view.SetActive(false);
+            }
+            UIInputModuleFixer.EnsureUIFocusAndInput();
         }
 
         private void HandlePlayerConnected(int playerId, bool isLocal)
@@ -220,13 +237,21 @@ namespace Game.Gameplay.UI
         {
             if (newState == GameState.Lobby)
             {
-                _view.SetActive(true);
+                if (_view != null)
+                {
+                    _view.SetActive(true);
+                }
                 _lobbyService?.RequestSync();
                 RefreshUI();
             }
             else
             {
-                _view.SetActive(false);
+                if (_view != null)
+                {
+                    _view.ResetUI();
+                    _view.SetActive(false);
+                }
+                UIInputModuleFixer.EnsureUIFocusAndInput();
             }
         }
 

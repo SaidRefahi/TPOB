@@ -48,9 +48,9 @@ namespace Game.Gameplay.UI
                 else
                 {
                     // Garantizar que las acciones de clic y punto estén habilitadas
-                    if (uiModule.point?.action != null && !uiModule.point.action.enabled)
+                    if (uiModule.point != null && uiModule.point.action != null && !uiModule.point.action.enabled)
                         uiModule.point.action.Enable();
-                    if (uiModule.leftClick?.action != null && !uiModule.leftClick.action.enabled)
+                    if (uiModule.leftClick != null && uiModule.leftClick.action != null && !uiModule.leftClick.action.enabled)
                         uiModule.leftClick.action.Enable();
                 }
             }
@@ -60,6 +60,25 @@ namespace Game.Gameplay.UI
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+
+        public static void EnsureUIFocusAndInput()
+        {
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem != null)
+            {
+                eventSystem.SetSelectedGameObject(null);
+            }
+
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+
+            var fixer = Object.FindFirstObjectByType<UIInputModuleFixer>();
+            if (fixer != null)
+            {
+                fixer.EnsureValidUIInput();
+                fixer.EnsureCursorVisible();
+            }
         }
     }
 }

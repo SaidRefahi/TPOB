@@ -591,9 +591,7 @@ namespace Game.Editor
             var gameScope = gameScopeGo.AddComponent<GameLifetimeScope>();
             var levelManager = gameScopeGo.AddComponent<LevelManager>();
 
-            var lobbyCtrlGo = new GameObject("[LOBBY_NETWORK_CONTROLLER]");
-            lobbyCtrlGo.transform.SetParent(netGroup.transform);
-            var lobbyCtrl = lobbyCtrlGo.AddComponent<LobbyNetworkController>();
+            var lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LobbyNetworkController.prefab");
 
             var bootGo = new GameObject("[BOOTSTRAPPER]");
             bootGo.transform.SetParent(netGroup.transform);
@@ -602,7 +600,8 @@ namespace Game.Editor
             var gameScopeSo = new SerializedObject(gameScope);
             gameScopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
             gameScopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
-            gameScopeSo.FindProperty("_lobbyNetworkController").objectReferenceValue = lobbyCtrl;
+            var lobbyPrefabProp = gameScopeSo.FindProperty("_lobbyNetworkControllerPrefab");
+            if (lobbyPrefabProp != null) lobbyPrefabProp.objectReferenceValue = lobbyPrefab;
             gameScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             // 5. LIGHTING & CAMERA

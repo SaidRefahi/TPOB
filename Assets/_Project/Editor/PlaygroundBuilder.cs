@@ -47,10 +47,7 @@ namespace Game.Editor
                 {
                 }
 
-                EditorApplication.delayCall += () =>
-                {
-                    BuildAll();
-                };
+                EditorApplication.delayCall += BuildAll;
             }
 
             string campaignTriggerPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp", "BuildCampaign.trigger");
@@ -64,10 +61,7 @@ namespace Game.Editor
                 {
                 }
 
-                EditorApplication.delayCall += () =>
-                {
-                    RoomContentBuilder.BuildAllCampaignRooms();
-                };
+                EditorApplication.delayCall += RoomContentBuilder.BuildAllCampaignRooms;
             }
         }
 
@@ -212,25 +206,21 @@ namespace Game.Editor
                 }
             }
 
-            // Find or create [LOBBY_NETWORK_CONTROLLER]
-            LobbyNetworkController lobbyCtrl = Object.FindFirstObjectByType<LobbyNetworkController>();
-            if (lobbyCtrl == null)
+            // Clean up any legacy static LobbyNetworkController in scene (spawned dynamically per session)
+            var sceneLobbyCtrl = Object.FindFirstObjectByType<LobbyNetworkController>();
+            if (sceneLobbyCtrl != null)
             {
-                var lobbyCtrlGo = new GameObject("[LOBBY_NETWORK_CONTROLLER]");
-                lobbyCtrlGo.transform.SetParent(netGroup.transform);
-                lobbyCtrl = lobbyCtrlGo.AddComponent<LobbyNetworkController>();
-                Undo.RegisterCreatedObjectUndo(lobbyCtrlGo, "Create [LOBBY_NETWORK_CONTROLLER]");
+                Object.DestroyImmediate(sceneLobbyCtrl.gameObject);
             }
-            else if (lobbyCtrl.transform.parent == null)
-            {
-                lobbyCtrl.transform.SetParent(netGroup.transform);
-            }
+
+            var lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LobbyNetworkController.prefab");
 
             // Wire GameScope
             var gameScopeSo = new SerializedObject(gameScope);
             gameScopeSo.FindProperty("_networkManager").objectReferenceValue = netManager;
             gameScopeSo.FindProperty("_levelManager").objectReferenceValue = levelManager;
-            gameScopeSo.FindProperty("_lobbyNetworkController").objectReferenceValue = lobbyCtrl;
+            var lobbyPrefabProp = gameScopeSo.FindProperty("_lobbyNetworkControllerPrefab");
+            if (lobbyPrefabProp != null) lobbyPrefabProp.objectReferenceValue = lobbyPrefab;
             gameScopeSo.ApplyModifiedPropertiesWithoutUndo();
 
             // Find or create [NETWORK_AUDIO_RELAY]

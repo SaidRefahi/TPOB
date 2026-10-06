@@ -64,7 +64,17 @@ namespace Game.Gameplay.UI
         {
             if (string.IsNullOrEmpty(_cachedRoomCode))
             {
-                _cachedRoomCode = "TPOB-" + UnityEngine.Random.Range(1000, 9999);
+                RegenerateRoomCode();
+            }
+            return _cachedRoomCode;
+        }
+
+        public string RegenerateRoomCode()
+        {
+            _cachedRoomCode = "TPOB-" + UnityEngine.Random.Range(1000, 9999);
+            if (_view != null && _view.LocalIpText != null)
+            {
+                _view.LocalIpText.text = $"Código de Sala: <color=#00FFFF><b>{_cachedRoomCode}</b></color>";
             }
             return _cachedRoomCode;
         }
@@ -74,12 +84,7 @@ namespace Game.Gameplay.UI
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            string roomCode = GetRoomCode();
-
-            if (_view.LocalIpText != null)
-            {
-                _view.LocalIpText.text = $"Código de Sala: <color=#00FFFF><b>{roomCode}</b></color>";
-            }
+            RegenerateRoomCode();
 
             if (_view.ConnectModalRoot != null)
             {
@@ -279,6 +284,25 @@ namespace Game.Gameplay.UI
             {
                 _view.SetActive(true);
                 _view.SetStatusFeedback(string.Empty, Color.white);
+                RegenerateRoomCode();
+
+                var lobbyView = Object.FindFirstObjectByType<LobbyView>(FindObjectsInactive.Include);
+                if (lobbyView != null)
+                {
+                    lobbyView.SetActive(false);
+                }
+
+                if (_view.ConnectModalRoot != null)
+                {
+                    _view.ConnectModalRoot.SetActive(false);
+                }
+
+                if (_view.SettingsDialog != null)
+                {
+                    _view.SettingsDialog.SetActive(false);
+                }
+
+                UIInputModuleFixer.EnsureUIFocusAndInput();
             }
         }
 
@@ -286,6 +310,25 @@ namespace Game.Gameplay.UI
         {
             _view.SetActive(true);
             _view.SetStatusFeedback("Desconectado de la partida o conexión terminada.", new Color(1f, 0.4f, 0.4f));
+            RegenerateRoomCode();
+
+            var lobbyView = Object.FindFirstObjectByType<LobbyView>(FindObjectsInactive.Include);
+            if (lobbyView != null)
+            {
+                lobbyView.SetActive(false);
+            }
+
+            if (_view.ConnectModalRoot != null)
+            {
+                _view.ConnectModalRoot.SetActive(false);
+            }
+
+            if (_view.SettingsDialog != null)
+            {
+                _view.SettingsDialog.SetActive(false);
+            }
+
+            UIInputModuleFixer.EnsureUIFocusAndInput();
         }
 
         private ushort GetPortFromInput()

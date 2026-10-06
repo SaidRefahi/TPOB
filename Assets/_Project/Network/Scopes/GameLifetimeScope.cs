@@ -14,7 +14,7 @@ namespace Game.Network.Scopes
     {
         [SerializeField] private NetworkManager _networkManager;
         [SerializeField] private LevelManager _levelManager;
-        [SerializeField] private LobbyNetworkController _lobbyNetworkController;
+        [SerializeField] private GameObject _lobbyNetworkControllerPrefab;
 
         public static GameLifetimeScope Instance { get; private set; }
 
@@ -89,7 +89,9 @@ namespace Game.Network.Scopes
             builder.Register<Game.Core.Settings.SettingsService>(Lifetime.Singleton).As<ISettingsService>();
 
             // Network Infrastructure
-            builder.Register<NetworkService>(Lifetime.Singleton).As<INetworkService>();
+            builder.Register<NetworkService>(Lifetime.Singleton)
+                .As<INetworkService>()
+                .WithParameter("lobbyPrefab", _lobbyNetworkControllerPrefab);
             builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>();
 
             // Level Manager
@@ -113,12 +115,8 @@ namespace Game.Network.Scopes
                 builder.RegisterComponent(hud);
             }
 
-            // Lobby Service
-            var lobbyCtrl = _lobbyNetworkController != null ? _lobbyNetworkController : FindFirstObjectByType<LobbyNetworkController>();
-            if (lobbyCtrl != null)
-            {
-                builder.RegisterComponent(lobbyCtrl).As<ILobbyService>();
-            }
+            // Lobby Service (Domain Service, Pure Dependency Inversion)
+            builder.Register<LobbyService>(Lifetime.Singleton).As<ILobbyService>();
         }
     }
 }
