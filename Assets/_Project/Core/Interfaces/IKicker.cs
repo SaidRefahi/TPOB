@@ -6,6 +6,7 @@ namespace Game.Core.Interfaces
     {
         bool CanKick { get; }
         void Kick();
+        void Kick(float chargeRatio);
         event Action OnKicked;
     }
 }

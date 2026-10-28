@@ -7,7 +7,7 @@ tags:
   - architecture
   - gdd
 created: 2026-09-16
-updated: 2026-09-28
+updated: 2026-10-06
 ---
 
 # 🤖 Two Pilots, One Robot (TPOB) — Centro de Documentación
@@ -29,6 +29,7 @@ Accede a las diferentes secciones del proyecto mediante los enlaces locales de O
 | [[05_Plantilla_Para_Notion]] | **Plantilla para Notion**: Documento formateado con callouts, tablas y checkboxes listo para ser importado o copiado a Notion. | `100% Completado` |
 | [[06_UI_Lobby_Pausa_Plan_de_Implementacion]] | **UI, Lobby y Pausa**: Plan de implementación por fases para Menú Principal (Host/Join), Lobby de selección exclusiva (Piernas/Torso con ficha de controles) y Menú de Pausa In-Game. | `100% Implementado` |
 | [[07_Animacion_Procedural_Piernas_Plan_de_Implementacion]] | **Animación Procedural de Piernas y NetworkBones**: Plan de animación procedural cuadrúpeda (marcha torpe 1 pata a la vez, salto, patada) con **Unity Animation Rigging** y sincronización de red con **PurrNet NetworkBones**. | `Propuesto para Revisión` |
+| [[08_Patrones_de_Diseno_Gameplay]] | **Patrones de Diseño en Gameplay Jugable**: Informe técnico académico de los 9 patrones de diseño aplicados exclusivamente al gameplay jugable en runtime, con diagramas de clase UML Mermaid y justificación Strategy vs State. | `Completado` |
 
 ---
 

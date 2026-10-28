@@ -18,11 +18,14 @@ namespace Game.Gameplay.Player.Legs
         private Vector2 _moveInput;
         private bool _jumpTriggered;
         private bool _kickTriggered;
+        private bool _isKickHeld;
+        private bool _kickReleased;
         private bool _sprintHeld;
         private bool _fuseTriggered;
 
         public Vector2 MoveInput => _moveInput;
         public bool IsSprintHeld => _sprintHeld;
+        public bool IsKickHeld => _isKickHeld || (_kickAction != null && _kickAction.IsPressed());
 
         public bool ConsumeJumpTrigger()
         {
@@ -43,6 +46,17 @@ namespace Game.Gameplay.Player.Legs
             }
 
             _kickTriggered = false;
+            return true;
+        }
+
+        public bool ConsumeKickReleased()
+        {
+            if (!_kickReleased)
+            {
+                return false;
+            }
+
+            _kickReleased = false;
             return true;
         }
 
@@ -112,7 +126,9 @@ namespace Game.Gameplay.Player.Legs
 
             if (_kickAction != null)
             {
+                _kickAction.started += HandleKickStarted;
                 _kickAction.performed += HandleKickPerformed;
+                _kickAction.canceled += HandleKickCanceled;
                 _kickAction.Enable();
             }
 
@@ -147,7 +163,9 @@ namespace Game.Gameplay.Player.Legs
 
             if (_kickAction != null)
             {
+                _kickAction.started -= HandleKickStarted;
                 _kickAction.performed -= HandleKickPerformed;
+                _kickAction.canceled -= HandleKickCanceled;
                 _kickAction.Disable();
             }
 
@@ -167,6 +185,8 @@ namespace Game.Gameplay.Player.Legs
             _moveInput = Vector2.zero;
             _jumpTriggered = false;
             _kickTriggered = false;
+            _isKickHeld = false;
+            _kickReleased = false;
             _sprintHeld = false;
             _fuseTriggered = false;
         }
@@ -186,9 +206,21 @@ namespace Game.Gameplay.Player.Legs
             _jumpTriggered = true;
         }
 
+        private void HandleKickStarted(InputAction.CallbackContext context)
+        {
+            _isKickHeld = true;
+        }
+
         private void HandleKickPerformed(InputAction.CallbackContext context)
         {
+            _isKickHeld = true;
             _kickTriggered = true;
+        }
+
+        private void HandleKickCanceled(InputAction.CallbackContext context)
+        {
+            _isKickHeld = false;
+            _kickReleased = true;
         }
 
         private void HandleSprintPerformed(InputAction.CallbackContext context)

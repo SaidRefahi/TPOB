@@ -110,6 +110,9 @@ namespace Game.Core.Audio
                 case AudioCue.RoomClear:
                     return GenerateArpeggio("Sfx_RoomClear", new[] { 261.63f, 329.63f, 392.00f, 523.25f }, 0.65f);
 
+                case AudioCue.KickMaxCharge:
+                    return GenerateTwoTone("Sfx_KickMaxCharge", 587.33f, 880f, 0.16f);
+
                 default:
                     return GenerateDecayingSine("Sfx_Default", 440f, 0.1f, 10f);
             }

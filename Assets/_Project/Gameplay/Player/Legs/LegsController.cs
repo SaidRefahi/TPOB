@@ -4,7 +4,9 @@ using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Player.Death;
+using Game.Gameplay.Player.Juice;
 using Game.Gameplay.Player.Robot;
+using Game.Gameplay.Player.Torso;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
@@ -21,6 +23,7 @@ namespace Game.Gameplay.Player.Legs
     [DeclareBoxGroup("Patada")]
     [DeclareBoxGroup("Impulsos de Cámara")]
     [DeclareBoxGroup("Fusión")]
+    [DeclareBoxGroup("Paredes Imantadas")]
     public sealed class LegsController : NetworkBehaviour, IMoveable, IKicker, IFusionOperator
     {
         [Group("Componentes")]
@@ -72,16 +75,28 @@ namespace Game.Gameplay.Player.Legs
         [SerializeField] private LayerMask _groundLayer = ~0;
 
         [Group("Patada")]
-        [SerializeField] private float _kickRadius = 1.3f;
+        [SerializeField] private float _kickRadius = 2.5f;
 
         [Group("Patada")]
-        [SerializeField] private float _kickForce = 16f;
+        [SerializeField] private float _minKickForce = 2.5f;
+
+        [Group("Patada")]
+        [SerializeField] private float _maxKickForce = 28f;
+
+        [Group("Patada")]
+        [SerializeField] private float _kickChargeDuration = 1.0f;
 
         [Group("Patada")]
         [SerializeField] private float _kickCooldown = 0.5f;
 
         [Group("Patada")]
         [SerializeField] private LayerMask _kickLayer = ~0;
+
+        [Group("Patada")]
+        [SerializeField] private KickTrajectoryVisualizer _trajectoryVisualizer;
+
+        [Group("Patada")]
+        [SerializeField] private KickChargeFlash _chargeFlash;
 
         [Group("Impulsos de Cámara")]
         [SerializeField] private CinemachineImpulseSource _kickImpulseSource;
@@ -92,16 +107,56 @@ namespace Game.Gameplay.Player.Legs
         [Group("Impulsos de Cámara")]
         [SerializeField] private float _hardLandingThreshold = 10f;
 
+        [Group("Paredes Imantadas")]
+        [SerializeField] private LayerMask _magneticWallLayer = ~0;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _wallProbeDistance = 1.2f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _wallAlignSpeed = 12f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _wallJumpForce = 8.5f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _magneticDetachCooldown = 0.35f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _defaultAdhesionForce = 35f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _surfaceProbeRadius = 0.35f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _probeHeightOffset = 0.45f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private MagneticBootsVisuals _bootsVisuals;
+
         private readonly RaycastHit[] _groundHits = new RaycastHit[1];
+        private readonly RaycastHit[] _wallHits = new RaycastHit[4];
         private readonly Collider[] _kickColliders = new Collider[8];
+        private readonly Collider[] _wallColliders = new Collider[4];
 
         private LegsInputData _pendingInput;
         private bool _isGrounded;
+        private bool _isOnMagneticSurface;
+        private Vector3 _currentSurfaceNormal = Vector3.up;
+        private IMagneticSurface _currentMagneticWall;
+        private float _detachCooldownTimer;
         private float _nextKickTime;
+        private float _catapultAirTime;
         private bool _isFused;
         private PlayerDeathHandler _deathHandler;
         private Game.Gameplay.Player.Juice.TumbleController _tumbleController;
         private Game.Network.Audio.NetworkAudioRelay _audioRelay;
+        private bool _isChargingKick;
+        private float _currentChargeTimer;
+        private bool _hasTriggeredMaxCharge;
+        private float _pendingKickCharge = 1f;
+        private LegsSplineHoseAnimator _splineAnimator;
+        private Collider _selfCollider;
 
         public Vector2 MoveInput => _pendingInput.MoveDirection;
         public bool IsGrounded => _isGrounded;
@@ -109,8 +164,12 @@ namespace Game.Gameplay.Player.Legs
         public bool CanKick => Time.time >= _nextKickTime;
         public float WalkSpeed => _walkSpeed;
         public float SprintSpeed => _sprintSpeed;
+        public bool IsOnMagneticSurface => _isOnMagneticSurface;
+        public Vector3 CurrentSurfaceNormal => _currentSurfaceNormal;
+        public LayerMask MagneticWallLayer => _magneticWallLayer;
 
         public event Action OnKicked;
+        public event Action<bool, Vector3> OnMagneticSurfaceChanged;
 
         protected override void OnSpawned()
         {
@@ -164,6 +223,47 @@ namespace Game.Gameplay.Player.Legs
             {
                 _tumbleController = GetComponent<Game.Gameplay.Player.Juice.TumbleController>();
             }
+
+            if (_selfCollider == null)
+            {
+                _selfCollider = GetComponent<Collider>();
+            }
+
+            if (_splineAnimator == null)
+            {
+                _splineAnimator = GetComponent<LegsSplineHoseAnimator>();
+                if (_splineAnimator == null)
+                {
+                    _splineAnimator = GetComponentInChildren<LegsSplineHoseAnimator>();
+                }
+            }
+
+            if (_trajectoryVisualizer == null)
+            {
+                _trajectoryVisualizer = GetComponent<KickTrajectoryVisualizer>();
+                if (_trajectoryVisualizer == null)
+                {
+                    _trajectoryVisualizer = gameObject.AddComponent<KickTrajectoryVisualizer>();
+                }
+            }
+
+            if (_chargeFlash == null)
+            {
+                _chargeFlash = GetComponent<KickChargeFlash>();
+                if (_chargeFlash == null)
+                {
+                    _chargeFlash = gameObject.AddComponent<KickChargeFlash>();
+                }
+            }
+
+            if (_bootsVisuals == null)
+            {
+                _bootsVisuals = GetComponent<MagneticBootsVisuals>();
+                if (_bootsVisuals == null)
+                {
+                    _bootsVisuals = GetComponentInChildren<MagneticBootsVisuals>();
+                }
+            }
         }
 
         private void Start()
@@ -186,6 +286,8 @@ namespace Game.Gameplay.Player.Legs
 
         protected override void OnDestroy()
         {
+            CancelKickCharge();
+
             if (_coordinator != null)
             {
                 _coordinator.UnregisterLegs(this);
@@ -194,10 +296,34 @@ namespace Game.Gameplay.Player.Legs
             base.OnDestroy();
         }
 
+        private void OnDisable()
+        {
+            CancelKickCharge();
+            if (_isOnMagneticSurface)
+            {
+                SetMagneticState(false);
+            }
+        }
+
         private void Update()
         {
             if (_deathHandler != null && !_deathHandler.IsAlive)
             {
+                CancelKickCharge();
+                if (_isOnMagneticSurface)
+                {
+                    SetMagneticState(false);
+                }
+                return;
+            }
+
+            if (_tumbleController != null && _tumbleController.IsTumbling)
+            {
+                CancelKickCharge();
+                if (_isOnMagneticSurface)
+                {
+                    SetMagneticState(false);
+                }
                 return;
             }
 
@@ -207,6 +333,8 @@ namespace Game.Gameplay.Player.Legs
                 return;
             }
 
+            UpdateKickCharge();
+
             if (_commandInvoker != null)
             {
                 _commandInvoker.Execute(new MoveCommand(_inputReader.MoveInput, _inputReader.IsSprintHeld));
@@ -214,11 +342,6 @@ namespace Game.Gameplay.Player.Legs
                 if (_inputReader.ConsumeJumpTrigger())
                 {
                     _commandInvoker.Execute(new JumpCommand());
-                }
-
-                if (_inputReader.ConsumeKickTrigger())
-                {
-                    _commandInvoker.Execute(new KickCommand());
                 }
 
                 if (_inputReader.ConsumeFuseTrigger())
@@ -242,7 +365,7 @@ namespace Game.Gameplay.Player.Legs
             LegsInputData inputData = new LegsInputData(
                 _inputReader.MoveInput,
                 _inputReader.ConsumeJumpTrigger(),
-                _inputReader.ConsumeKickTrigger(),
+                false,
                 _inputReader.IsSprintHeld
             );
 
@@ -318,9 +441,90 @@ namespace Game.Gameplay.Player.Legs
         private void UpdateGroundStatus()
         {
             Vector3 origin = _groundCheckPoint != null ? _groundCheckPoint.position : transform.position;
-            int hitCount = Physics.RaycastNonAlloc(origin, Vector3.down, _groundHits, _groundCheckDistance, _groundLayer);
+            Vector3 probeOrigin = origin + transform.up * _probeHeightOffset;
+            Vector3 travelDirection = CalculateTravelDirection();
+
+            bool surfaceAheadDetected = false;
+            Vector3 aheadNormal = Vector3.up;
+            IMagneticSurface aheadSurface = null;
+            float aheadDist = float.MaxValue;
+
+            if (_detachCooldownTimer <= 0f)
+            {
+                surfaceAheadDetected = DetectSurfaceAhead(probeOrigin, travelDirection, out aheadNormal, out aheadSurface, out aheadDist);
+            }
+
+            if (_isOnMagneticSurface)
+            {
+                // 1. Proactive transition check: approaching a wall, ceiling, or floor junction
+                float transitionThreshold = _surfaceProbeRadius + 0.35f;
+                if (surfaceAheadDetected && aheadDist <= transitionThreshold && Vector3.Dot(_currentSurfaceNormal, aheadNormal) < 0.85f)
+                {
+                    if (aheadSurface != null && aheadSurface.IsActive)
+                    {
+                        _currentMagneticWall = aheadSurface;
+                        _currentSurfaceNormal = aheadNormal;
+                        _isGrounded = true;
+                        return;
+                    }
+
+                    if (aheadSurface == null && aheadNormal.y > 0.7f)
+                    {
+                        // Transitioned from magnetic wall back to floor
+                        SetMagneticState(false);
+                        _isGrounded = true;
+                        return;
+                    }
+                }
+
+                // 2. Direct ground verification under feet
+                int hitCount = Physics.RaycastNonAlloc(origin, -transform.up, _groundHits, _groundCheckDistance + 0.45f, _groundLayer | _magneticWallLayer, QueryTriggerInteraction.Ignore);
+                if (hitCount > 0)
+                {
+                    Collider hitCollider = _groundHits[0].collider;
+                    if (hitCollider != null && (hitCollider.TryGetComponent<IMagneticSurface>(out var magSurface) || (hitCollider.GetComponentInParent<IMagneticSurface>() is { } pMag && (magSurface = pMag) != null)))
+                    {
+                        if (magSurface.IsActive)
+                        {
+                            _currentMagneticWall = magSurface;
+                            _currentSurfaceNormal = _groundHits[0].normal;
+                            _isGrounded = true;
+                        }
+                        else
+                        {
+                            SetMagneticState(false);
+                            _isGrounded = false;
+                        }
+                    }
+                    else if (_groundHits[0].normal.y > 0.7f)
+                    {
+                        // Transitioned from magnetic wall back to floor
+                        SetMagneticState(false);
+                        _isGrounded = true;
+                    }
+                    else
+                    {
+                        SetMagneticState(false);
+                        _isGrounded = false;
+                    }
+                }
+                else
+                {
+                    // Walked past wall boundary into air
+                    SetMagneticState(false);
+                    _isGrounded = false;
+                }
+                return;
+            }
+
+            int groundHitCount = Physics.RaycastNonAlloc(origin, Vector3.down, _groundHits, _groundCheckDistance, _groundLayer | _magneticWallLayer, QueryTriggerInteraction.Ignore);
             bool wasGrounded = _isGrounded;
-            _isGrounded = hitCount > 0;
+            _isGrounded = groundHitCount > 0;
+
+            if (_catapultAirTime > 0f && _rigidbody != null && _rigidbody.linearVelocity.y < 0f && _isGrounded)
+            {
+                _catapultAirTime = 0f;
+            }
 
             if (!wasGrounded && _isGrounded && _rigidbody != null)
             {
@@ -330,12 +534,254 @@ namespace Game.Gameplay.Player.Legs
                     PlayAudioCue(Game.Core.Enums.AudioCue.HardLanding, origin);
                 }
             }
+
+            if (_detachCooldownTimer > 0f)
+            {
+                _detachCooldownTimer -= Time.fixedDeltaTime;
+            }
+            else
+            {
+                if (surfaceAheadDetected && aheadSurface != null && aheadSurface.IsActive && aheadDist <= _surfaceProbeRadius + 0.35f)
+                {
+                    _currentMagneticWall = aheadSurface;
+                    _currentSurfaceNormal = aheadNormal;
+                    SetMagneticState(true);
+                    _isGrounded = true;
+                    return;
+                }
+
+                ProbeImmediateMagneticContact(origin);
+            }
+        }
+
+        private bool DetectSurfaceAhead(Vector3 origin, Vector3 travelDirection, out Vector3 detectedNormal, out IMagneticSurface detectedSurface, out float hitDistance)
+        {
+            detectedNormal = Vector3.up;
+            detectedSurface = null;
+            hitDistance = float.MaxValue;
+
+            if (travelDirection.sqrMagnitude < 0.001f)
+            {
+                return false;
+            }
+
+            int hitCount = Physics.SphereCastNonAlloc(
+                origin,
+                _surfaceProbeRadius,
+                travelDirection,
+                _wallHits,
+                _wallProbeDistance,
+                _groundLayer | _magneticWallLayer,
+                QueryTriggerInteraction.Ignore
+            );
+
+            if (hitCount == 0)
+            {
+                hitCount = Physics.RaycastNonAlloc(
+                    origin,
+                    travelDirection,
+                    _wallHits,
+                    _wallProbeDistance,
+                    _groundLayer | _magneticWallLayer,
+                    QueryTriggerInteraction.Ignore
+                );
+            }
+
+            float closestDist = float.MaxValue;
+            int closestIdx = -1;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider col = _wallHits[i].collider;
+                if (col == null || col == _selfCollider || col.transform.root == transform.root)
+                {
+                    continue;
+                }
+
+                if (_wallHits[i].distance < closestDist)
+                {
+                    closestDist = _wallHits[i].distance;
+                    closestIdx = i;
+                }
+            }
+
+            if (closestIdx >= 0)
+            {
+                RaycastHit bestHit = _wallHits[closestIdx];
+                Collider hitCol = bestHit.collider;
+                hitDistance = bestHit.distance;
+
+                if (hitCol.TryGetComponent<IMagneticSurface>(out var mag) ||
+                    (hitCol.GetComponentInParent<IMagneticSurface>() is { } pMag && (mag = pMag) != null))
+                {
+                    if (mag.IsActive)
+                    {
+                        detectedSurface = mag;
+                        Vector3 queryPoint = bestHit.point != Vector3.zero ? bestHit.point : origin;
+                        Vector3 surfaceNorm = mag.GetSurfaceNormal(queryPoint);
+                        detectedNormal = surfaceNorm.sqrMagnitude > 0.01f ? surfaceNorm : bestHit.normal;
+                        return true;
+                    }
+                }
+                else if (bestHit.normal.y > 0.7f)
+                {
+                    detectedNormal = bestHit.normal;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private Vector3 CalculateTravelDirection()
+        {
+            Vector2 input = _pendingInput.MoveDirection;
+
+            if (_isOnMagneticSurface)
+            {
+                Vector3 N = _currentSurfaceNormal;
+                Vector3 tangentUp;
+                Vector3 tangentRight;
+
+                if (Mathf.Abs(N.y) > 0.7f)
+                {
+                    tangentUp = Vector3.ProjectOnPlane(Vector3.forward, N).normalized;
+                    tangentRight = Vector3.ProjectOnPlane(Vector3.right, N).normalized;
+                }
+                else
+                {
+                    tangentUp = Vector3.ProjectOnPlane(Vector3.up, N).normalized;
+                    tangentRight = Vector3.Cross(N, tangentUp).normalized;
+                }
+
+                if (input.sqrMagnitude > 0.01f)
+                {
+                    return (tangentRight * input.x + tangentUp * input.y).normalized;
+                }
+
+                return transform.forward;
+            }
+
+            if (input.sqrMagnitude > 0.01f)
+            {
+                return new Vector3(input.x, 0f, input.y).normalized;
+            }
+
+            return transform.forward;
+        }
+
+        private void ProbeImmediateMagneticContact(Vector3 origin)
+        {
+            int overlapCount = Physics.OverlapSphereNonAlloc(origin + transform.up * 0.4f, 0.45f, _wallColliders, _magneticWallLayer, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < overlapCount; i++)
+            {
+                Collider col = _wallColliders[i];
+                if (col == null || col == _selfCollider || col.transform.root == transform.root)
+                {
+                    continue;
+                }
+
+                if ((col.TryGetComponent<IMagneticSurface>(out var magSurface) || (col.GetComponentInParent<IMagneticSurface>() is { } pMag && (magSurface = pMag) != null)) && magSurface.IsActive)
+                {
+                    _currentMagneticWall = magSurface;
+                    _currentSurfaceNormal = magSurface.GetSurfaceNormal(origin);
+                    SetMagneticState(true);
+                    _isGrounded = true;
+                    break;
+                }
+            }
+        }
+
+        private void SetMagneticState(bool isAttached)
+        {
+            if (_isOnMagneticSurface == isAttached)
+            {
+                return;
+            }
+
+            _isOnMagneticSurface = isAttached;
+
+            if (_bootsVisuals != null)
+            {
+                _bootsVisuals.SetMagneticState(isAttached);
+            }
+
+            if (_rigidbody != null)
+            {
+                _rigidbody.useGravity = !isAttached;
+            }
+
+            if (isAttached)
+            {
+                PlayAudioCue(Game.Core.Enums.AudioCue.MagnetPull, transform.position);
+            }
+            else
+            {
+                _currentMagneticWall = null;
+                _currentSurfaceNormal = Vector3.up;
+                PlayAudioCue(Game.Core.Enums.AudioCue.Release, transform.position);
+            }
+
+            OnMagneticSurfaceChanged?.Invoke(isAttached, _currentSurfaceNormal);
         }
 
         private void ApplyLocomotion()
         {
+            if (_catapultAirTime > 0f)
+            {
+                _catapultAirTime -= Time.fixedDeltaTime;
+                return;
+            }
+
             Vector2 input = _pendingInput.MoveDirection;
             float targetSpeed = _pendingInput.SprintHeld ? _sprintSpeed : _walkSpeed;
+            if (_coordinator != null)
+            {
+                targetSpeed *= _coordinator.DragSpeedMultiplier;
+            }
+
+            if (_isOnMagneticSurface)
+            {
+                Vector3 N = _currentSurfaceNormal;
+                Vector3 tangentUp;
+                Vector3 tangentRight;
+
+                if (Mathf.Abs(N.y) > 0.7f)
+                {
+                    tangentUp = Vector3.ProjectOnPlane(Vector3.forward, N).normalized;
+                    tangentRight = Vector3.ProjectOnPlane(Vector3.right, N).normalized;
+                }
+                else
+                {
+                    tangentUp = Vector3.ProjectOnPlane(Vector3.up, N).normalized;
+                    tangentRight = Vector3.Cross(N, tangentUp).normalized;
+                }
+
+                Vector3 desiredMoveDir = (tangentRight * input.x + tangentUp * input.y);
+
+                Vector3 currentVel = _rigidbody.linearVelocity;
+                Vector3 normalVel = Vector3.Project(currentVel, N);
+                Vector3 tangentVel = currentVel - normalVel;
+                Vector3 targetTangentVel = desiredMoveDir * targetSpeed;
+
+                Vector3 newTangentVel = Vector3.MoveTowards(tangentVel, targetTangentVel, _acceleration * Time.fixedDeltaTime);
+                _rigidbody.linearVelocity = newTangentVel + normalVel;
+
+                float adhesion = _currentMagneticWall != null ? _currentMagneticWall.AdhesionForce : _defaultAdhesionForce;
+                _rigidbody.AddForce(-N * adhesion, ForceMode.Acceleration);
+
+                Quaternion surfaceAlignRot = Quaternion.FromToRotation(transform.up, N) * transform.rotation;
+                if (desiredMoveDir.sqrMagnitude > 0.001f)
+                {
+                    Quaternion lookRot = Quaternion.LookRotation(desiredMoveDir.normalized, N);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, _rotationSpeed * Time.fixedDeltaTime);
+                }
+                else
+                {
+                    transform.rotation = Quaternion.Slerp(transform.rotation, surfaceAlignRot, _wallAlignSpeed * Time.fixedDeltaTime);
+                }
+                return;
+            }
 
             Vector3 targetVelocity = new Vector3(input.x, 0f, input.y) * targetSpeed;
             Vector3 currentVelocity = _rigidbody.linearVelocity;
@@ -350,6 +796,11 @@ namespace Game.Gameplay.Player.Legs
                 Quaternion targetRotation = Quaternion.LookRotation(targetVelocity.normalized, Vector3.up);
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, _rotationSpeed * Time.fixedDeltaTime);
             }
+            else if (transform.up != Vector3.up)
+            {
+                Quaternion uprightRotation = Quaternion.FromToRotation(transform.up, Vector3.up) * transform.rotation;
+                transform.rotation = Quaternion.Slerp(transform.rotation, uprightRotation, _wallAlignSpeed * Time.fixedDeltaTime);
+            }
         }
 
         private void ApplyJumpAndGravity()
@@ -357,6 +808,26 @@ namespace Game.Gameplay.Player.Legs
             if (_pendingInput.JumpTriggered)
             {
                 _pendingInput.JumpTriggered = false;
+
+                if (_coordinator != null && _coordinator.TryTriggerCatapultLaunch())
+                {
+                    return;
+                }
+
+                if (_isOnMagneticSurface)
+                {
+                    Vector3 N = _currentSurfaceNormal;
+                    Vector3 pushAway = N * 0.85f;
+                    Vector3 forwardBonus = N.y < -0.7f ? transform.forward * 0.35f : Vector3.up * 0.35f;
+                    Vector3 jumpDir = (pushAway + forwardBonus).normalized;
+
+                    SetMagneticState(false);
+                    _detachCooldownTimer = _magneticDetachCooldown;
+                    _rigidbody.linearVelocity = jumpDir * _wallJumpForce;
+
+                    PlayAudioCue(Game.Core.Enums.AudioCue.Jump, transform.position);
+                    return;
+                }
 
                 if (_isGrounded)
                 {
@@ -367,7 +838,7 @@ namespace Game.Gameplay.Player.Legs
                 }
             }
 
-            if (!_isGrounded && _rigidbody.linearVelocity.y < 0f)
+            if (!_isOnMagneticSurface && !_isGrounded && _rigidbody.linearVelocity.y < 0f)
             {
                 _rigidbody.linearVelocity += Vector3.up * (Physics.gravity.y * (_fallMultiplier - 1f) * Time.fixedDeltaTime);
             }
@@ -388,6 +859,9 @@ namespace Game.Gameplay.Player.Legs
             }
 
             _nextKickTime = Time.time + _kickCooldown;
+
+            float chargeRatio = _pendingKickCharge;
+            float effectiveForce = Mathf.Lerp(_minKickForce, _maxKickForce, chargeRatio);
 
             Vector3 kickOrigin = _kickPoint != null ? _kickPoint.position : transform.position + transform.forward * 0.8f;
             int hitCount = Physics.OverlapSphereNonAlloc(kickOrigin, _kickRadius, _kickColliders, _kickLayer);
@@ -410,35 +884,35 @@ namespace Game.Gameplay.Player.Legs
                     (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<IKickable>(out kickable)) ||
                     (col.GetComponentInParent<IKickable>() is { } pKick && (kickable = pKick) != null))
                 {
-                    kickable.OnKicked(col.bounds.center, direction, _kickForce);
+                    kickable.OnKicked(col.bounds.center, direction, effectiveForce);
                 }
                 else if (col.TryGetComponent<IPushable>(out var pushable) ||
                          (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<IPushable>(out pushable)) ||
                          (col.GetComponentInParent<IPushable>() is { } pPush && (pushable = pPush) != null))
                 {
-                    pushable.OnPushed(direction, _kickForce);
+                    pushable.OnPushed(direction, effectiveForce);
                 }
                 else if (col.attachedRigidbody != null)
                 {
-                    col.attachedRigidbody.AddForce(direction * _kickForce, ForceMode.Impulse);
+                    col.attachedRigidbody.AddForce(direction * effectiveForce, ForceMode.Impulse);
                 }
             }
 
             if (!isSpawned)
             {
-                TriggerKickImpulse();
+                TriggerKickImpulse(chargeRatio);
                 OnKicked?.Invoke();
             }
             else
             {
-                PlayKickEffectObserversRpc(kickOrigin);
+                PlayKickEffectObserversRpc(kickOrigin, chargeRatio);
             }
         }
 
         [ObserversRpc(runLocally: true)]
-        private void PlayKickEffectObserversRpc(Vector3 origin)
+        private void PlayKickEffectObserversRpc(Vector3 origin, float chargeRatio)
         {
-            TriggerKickImpulse();
+            TriggerKickImpulse(chargeRatio);
             PlayAudioCue(Game.Core.Enums.AudioCue.Kick, origin);
             OnKicked?.Invoke();
         }
@@ -455,11 +929,208 @@ namespace Game.Gameplay.Player.Legs
             }
         }
 
-        private void TriggerKickImpulse()
+        private void TriggerKickImpulse(float chargeRatio = 1f)
         {
             if (_kickImpulseSource != null)
             {
-                _kickImpulseSource.GenerateImpulse(transform.forward * _kickImpulseForce);
+                float impulseMultiplier = Mathf.Lerp(0.04f, 1.35f, chargeRatio);
+                _kickImpulseSource.GenerateImpulse(transform.forward * (_kickImpulseForce * impulseMultiplier));
+            }
+        }
+
+        private void UpdateKickCharge()
+        {
+            if (_isFused || !CanKick)
+            {
+                if (_isChargingKick)
+                {
+                    CancelKickCharge();
+                }
+                return;
+            }
+
+            if (_inputReader.IsKickHeld)
+            {
+                if (!_isChargingKick)
+                {
+                    _isChargingKick = true;
+                    _currentChargeTimer = 0f;
+                    _hasTriggeredMaxCharge = false;
+                }
+
+                _currentChargeTimer += Time.deltaTime;
+                float chargeRatio = Mathf.Clamp01(_currentChargeTimer / _kickChargeDuration);
+
+                if (chargeRatio >= 1f && !_hasTriggeredMaxCharge)
+                {
+                    _hasTriggeredMaxCharge = true;
+                    TriggerMaxChargeFeedback();
+                }
+
+                TorsoController torso = GetTorsoInKickRange(out Vector3 torsoPosition, out Collider torsoCollider);
+                if (torso != null && _trajectoryVisualizer != null)
+                {
+                    Vector3 direction = (torsoPosition - transform.position).normalized;
+                    direction.y = 0.2f;
+                    direction = direction.normalized;
+
+                    Vector3 launchDir = (direction + Vector3.up * 0.45f).normalized;
+                    float currentForce = Mathf.Lerp(_minKickForce, _maxKickForce, chargeRatio);
+                    Vector3 launchVelocity = launchDir * (currentForce * 1.35f);
+
+                    _trajectoryVisualizer.RenderTrajectory(torsoPosition, launchVelocity, _kickLayer, torsoCollider, _selfCollider);
+                }
+                else if (_trajectoryVisualizer != null)
+                {
+                    _trajectoryVisualizer.ClearTrajectory();
+                }
+            }
+            else if (_isChargingKick || _inputReader.ConsumeKickReleased())
+            {
+                float finalCharge = 0f;
+                if (_isChargingKick)
+                {
+                    finalCharge = Mathf.Clamp01(_currentChargeTimer / _kickChargeDuration);
+                    _isChargingKick = false;
+                }
+
+                if (_trajectoryVisualizer != null)
+                {
+                    _trajectoryVisualizer.ClearTrajectory();
+                }
+
+                ExecuteChargedKick(finalCharge);
+                _currentChargeTimer = 0f;
+                _hasTriggeredMaxCharge = false;
+            }
+        }
+
+        private TorsoController GetTorsoInKickRange(out Vector3 torsoPosition, out Collider torsoCollider)
+        {
+            torsoPosition = Vector3.zero;
+            torsoCollider = null;
+            Vector3 kickOrigin = _kickPoint != null ? _kickPoint.position : transform.position + transform.forward * 0.8f;
+            float kickRadiusSqr = _kickRadius * _kickRadius;
+
+            if (_coordinator != null && _coordinator.Torso != null)
+            {
+                TorsoController torso = _coordinator.Torso;
+                if (!torso.IsFused)
+                {
+                    Vector3 center = torso.transform.position;
+                    var col = torso.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        center = col.bounds.center;
+                        torsoCollider = col;
+                    }
+
+                    if ((center - kickOrigin).sqrMagnitude <= kickRadiusSqr)
+                    {
+                        torsoPosition = center;
+                        return torso;
+                    }
+                }
+            }
+
+            int hitCount = Physics.OverlapSphereNonAlloc(kickOrigin, _kickRadius, _kickColliders, _kickLayer);
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider col = _kickColliders[i];
+                if (col == null || col.transform == transform || col.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                if (col.TryGetComponent<TorsoController>(out var torso) ||
+                    (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<TorsoController>(out torso)) ||
+                    (col.GetComponentInParent<TorsoController>() is { } pTorso && (torso = pTorso) != null))
+                {
+                    if (!torso.IsFused)
+                    {
+                        torsoPosition = col.bounds.center;
+                        torsoCollider = col;
+                        return torso;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private void ExecuteChargedKick(float chargeRatio)
+        {
+            if (_commandInvoker != null)
+            {
+                _commandInvoker.Execute(new KickCommand(chargeRatio));
+            }
+            else
+            {
+                Kick(chargeRatio);
+                if (isSpawned && !isServer)
+                {
+                    LegsInputData inputData = new LegsInputData(
+                        _inputReader.MoveInput,
+                        false,
+                        true,
+                        _inputReader.IsSprintHeld
+                    );
+                    SendChargedInputServerRpc(inputData, chargeRatio);
+                }
+            }
+        }
+
+        [ServerRpc(Channel.Unreliable)]
+        private void SendChargedInputServerRpc(LegsInputData inputData, float chargeRatio, RPCInfo info = default)
+        {
+            _pendingKickCharge = chargeRatio;
+            ProcessInput(inputData);
+        }
+
+        private void TriggerMaxChargeFeedback()
+        {
+            Vector3 footPos = _splineAnimator != null
+                ? _splineAnimator.GetNextKickingFootPosition()
+                : (_kickPoint != null ? _kickPoint.position : transform.position + transform.forward * 0.8f + Vector3.up * 0.15f);
+
+            if (_chargeFlash != null)
+            {
+                _chargeFlash.TriggerFlash(footPos);
+            }
+
+            PlayAudioCue(Game.Core.Enums.AudioCue.KickMaxCharge, footPos);
+
+            if (isSpawned)
+            {
+                PlayMaxChargeEffectObserversRpc(footPos);
+            }
+        }
+
+        [ObserversRpc(runLocally: false)]
+        private void PlayMaxChargeEffectObserversRpc(Vector3 footPosition)
+        {
+            if (_chargeFlash != null)
+            {
+                _chargeFlash.TriggerFlash(footPosition);
+            }
+
+            PlayAudioCue(Game.Core.Enums.AudioCue.KickMaxCharge, footPosition);
+        }
+
+        private void CancelKickCharge()
+        {
+            if (!_isChargingKick)
+            {
+                return;
+            }
+
+            _isChargingKick = false;
+            _currentChargeTimer = 0f;
+            _hasTriggeredMaxCharge = false;
+
+            if (_trajectoryVisualizer != null)
+            {
+                _trajectoryVisualizer.ClearTrajectory();
             }
         }
 
@@ -478,9 +1149,28 @@ namespace Game.Gameplay.Player.Legs
             _pendingInput.JumpTriggered = true;
         }
 
-        public void Kick()
+        public void Kick() => Kick(1f);
+
+        public void Kick(float chargeRatio)
         {
+            _pendingKickCharge = Mathf.Clamp01(chargeRatio);
             _pendingInput.KickTriggered = true;
+        }
+
+        public void ApplyCatapultLaunch(Vector3 launchImpulse)
+        {
+            if (_rigidbody == null)
+            {
+                _rigidbody = GetComponent<Rigidbody>();
+            }
+
+            if (_rigidbody != null)
+            {
+                _catapultAirTime = 1.5f;
+                _isGrounded = false;
+                _rigidbody.linearVelocity = launchImpulse;
+                PlayAudioCue(Game.Core.Enums.AudioCue.Jump, transform.position);
+            }
         }
 
         public FusionSocket FusionSocket => _fusionSocket;
@@ -560,6 +1250,14 @@ namespace Game.Gameplay.Player.Legs
             Gizmos.color = Color.red;
             Vector3 kickOrigin = _kickPoint != null ? _kickPoint.position : transform.position + transform.forward * 0.8f;
             Gizmos.DrawWireSphere(kickOrigin, _kickRadius);
+
+            // Surface detection probe gizmo
+            Gizmos.color = Color.cyan;
+            Vector3 probeOrigin = groundOrigin + transform.up * _probeHeightOffset;
+            Vector3 probeDir = transform.forward;
+            Gizmos.DrawWireSphere(probeOrigin, _surfaceProbeRadius);
+            Gizmos.DrawLine(probeOrigin, probeOrigin + probeDir * _wallProbeDistance);
+            Gizmos.DrawWireSphere(probeOrigin + probeDir * _wallProbeDistance, _surfaceProbeRadius);
         }
     }
 }

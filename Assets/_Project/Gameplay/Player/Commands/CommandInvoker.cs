@@ -151,7 +151,8 @@ namespace Game.Gameplay.Player.Commands
         {
             if (context.Kicker != null && context.Kicker.CanKick)
             {
-                context.Kicker.Kick();
+                float charge = packet.FloatData > 0f ? packet.FloatData : 1f;
+                context.Kicker.Kick(charge);
             }
         }
 

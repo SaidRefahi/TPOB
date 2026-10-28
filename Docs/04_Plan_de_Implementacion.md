@@ -21,22 +21,22 @@ Este plan de implementación toma como base el roadmap inicial de 14 fases y lo 
 
 ## 📋 Resumen Ejecutivo del Roadmap
 
-| Fase | Título | Stack / Addons Protagonistas | Entregable Principal |
-| :---: | :--- | :--- | :--- |
-| **01** | Infraestructura Core, Asmdefs y PurrNet Setup | PurrNet, VContainer, Tri-Inspector | Conexión local de 2 clientes con `NetworkManager` y Root Scope. `[COMPLETADA]` |
-| **02** | Capa Global: GameManager y LevelManager | VContainer, UniTask, PurrNet SceneModule | Carga asíncrona de escenas con UniTask y gestión de estados de partida. `[COMPLETADA]` |
-| **03** | Capa de Sala: RoomController y State Pattern | VContainer, PurrNet SyncVar, Tri-Inspector | Ciclo de vida determinista de sala con spawning sincronizado. `[COMPLETADA]` |
-| **04** | Jugador 1: Locomoción y Habilidades (Piernas) | InputSystem, PurrNet Physics, Tri-Inspector | Piernas camina, salta, patea y empuja cajas con física autoritativa. `[COMPLETADA]` |
-| **05** | Jugador 2: Manipulación y Habilidades (Torso) | InputSystem, PurrNet Physics, DOTween | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. `[COMPLETADA]` |
-| **06** | Sistema de Comandos (Command Pattern) | C# Structs (Zero GC), PurrNet ServerRpc | Comandos polimórficos de jugador desacoplados de la red. `[COMPLETADA]` |
-| **07** | Fusión y Separación del Robot | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween | Alternancia fluida entre 1 y 2 avatares físicos en red. `[COMPLETADA]` |
-| **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos | Cinemachine 3.x, CinemachineTargetGroup | Encuadre adaptativo dinámico y screen shake por impulsos físicos. `[COMPLETADA]` |
-| **09** | Bus de Eventos Desacoplado (Observer Pattern) | VContainer, C# Events, PurrNet ObserversRpc | Comunicación entre subsistemas sin llamadas cruzadas directas. `[COMPLETADA]` |
-| **10** | Composite Pattern y Mecanismos de Puzzle | Interfaces, DOTween, Tri-Inspector | Árbol lógico de finalización y objetos interactivos reactivos. `[COMPLETADA]` |
-| **11** | Ciclo de Muerte, Checkpoints y Respawn | UniTask, PurrNet SyncVar, KillVolume | Caídas y muertes con reaparición rápida sin reiniciar la sala. `[COMPLETADA]` |
-| **12** | Producción de Contenido: Diseño de 10 Salas | Tri-Inspector, Cinemachine, PurrNet | 4 salas simples, 4 intermedias y 2 avanzadas encadenadas. `[COMPLETADA]` |
-| **13** | Comedia Física, Ragdolls y Jugo Audiovisual | DOTween, Cinemachine Impulses, Audio Network | Sensación de impacto, descontrol físico cómico y audio sintetizado en red. `[COMPLETADA]` |
-| **14** | Optimización Zero-GC, Simulación de Red y QA Final | PurrNet Latency Sim, Unity Profiler, Editor Tooling | Certificación de rendimiento, simulación de estrés de red y build final. `[COMPLETADA]` |
+|  Fase  | Título                                             | Stack / Addons Protagonistas                        | Entregable Principal                                                                      |
+| :----: | :------------------------------------------------- | :-------------------------------------------------- | :---------------------------------------------------------------------------------------- |
+| **01** | Infraestructura Core, Asmdefs y PurrNet Setup      | PurrNet, VContainer, Tri-Inspector                  | Conexión local de 2 clientes con `NetworkManager` y Root Scope. `[COMPLETADA]`            |
+| **02** | Capa Global: GameManager y LevelManager            | VContainer, UniTask, PurrNet SceneModule            | Carga asíncrona de escenas con UniTask y gestión de estados de partida. `[COMPLETADA]`    |
+| **03** | Capa de Sala: RoomController y State Pattern       | VContainer, PurrNet SyncVar, Tri-Inspector          | Ciclo de vida determinista de sala con spawning sincronizado. `[COMPLETADA]`              |
+| **04** | Jugador 1: Locomoción y Habilidades (Piernas)      | InputSystem, PurrNet Physics, Tri-Inspector         | Piernas camina, salta, patea y empuja cajas con física autoritativa. `[COMPLETADA]`       |
+| **05** | Jugador 2: Manipulación y Habilidades (Torso)      | InputSystem, PurrNet Physics, DOTween               | Torso agarra, lanza, atrae magnéticamente y opera mecanismos. `[COMPLETADA]`              |
+| **06** | Sistema de Comandos (Command Pattern)              | C# Structs (Zero GC), PurrNet ServerRpc             | Comandos polimórficos de jugador desacoplados de la red. `[COMPLETADA]`                   |
+| **07** | Fusión y Separación del Robot                      | PurrNet Hierarchy Sync, Cinemachine 3.x, DOTween    | Alternancia fluida entre 1 y 2 avatares físicos en red. `[COMPLETADA]`                    |
+| **08** | Cámara Cinemachine 3.x Adaptativa e Impulsos       | Cinemachine 3.x, CinemachineTargetGroup             | Encuadre adaptativo dinámico y screen shake por impulsos físicos. `[COMPLETADA]`          |
+| **09** | Bus de Eventos Desacoplado (Observer Pattern)      | VContainer, C# Events, PurrNet ObserversRpc         | Comunicación entre subsistemas sin llamadas cruzadas directas. `[COMPLETADA]`             |
+| **10** | Composite Pattern y Mecanismos de Puzzle           | Interfaces, DOTween, Tri-Inspector                  | Árbol lógico de finalización y objetos interactivos reactivos. `[COMPLETADA]`             |
+| **11** | Ciclo de Muerte, Checkpoints y Respawn             | UniTask, PurrNet SyncVar, KillVolume                | Caídas y muertes con reaparición rápida sin reiniciar la sala. `[COMPLETADA]`             |
+| **12** | Producción de Contenido: Diseño de 10 Salas        | Tri-Inspector, Cinemachine, PurrNet                 | 4 salas simples, 4 intermedias y 2 avanzadas encadenadas. `[COMPLETADA]`                  |
+| **13** | Comedia Física, Ragdolls y Jugo Audiovisual        | DOTween, Cinemachine Impulses, Audio Network        | Sensación de impacto, descontrol físico cómico y audio sintetizado en red. `[COMPLETADA]` |
+| **14** | Optimización Zero-GC, Simulación de Red y QA Final | PurrNet Latency Sim, Unity Profiler, Editor Tooling | Certificación de rendimiento, simulación de estrés de red y build final. `[COMPLETADA]`   |
 
 ---
 

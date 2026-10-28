@@ -18,7 +18,7 @@ namespace Game.Gameplay.Player.Robot
     [DeclareBoxGroup("Estado Sincronizado")]
     [DeclareBoxGroup("Acciones")]
     [DeclareBoxGroup("Simulación de Muerte")]
-    public sealed class RobotCoordinator : NetworkBehaviour, IRobotCoordinator
+    public sealed class RobotCoordinator : NetworkBehaviour, IRobotCoordinator, ICatapultable
     {
         [Group("Referencias")]
         [SerializeField] private LegsController _legs;
@@ -42,16 +42,84 @@ namespace Game.Gameplay.Player.Robot
         private RobotContext _context;
         private IGameEventBus _eventBus;
 
+        private ICatapultMechanism _activeCatapult;
+        private float _dragSpeedMultiplier = 1f;
+
         public bool IsFused => _isFused.value;
         public LegsController Legs => _legs;
         public TorsoController Torso => _torso;
         public FusionSocket Socket => _socket;
         public IRobotStrategy CurrentStrategy => _currentStrategy;
+        public float DragSpeedMultiplier => _dragSpeedMultiplier;
+        public bool IsTensionedInCatapult => _activeCatapult != null && _activeCatapult.IsTensioned;
+
+        public bool CanBeCatapulted => IsFused && _legs != null;
+        public Vector3 LaunchOriginPosition => _legs != null ? _legs.transform.position : transform.position;
 
         [Inject]
         public void Construct(IGameEventBus eventBus = null)
         {
             _eventBus = eventBus;
+        }
+
+        public void SetDragSpeedMultiplier(float multiplier)
+        {
+            _dragSpeedMultiplier = Mathf.Clamp01(multiplier);
+        }
+
+        public void ResetDragSpeedMultiplier()
+        {
+            _dragSpeedMultiplier = 1f;
+        }
+
+        public void RegisterCatapult(ICatapultMechanism catapult)
+        {
+            _activeCatapult = catapult;
+        }
+
+        public void UnregisterCatapult(ICatapultMechanism catapult)
+        {
+            if (_activeCatapult == catapult)
+            {
+                _activeCatapult = null;
+            }
+        }
+
+        public bool TryTriggerCatapultLaunch()
+        {
+            if (_activeCatapult != null && _activeCatapult.IsTensioned)
+            {
+                _activeCatapult.TriggerLaunch();
+                return true;
+            }
+            return false;
+        }
+
+        public void ApplyCatapultResistance(Vector3 springForce)
+        {
+            bool canSimulate = !isSpawned || isServer;
+            if (!canSimulate || !CanBeCatapulted) return;
+            if (_context != null && _context.LegsRigidbody != null)
+            {
+                _context.LegsRigidbody.AddForce(springForce, ForceMode.Acceleration);
+            }
+        }
+
+        public void ExecuteCatapultLaunch(Vector3 launchImpulse)
+        {
+            bool canSimulate = !isSpawned || isServer;
+            if (!canSimulate || !CanBeCatapulted) return;
+
+            if (_legs != null)
+            {
+                _legs.ApplyCatapultLaunch(launchImpulse);
+            }
+            else if (_context != null && _context.LegsRigidbody != null)
+            {
+                _context.LegsRigidbody.linearVelocity = Vector3.zero;
+                _context.LegsRigidbody.angularVelocity = Vector3.zero;
+                _context.LegsRigidbody.AddForce(launchImpulse, ForceMode.VelocityChange);
+            }
         }
 
         private void Awake()

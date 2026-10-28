@@ -79,6 +79,15 @@ namespace Game.Gameplay.Player.Legs
             EnsureBuffers();
         }
 
+        public void Configure(LegID id, Transform restAnchor, Transform[] bones)
+        {
+            _id = id;
+            _restAnchor = restAnchor;
+            _bones = bones;
+            _hasValidBindPose = false;
+            EnsureBuffers();
+        }
+
         public void EnsureBuffers()
         {
             if (_restLocalRotations == null || _restLocalRotations.Length != 13)
@@ -241,7 +250,7 @@ namespace Game.Gameplay.Player.Legs
                 Vector3 nextPos = _splinePoints[i + 1];
                 Vector3 newDir = (nextPos - currentPos);
                 if (newDir.sqrMagnitude > 0.0001f) newDir.Normalize();
-                else newDir = Vector3.down;
+                else newDir = characterTransform != null ? -characterTransform.up : Vector3.down;
 
                 Vector3 currentRestDir = charRot * _restLocalSegmentDirs[i];
                 Quaternion currentRestRot = charRot * _restLocalRotations[i];
@@ -258,8 +267,10 @@ namespace Game.Gameplay.Player.Legs
             {
                 footBone.position = _splinePoints[12];
 
-                // Align foot with ground normal and character facing direction
-                Quaternion groundAlignment = Quaternion.FromToRotation(Vector3.up, groundNorm);
+                // Align foot with ground normal relative to character chassis
+                Vector3 charUp = characterTransform.up;
+                Vector3 safeNorm = groundNorm.sqrMagnitude > 0.001f ? groundNorm : charUp;
+                Quaternion groundAlignment = Quaternion.FromToRotation(charUp, safeNorm);
                 footBone.rotation = groundAlignment * charRot * _footRestRotation;
             }
         }
@@ -659,6 +670,91 @@ namespace Game.Gameplay.Player.Legs
 #endif
         }
 
+        [Group("Simulación y Pruebas en Editor (Odin/TriInspector)")]
+        [Button(ButtonSizes.Medium, "🔍 Auto-Buscar Huesos de Patas y Chasis")]
+        public void AutoFindLegBonesAndChassis()
+        {
+            if (_controller == null)
+            {
+                _controller = GetComponent<LegsController>();
+                if (_controller == null) _controller = GetComponentInParent<LegsController>();
+            }
+
+            if (_rigidbody == null && _controller != null)
+            {
+                _rigidbody = _controller.GetComponent<Rigidbody>();
+            }
+            if (_rigidbody == null)
+            {
+                _rigidbody = GetComponent<Rigidbody>();
+                if (_rigidbody == null) _rigidbody = GetComponentInParent<Rigidbody>();
+            }
+
+            if (_bodyRoot == null)
+            {
+                _bodyRoot = FindChildRecursive(transform, "Armature");
+                if (_bodyRoot == null) _bodyRoot = FindChildRecursive(transform, "Roundcube.001");
+                if (_bodyRoot == null) _bodyRoot = FindChildRecursive(transform, "Legs_Unity");
+                if (_bodyRoot == null) _bodyRoot = FindChildRecursive(transform, "Hip");
+            }
+
+            if (_bodyRoot != null && !_defaultBodyTransformCached)
+            {
+                _defaultBodyPosition = _bodyRoot.localPosition;
+                _defaultBodyRotation = _bodyRoot.localRotation;
+                _defaultBodyTransformCached = true;
+            }
+
+            if (_legs == null || _legs.Length != 4)
+            {
+                _legs = new SplineLeg[4];
+            }
+
+            SetupLeg(0, LegID.FrontLeft, "Rest_FL", ".FL");
+            SetupLeg(1, LegID.BackRight, "Rest_BR", ".BR");
+            SetupLeg(2, LegID.FrontRight, "Rest_FR", ".FR");
+            SetupLeg(3, LegID.BackLeft, "Rest_BL", ".BL");
+
+            _restPoseCached = false;
+            CacheRestPoses(forceRecache: true);
+            InitializeLegs();
+        }
+
+        private void SetupLeg(int index, LegID id, string anchorName, string boneSuffix)
+        {
+            Transform anchor = FindChildRecursive(transform, anchorName);
+            Transform[] bones = new Transform[13];
+            for (int i = 1; i <= 13; i++)
+            {
+                string boneName = $"Bone.{i:D3}{boneSuffix}";
+                bones[i - 1] = FindChildRecursive(transform, boneName);
+            }
+
+            if (_legs[index] == null)
+            {
+                _legs[index] = new SplineLeg(id, anchor, bones);
+            }
+            else
+            {
+                _legs[index].Configure(id, anchor, bones);
+            }
+        }
+
+        private static Transform FindChildRecursive(Transform parent, string targetName)
+        {
+            if (parent == null) return null;
+            if (parent.name == targetName) return parent;
+
+            int childCount = parent.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                Transform result = FindChildRecursive(parent.GetChild(i), targetName);
+                if (result != null) return result;
+            }
+
+            return null;
+        }
+
         // Runtime states
         private Vector3 _defaultBodyPosition;
         private Quaternion _defaultBodyRotation;
@@ -788,6 +884,16 @@ namespace Game.Gameplay.Player.Legs
                 if (_groundLayer.value == 0) _groundLayer = ~0;
             }
 
+            if (_controller != null)
+            {
+                _groundLayer |= _controller.MagneticWallLayer;
+            }
+
+            if (_bodyRoot == null || _legs == null || _legs.Length < 4 || _legs[0] == null || _legs[0].Bones == null || _legs[0].Bones.Length < 13 || _legs[0].Bones[0] == null)
+            {
+                AutoFindLegBonesAndChassis();
+            }
+
             CacheRestPoses();
             InitializeLegs();
         }
@@ -859,6 +965,11 @@ namespace Game.Gameplay.Player.Legs
                 _animationTimeScale = 1.0f;
             }
 
+            if (_bodyRoot == null || _legs == null || _legs.Length < 4 || _legs[0] == null || _legs[0].Bones == null || _legs[0].Bones.Length < 13 || _legs[0].Bones[0] == null)
+            {
+                AutoFindLegBonesAndChassis();
+            }
+
             CacheRestPoses();
             InitializeLegs();
         }
@@ -924,12 +1035,11 @@ namespace Game.Gameplay.Player.Legs
             float dt = Time.deltaTime * _animationTimeScale;
             bool isGrounded = (_controller == null || _controller.IsGrounded || CheckGroundedFallback()) && !_isSimulatingAirborne;
             Vector3 linearVelocity = _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
-            Vector3 horizontalVelocity = new Vector3(linearVelocity.x, 0f, linearVelocity.z);
+            Vector3 horizontalVelocity = Vector3.ProjectOnPlane(linearVelocity, transform.up);
 
             if (_isSimulatingWalk && horizontalVelocity.sqrMagnitude < 0.01f)
             {
-                Vector3 fwd = transform.forward;
-                fwd.y = 0f;
+                Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, transform.up);
                 if (fwd.sqrMagnitude > 0.0001f) fwd.Normalize();
                 horizontalVelocity = fwd * _simulatedSpeed;
             }
@@ -996,11 +1106,10 @@ namespace Game.Gameplay.Player.Legs
 
                 leg.State = LegActionState.Airborne;
 
-                Vector3 inwardDir = (transform.position - leg.RestAnchor.position);
-                inwardDir.y = 0f;
-                inwardDir = inwardDir.normalized * _airborneInwardOffset;
+                Vector3 inwardDir = Vector3.ProjectOnPlane(transform.position - leg.RestAnchor.position, transform.up);
+                if (inwardDir.sqrMagnitude > 0.0001f) inwardDir = inwardDir.normalized * _airborneInwardOffset;
 
-                Vector3 targetAirbornePos = leg.RestAnchor.position + Vector3.up * _airborneTuckHeight + inwardDir;
+                Vector3 targetAirbornePos = leg.RestAnchor.position + transform.up * _airborneTuckHeight + inwardDir;
                 leg.CurrentFootPos = Vector3.MoveTowards(leg.CurrentFootPos, targetAirbornePos, 14f * dt);
                 leg.PlantedFootPos = leg.CurrentFootPos;
             }
@@ -1050,11 +1159,10 @@ namespace Game.Gameplay.Player.Legs
                         ? inwardDir * (lateralSample * _frontFootInwardArc)
                         : outwardDir * (lateralSample * (_lateralSwayArc + _flankClearanceArc));
 
-                    // Vertical height curve: energetic rise to peak (0.3), continuous descent, and sudden stomp down (0.85)
+                    // Height curve lift relative to surface/character orientation
                     float heightSample = _stepHeightCurve.Evaluate(progress);
-                    float currentY = Mathf.Lerp(steppingLeg.StepStartFootPos.y, steppingLeg.StepTargetFootPos.y, progress) + heightSample * _maxStepHeight;
-
-                    Vector3 rawSwingPos = new Vector3(baseHoriz.x + lateralOffset.x, currentY, baseHoriz.z + lateralOffset.z);
+                    Vector3 liftOffset = transform.up * (heightSample * _maxStepHeight);
+                    Vector3 rawSwingPos = baseHoriz + lateralOffset + liftOffset;
 
                     // Dynamic collision avoidance with companion leg on same flank
                     Vector3 avoidanceOffset = CalculateDynamicAvoidanceOffset(_activeSteppingIndex, rawSwingPos, progress, out _currentAvoidanceHoseBulge);
@@ -1103,15 +1211,16 @@ namespace Game.Gameplay.Player.Legs
                 }
 
                 Vector3 anchorPos = leg.RestAnchor.position;
-                Vector3 delta = leg.PlantedFootPos - anchorPos;
-                delta.y = 0f; // Only horizontal displacement on the ground plane
+                Vector3 deltaTotal = leg.PlantedFootPos - anchorPos;
+                Vector3 deltaOnPlane = Vector3.ProjectOnPlane(deltaTotal, transform.up);
+                Vector3 normalDepth = Vector3.Project(deltaTotal, transform.up);
 
-                float distHorizontal = delta.magnitude;
-                if (distHorizontal > _maxRearStanceDistance && distHorizontal > 0.0001f)
+                float distOnPlane = deltaOnPlane.magnitude;
+                if (distOnPlane > _maxRearStanceDistance && distOnPlane > 0.0001f)
                 {
                     // Leash planted foot so it never falls further behind than _maxRearStanceDistance
-                    Vector3 clampedOffset = (delta / distHorizontal) * _maxRearStanceDistance;
-                    leg.PlantedFootPos = new Vector3(anchorPos.x + clampedOffset.x, leg.PlantedFootPos.y, anchorPos.z + clampedOffset.z);
+                    Vector3 clampedOffset = (deltaOnPlane / distOnPlane) * _maxRearStanceDistance;
+                    leg.PlantedFootPos = anchorPos + clampedOffset + normalDepth;
                 }
 
                 leg.CurrentFootPos = leg.PlantedFootPos;
@@ -1315,6 +1424,34 @@ namespace Game.Gameplay.Player.Legs
             }
         }
 
+        public Transform GetNextKickingFootTransform()
+        {
+            int index = _lastKickWasLeft ? 2 : 0;
+            if (_legs != null && index >= 0 && index < _legs.Length && _legs[index] != null)
+            {
+                var bones = _legs[index].Bones;
+                if (bones != null && bones.Length > 12 && bones[12] != null)
+                {
+                    return bones[12];
+                }
+            }
+            return null;
+        }
+
+        public Vector3 GetNextKickingFootPosition()
+        {
+            var footTransform = GetNextKickingFootTransform();
+            if (footTransform != null) return footTransform.position;
+
+            int index = _lastKickWasLeft ? 2 : 0;
+            if (_legs != null && index >= 0 && index < _legs.Length && _legs[index] != null)
+            {
+                return _legs[index].CurrentFootPos;
+            }
+
+            return transform.position + transform.forward * 0.8f;
+        }
+
         private void HandleKicked()
         {
             if (_isKicking) return;
@@ -1382,11 +1519,11 @@ namespace Game.Gameplay.Player.Legs
             {
                 avgNormal /= normalCount;
                 if (avgNormal.sqrMagnitude > 0.001f) avgNormal.Normalize();
-                else avgNormal = Vector3.up;
+                else avgNormal = transform.up;
             }
             else
             {
-                avgNormal = Vector3.up;
+                avgNormal = transform.up;
             }
 
             Quaternion slopeOffset = Quaternion.FromToRotation(transform.up, avgNormal);
@@ -1420,7 +1557,7 @@ namespace Game.Gameplay.Player.Legs
                 // Ensure minimum separation to prevent zero-distance degenerate tangent collapse
                 if (dist < 0.05f)
                 {
-                    p3 = p0 + Vector3.down * 0.05f;
+                    p3 = p0 - transform.up * 0.05f;
                     hipToFoot = p3 - p0;
                     dist = 0.05f;
                 }
@@ -1521,7 +1658,7 @@ namespace Game.Gameplay.Player.Legs
 
                 // Control Point 2: Ankle arch.
                 // Descends vertically into the foot on the ground with outward/inward clearance.
-                Vector3 p2 = p3 + (Vector3.up * _ankleArchHeight) + lateralVectorP2;
+                Vector3 p2 = p3 + (transform.up * _ankleArchHeight) + lateralVectorP2;
 
                 // Solve the 13 bones along the Cubic Bezier spline with arc-length parameterization!
                 leg.SolveSplineHose(p0, p1, p2, p3, leg.GroundNormal, transform);
@@ -1543,7 +1680,8 @@ namespace Game.Gameplay.Player.Legs
 
             Vector3 angularVel = _rigidbody != null ? _rigidbody.angularVelocity : Vector3.zero;
             Vector3 tangentialVel = Vector3.Cross(angularVel, anchorPos - transform.position);
-            Vector3 totalVelocity = horizontalVelocity + new Vector3(tangentialVel.x, 0f, tangentialVel.z);
+            Vector3 tangentialOnPlane = Vector3.ProjectOnPlane(tangentialVel, transform.up);
+            Vector3 totalVelocity = horizontalVelocity + tangentialOnPlane;
 
             Vector3 strideLead = totalVelocity * leadTime;
             float leadMag = strideLead.magnitude;
@@ -1553,8 +1691,8 @@ namespace Game.Gameplay.Player.Legs
             }
 
             Vector3 projectedPos = anchorPos + strideLead;
-            Vector3 origin = projectedPos + Vector3.up * _raycastOriginHeight;
-            int hitCount = Physics.RaycastNonAlloc(origin, Vector3.down, leg.RayHits, _raycastDistance, _groundLayer, QueryTriggerInteraction.Ignore);
+            Vector3 origin = projectedPos + transform.up * _raycastOriginHeight;
+            int hitCount = Physics.RaycastNonAlloc(origin, -transform.up, leg.RayHits, _raycastDistance, _groundLayer, QueryTriggerInteraction.Ignore);
 
             Vector3 groundPoint = projectedPos;
             bool foundGround = false;
@@ -1574,9 +1712,9 @@ namespace Game.Gameplay.Player.Legs
             if (!foundGround)
             {
                 // Fallback: If no floor collider detected (e.g. in Prefab Stage / editor preview or mid-air void),
-                // ground feet on the character base contact plane (transform.position.y)
-                groundPoint = new Vector3(projectedPos.x, transform.position.y, projectedPos.z);
-                leg.GroundNormal = Vector3.up;
+                // ground feet on the character base contact plane
+                groundPoint = projectedPos;
+                leg.GroundNormal = transform.up;
             }
 
             return groundPoint;

@@ -141,5 +141,45 @@ namespace Game.Core.Events
             IsReady = isReady;
         }
     }
+
+    public readonly struct CatapultLaunchedEvent
+    {
+        public readonly Vector3 Impulse;
+        public readonly float TensionRatio;
+
+        public CatapultLaunchedEvent(Vector3 impulse, float tensionRatio)
+        {
+            Impulse = impulse;
+            TensionRatio = tensionRatio;
+        }
+    }
+
+    public readonly struct HeavyDoorProgressChangedEvent
+    {
+        public readonly int DoorId;
+        public readonly float Progress;
+        public readonly bool IsFullyOpened;
+
+        public HeavyDoorProgressChangedEvent(int doorId, float progress, bool isFullyOpened)
+        {
+            DoorId = doorId;
+            Progress = progress;
+            IsFullyOpened = isFullyOpened;
+        }
+    }
+
+    public readonly struct LegsMagneticSurfaceChangedEvent
+    {
+        public readonly bool IsAttached;
+        public readonly Vector3 SurfaceNormal;
+        public readonly Vector3 ContactPoint;
+
+        public LegsMagneticSurfaceChangedEvent(bool isAttached, Vector3 surfaceNormal, Vector3 contactPoint)
+        {
+            IsAttached = isAttached;
+            SurfaceNormal = surfaceNormal;
+            ContactPoint = contactPoint;
+        }
+    }
 }
 

@@ -88,6 +88,7 @@ namespace Game.Gameplay.Player.Torso
 
         private TorsoInputData _pendingInput;
         private IGrabbable _currentHeldObject;
+        private IHeavyMagneticDraggable _lockedDraggable;
         private bool _isMagnetActive;
         private bool _isClimbing;
         private Vector2 _climbDirection;
@@ -105,6 +106,9 @@ namespace Game.Gameplay.Player.Torso
         public IGrabbable CurrentHeldObject => _currentHeldObject;
         public float ThrowForce => _throwForce;
         public bool IsMagnetActive => _isMagnetActive;
+        public Transform AimPivot => _aimPivot;
+        public Transform HoldSocket => _holdSocket;
+        public Transform MagnetOrigin => _magnetOrigin;
 
         public event Action<IGrabbable> OnObjectGrabbed;
         public event Action<IGrabbable> OnObjectReleased;
@@ -125,6 +129,12 @@ namespace Game.Gameplay.Player.Torso
 
         protected override void OnDespawned()
         {
+            if (_lockedDraggable != null)
+            {
+                _lockedDraggable.UnlockMagnet();
+                _lockedDraggable = null;
+            }
+
             _syncedFusedRotation.onChanged -= HandleSyncedFusedRotationChanged;
             base.OnDespawned();
         }
@@ -410,7 +420,7 @@ namespace Game.Gameplay.Player.Torso
             }
 
             Vector3 searchCenter = _holdSocket.position;
-            int count = Physics.OverlapSphereNonAlloc(searchCenter, _grabRadius, _grabColliders, _grabLayer);
+            int count = Physics.OverlapSphereNonAlloc(searchCenter, _grabRadius, _grabColliders, _grabLayer, QueryTriggerInteraction.Collide);
 
             for (int i = 0; i < count; i++)
             {
@@ -420,7 +430,8 @@ namespace Game.Gameplay.Player.Torso
                     continue;
                 }
 
-                if (col.TryGetComponent<IGrabbable>(out var grabbable) && !grabbable.IsGrabbed)
+                var grabbable = col.GetComponentInParent<IGrabbable>();
+                if (grabbable != null && !grabbable.IsGrabbed)
                 {
                     Grab(grabbable);
                     _pendingInput.InteractTriggered = false;
@@ -530,11 +541,16 @@ namespace Game.Gameplay.Player.Torso
 
             if (!_isMagnetActive)
             {
+                if (_lockedDraggable != null)
+                {
+                    _lockedDraggable.UnlockMagnet();
+                    _lockedDraggable = null;
+                }
                 return;
             }
 
             Vector3 origin = _magnetOrigin.position;
-            int count = Physics.OverlapSphereNonAlloc(origin, _magnetRange, _magnetColliders, _magneticLayer);
+            int count = Physics.OverlapSphereNonAlloc(origin, _magnetRange, _magnetColliders, _magneticLayer, QueryTriggerInteraction.Collide);
 
             for (int i = 0; i < count; i++)
             {
@@ -544,9 +560,25 @@ namespace Game.Gameplay.Player.Torso
                     continue;
                 }
 
-                if (col.TryGetComponent<IMagnetic>(out var magnetic) && magnetic.CanBeAttracted)
+                var heavyDraggable = col.GetComponentInParent<IHeavyMagneticDraggable>();
+                if (heavyDraggable != null)
                 {
-                    magnetic.ApplyMagneticForce(origin, _magnetForce, Time.fixedDeltaTime);
+                    if (_lockedDraggable == null && !heavyDraggable.IsMagnetLocked)
+                    {
+                        heavyDraggable.LockMagnet(_magnetOrigin);
+                        if (heavyDraggable.IsMagnetLocked)
+                        {
+                            _lockedDraggable = heavyDraggable;
+                        }
+                    }
+                }
+                else
+                {
+                    var magnetic = col.GetComponentInParent<IMagnetic>();
+                    if (magnetic != null && magnetic.CanBeAttracted)
+                    {
+                        magnetic.ApplyMagneticForce(origin, _magnetForce, Time.fixedDeltaTime);
+                    }
                 }
             }
         }
@@ -620,7 +652,8 @@ namespace Game.Gameplay.Player.Torso
 
         public bool IsClimbing => _isClimbing;
         public bool IsFused => _isFused;
-        public bool CanFuse => (_coordinator != null || (_coordinator = FindFirstObjectByType<RobotCoordinator>()) != null) && _coordinator.CanFuse();
+        public RobotCoordinator Coordinator => _coordinator != null ? _coordinator : (_coordinator = FindFirstObjectByType<RobotCoordinator>());
+        public bool CanFuse => (Coordinator != null) && _coordinator.CanFuse();
 
         public void SetCoordinator(RobotCoordinator coordinator)
         {
@@ -743,7 +776,7 @@ namespace Game.Gameplay.Player.Torso
             Vector3 launchDir = (direction + Vector3.up * 0.45f).normalized;
             _rigidbody.linearVelocity = launchDir * (kickForce * 1.35f);
 
-            if (_tumbleController != null)
+            if (_tumbleController != null && kickForce >= 8f)
             {
                 _tumbleController.TriggerTumble(launchDir * kickForce);
             }

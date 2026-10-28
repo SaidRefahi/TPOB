@@ -293,6 +293,7 @@ namespace Game.Editor
             public Material CheckpointBase;
             public Material CheckpointIndicator;
             public Material KillVolume;
+            public Material MagneticWall;
         }
 
         public struct PrefabSet
@@ -312,6 +313,9 @@ namespace Game.Editor
             public GameObject Checkpoint;
             public GameObject KillVolume;
             public GameObject SeeSawPlatform;
+            public GameObject MagneticWall;
+            public GameObject Catapult;
+            public GameObject HeavyMagneticDoor;
         }
 
         public static MaterialSet CreateMaterials()
@@ -341,6 +345,9 @@ namespace Game.Editor
             set.CheckpointBase = GetOrCreateMaterial("Mat_CheckpointBase", new Color(0.2f, 0.22f, 0.28f), shader, 0.5f, 0.6f);
             set.CheckpointIndicator = GetOrCreateMaterial("Mat_CheckpointIndicator", new Color(0.85f, 0.45f, 0.1f), shader, 0.8f, 0.8f);
             set.KillVolume = GetOrCreateMaterial("Mat_KillVolume", new Color(0.85f, 0.15f, 0.15f, 0.3f), shader);
+            set.MagneticWall = GetOrCreateMaterial("Mat_MagneticWall", new Color(0.12f, 0.16f, 0.22f), shader, 0.9f, 0.85f);
+            set.MagneticWall.EnableKeyword("_EMISSION");
+            set.MagneticWall.SetColor("_EmissionColor", new Color(0.1f, 0.75f, 1f));
 
             AssetDatabase.SaveAssets();
             return set;
@@ -353,12 +360,11 @@ namespace Game.Editor
             if (mat == null)
             {
                 mat = new Material(shader) { name = name };
+                mat.color = color;
+                if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", metallic);
+                if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", smoothness);
                 AssetDatabase.CreateAsset(mat, path);
             }
-            mat.color = color;
-            if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", metallic);
-            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", smoothness);
-            EditorUtility.SetDirty(mat);
             return mat;
         }
 
@@ -367,11 +373,19 @@ namespace Game.Editor
             PrefabSet prefabs = new PrefabSet();
             var inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
 
-            // 1. LegsPlayer Prefab
-            prefabs.Legs = CreateLegsPrefab(mats.Legs, inputActions);
+            // 1. LegsPlayer Prefab (Preserve existing custom 3D model prefabs if present)
+            prefabs.Legs = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabsDir}/LegsPlayer.prefab");
+            if (prefabs.Legs == null)
+            {
+                prefabs.Legs = CreateLegsPrefab(mats.Legs, inputActions);
+            }
 
-            // 2. TorsoPlayer Prefab
-            prefabs.Torso = CreateTorsoPrefab(mats.Torso, inputActions);
+            // 2. TorsoPlayer Prefab (Preserve existing custom 3D model prefabs if present)
+            prefabs.Torso = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabsDir}/TorsoPlayer.prefab");
+            if (prefabs.Torso == null)
+            {
+                prefabs.Torso = CreateTorsoPrefab(mats.Torso, inputActions);
+            }
 
             // 3. GrabbableBox Prefab
             prefabs.GrabbableBox = CreateGrabbableBoxPrefab(mats.Grabbable);
@@ -411,6 +425,15 @@ namespace Game.Editor
 
             // 15. SeeSawPlatform Prefab
             prefabs.SeeSawPlatform = CreateSeeSawPrefab(mats.Floor);
+
+            // 16. MagneticWall Prefab
+            prefabs.MagneticWall = CreateMagneticWallPrefab(mats.MagneticWall);
+
+            // 17. Catapult Prefab
+            prefabs.Catapult = CreateCatapultPrefab(mats.LeverHandle);
+
+            // 18. HeavyMagneticDoor Prefab
+            prefabs.HeavyMagneticDoor = CreateHeavyDoorPrefab(mats.DoorFrame, mats.DoorLeaf, mats.Magnetic);
 
             AssetDatabase.SaveAssets();
             return prefabs;
@@ -516,18 +539,12 @@ namespace Game.Editor
             col.sharedMaterial = Game.Gameplay.PhysicsJuice.PhysicsMaterialFactory.ComedicNormal;
 
             var impactFeedback = root.AddComponent<Game.Gameplay.Player.Juice.ImpactFeedbackSystem>();
-            var tumble = root.AddComponent<Game.Gameplay.Player.Juice.TumbleController>();
+            root.AddComponent<Game.Gameplay.Player.Juice.TumbleController>();
 
             var impactSo = new SerializedObject(impactFeedback);
-            impactSo.FindProperty("_rigidbody").objectReferenceValue = rb;
-            impactSo.FindProperty("_visualRoot").objectReferenceValue = mesh.transform;
-            impactSo.FindProperty("_impulseSource").objectReferenceValue = kickImpulse;
+            var visualModelProp = impactSo.FindProperty("_visualModel");
+            if (visualModelProp != null) visualModelProp.objectReferenceValue = mesh.transform;
             impactSo.ApplyModifiedPropertiesWithoutUndo();
-
-            var tumbleSo = new SerializedObject(tumble);
-            tumbleSo.FindProperty("_rigidbody").objectReferenceValue = rb;
-            tumbleSo.FindProperty("_visualTransform").objectReferenceValue = mesh.transform;
-            tumbleSo.ApplyModifiedPropertiesWithoutUndo();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
@@ -598,18 +615,12 @@ namespace Game.Editor
             col.sharedMaterial = Game.Gameplay.PhysicsJuice.PhysicsMaterialFactory.ComedicNormal;
 
             var impactFeedback = root.AddComponent<Game.Gameplay.Player.Juice.ImpactFeedbackSystem>();
-            var tumble = root.AddComponent<Game.Gameplay.Player.Juice.TumbleController>();
+            root.AddComponent<Game.Gameplay.Player.Juice.TumbleController>();
 
             var impactSo = new SerializedObject(impactFeedback);
-            impactSo.FindProperty("_rigidbody").objectReferenceValue = rb;
-            impactSo.FindProperty("_visualRoot").objectReferenceValue = torsoMesh.transform;
-            impactSo.FindProperty("_impulseSource").objectReferenceValue = deathImpulse;
+            var visualModelProp = impactSo.FindProperty("_visualModel");
+            if (visualModelProp != null) visualModelProp.objectReferenceValue = torsoMesh.transform;
             impactSo.ApplyModifiedPropertiesWithoutUndo();
-
-            var tumbleSo = new SerializedObject(tumble);
-            tumbleSo.FindProperty("_rigidbody").objectReferenceValue = rb;
-            tumbleSo.FindProperty("_visualTransform").objectReferenceValue = torsoMesh.transform;
-            tumbleSo.ApplyModifiedPropertiesWithoutUndo();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
@@ -1083,6 +1094,178 @@ namespace Game.Editor
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        private static GameObject CreateMagneticWallPrefab(Material mat)
+        {
+            string path = $"{PrefabsDir}/MagneticWall.prefab";
+            GameObject root = new GameObject("MagneticWall");
+
+            var box = root.AddComponent<BoxCollider>();
+            box.size = new Vector3(8f, 8f, 0.6f);
+
+            var mesh = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            mesh.name = "WallMesh";
+            mesh.transform.SetParent(root.transform);
+            mesh.transform.localPosition = Vector3.zero;
+            mesh.transform.localScale = new Vector3(8f, 8f, 0.6f);
+            var renderer = mesh.GetComponent<Renderer>();
+            renderer.sharedMaterial = mat;
+            Object.DestroyImmediate(mesh.GetComponent<Collider>());
+
+            var magWall = root.AddComponent<Game.Gameplay.Interactables.MagneticWall>();
+            var wallSo = new SerializedObject(magWall);
+            wallSo.FindProperty("_wallRenderer").objectReferenceValue = renderer;
+            wallSo.ApplyModifiedPropertiesWithoutUndo();
+
+            AddServerAuthoritativeTransform(root);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreateCatapultPrefab(Material strapMat)
+        {
+            string path = $"{PrefabsDir}/CatapultMechanism.prefab";
+            GameObject root = new GameObject("CatapultMechanism");
+
+            var anchorGo = new GameObject("AnchorPoint");
+            anchorGo.transform.SetParent(root.transform);
+            anchorGo.transform.localPosition = Vector3.zero;
+
+            var postLeft = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            postLeft.name = "Post_Left";
+            postLeft.transform.SetParent(root.transform);
+            postLeft.transform.localPosition = new Vector3(-2.5f, 1.5f, 0f);
+            postLeft.transform.localScale = new Vector3(0.4f, 1.5f, 0.4f);
+
+            var postRight = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            postRight.name = "Post_Right";
+            postRight.transform.SetParent(root.transform);
+            postRight.transform.localPosition = new Vector3(2.5f, 1.5f, 0f);
+            postRight.transform.localScale = new Vector3(0.4f, 1.5f, 0.4f);
+
+            var handleGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            handleGo.name = "Strap_Handle";
+            handleGo.transform.SetParent(root.transform);
+            handleGo.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+            handleGo.transform.localScale = new Vector3(0.8f, 0.5f, 0.5f);
+
+            var handleCol = handleGo.GetComponent<BoxCollider>();
+            if (handleCol != null)
+            {
+                handleCol.isTrigger = true;
+                handleCol.size = new Vector3(2.5f, 2.5f, 2.5f);
+            }
+
+            var lineLeftGo = new GameObject("Line_Left");
+            lineLeftGo.transform.SetParent(root.transform);
+            var lineLeft = lineLeftGo.AddComponent<LineRenderer>();
+            ConfigureLineRenderer(lineLeft, strapMat);
+
+            var lineRightGo = new GameObject("Line_Right");
+            lineRightGo.transform.SetParent(root.transform);
+            var lineRight = lineRightGo.AddComponent<LineRenderer>();
+            ConfigureLineRenderer(lineRight, strapMat);
+
+            var catapult = root.AddComponent<CatapultMechanism>();
+            var impulse = root.AddComponent<CinemachineImpulseSource>();
+
+            var so = new SerializedObject(catapult);
+            so.FindProperty("_anchorPoint").objectReferenceValue = anchorGo.transform;
+            so.FindProperty("_strapHandle").objectReferenceValue = handleGo.transform;
+            so.FindProperty("_postLeft").objectReferenceValue = postLeft.transform;
+            so.FindProperty("_postRight").objectReferenceValue = postRight.transform;
+            so.FindProperty("_strapLeft").objectReferenceValue = lineLeft;
+            so.FindProperty("_strapRight").objectReferenceValue = lineRight;
+            so.FindProperty("_impulseSource").objectReferenceValue = impulse;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            AddServerAuthoritativeTransform(root);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject CreateHeavyDoorPrefab(Material frameMat, Material leafMat, Material handleMat)
+        {
+            string path = $"{PrefabsDir}/HeavyMagneticDoor.prefab";
+            GameObject root = new GameObject("HeavyMagneticDoor");
+
+            var frameL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            frameL.name = "Frame_Left";
+            frameL.transform.SetParent(root.transform);
+            frameL.transform.localPosition = new Vector3(-2f, 2f, 0f);
+            frameL.transform.localScale = new Vector3(0.5f, 4f, 0.5f);
+            frameL.GetComponent<Renderer>().sharedMaterial = frameMat;
+
+            var frameR = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            frameR.name = "Frame_Right";
+            frameR.transform.SetParent(root.transform);
+            frameR.transform.localPosition = new Vector3(2f, 2f, 0f);
+            frameR.transform.localScale = new Vector3(0.5f, 4f, 0.5f);
+            frameR.GetComponent<Renderer>().sharedMaterial = frameMat;
+
+            var topRail = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            topRail.name = "Top_Rail";
+            topRail.transform.SetParent(root.transform);
+            topRail.transform.localPosition = new Vector3(1.5f, 3.8f, 0f);
+            topRail.transform.localScale = new Vector3(7.5f, 0.4f, 0.6f);
+            topRail.GetComponent<Renderer>().sharedMaterial = frameMat;
+
+            var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leaf.name = "Door_Leaf";
+            leaf.transform.SetParent(root.transform);
+            leaf.transform.localPosition = new Vector3(0f, 1.8f, 0f);
+            leaf.transform.localScale = new Vector3(3.5f, 3.6f, 0.3f);
+            leaf.GetComponent<Renderer>().sharedMaterial = leafMat;
+
+            var handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            handle.name = "Magnetic_Handle";
+            handle.transform.SetParent(leaf.transform);
+            handle.transform.localPosition = new Vector3(0f, -0.2f, -0.65f);
+            handle.transform.localScale = new Vector3(0.8f, 0.4f, 0.3f);
+            var handleRenderer = handle.GetComponent<Renderer>();
+            handleRenderer.sharedMaterial = handleMat;
+
+            var handleCol = handle.GetComponent<BoxCollider>();
+            if (handleCol != null)
+            {
+                handleCol.isTrigger = true;
+                handleCol.size = new Vector3(2f, 2f, 3f);
+            }
+
+            var door = root.AddComponent<HeavyMagneticDoor>();
+            var impulse = root.AddComponent<CinemachineImpulseSource>();
+
+            var so = new SerializedObject(door);
+            so.FindProperty("_doorLeaf").objectReferenceValue = leaf.transform;
+            so.FindProperty("_handlePoint").objectReferenceValue = handle.transform;
+            so.FindProperty("_handleIndicatorRenderer").objectReferenceValue = handleRenderer;
+            so.FindProperty("_openOffset").vector3Value = new Vector3(3.8f, 0f, 0f);
+            so.FindProperty("_requiredPullDistance").floatValue = 3.5f;
+            so.FindProperty("_dragSpeedMultiplier").floatValue = 0.35f;
+            so.FindProperty("_impulseSource").objectReferenceValue = impulse;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            AddServerAuthoritativeTransform(root);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static void ConfigureLineRenderer(LineRenderer line, Material mat)
+        {
+            line.positionCount = 2;
+            line.startWidth = 0.08f;
+            line.endWidth = 0.08f;
+            line.material = mat;
+            line.useWorldSpace = true;
+            line.numCapVertices = 4;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
         private static void BuildPlaygroundScene(PrefabSet prefabs, MaterialSet mats)

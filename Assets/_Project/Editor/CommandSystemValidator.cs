@@ -25,11 +25,15 @@ namespace Game.Editor
         {
             public bool CanKick => true;
             public bool KickCalled { get; private set; }
+            public float LastChargeRatio { get; private set; } = 1f;
             public event System.Action OnKicked;
 
-            public void Kick()
+            public void Kick() => Kick(1f);
+
+            public void Kick(float chargeRatio)
             {
                 KickCalled = true;
+                LastChargeRatio = chargeRatio;
                 OnKicked?.Invoke();
             }
         }
@@ -100,6 +104,12 @@ namespace Game.Editor
             var kickCmd = new KickCommand();
             kickCmd.Execute(context);
             Debug.Assert(kicker.KickCalled, "Kick should have been called");
+
+            var chargedKickCmd = new KickCommand(0.75f);
+            var chargedPacket = chargedKickCmd.ToPacket();
+            Debug.Assert(chargedPacket.FloatData == 0.75f, "Kick packet must contain charge ratio in FloatData");
+            chargedKickCmd.Execute(context);
+            Debug.Assert(kicker.LastChargeRatio == 0.75f, "KickContext must receive charge ratio");
 
             // 4. Validate ClimbCommand
             var climbCmd = new ClimbCommand(Vector2.up);

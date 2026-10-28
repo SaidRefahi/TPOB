@@ -22,6 +22,7 @@ namespace Game.Core.Enums
         PlayerDeath = 17,
         PlayerRespawn = 18,
         PlayerTumble = 19,
-        RoomClear = 20
+        RoomClear = 20,
+        KickMaxCharge = 21
     }
 }
