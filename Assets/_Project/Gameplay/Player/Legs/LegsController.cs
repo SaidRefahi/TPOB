@@ -126,15 +126,26 @@ namespace Game.Gameplay.Player.Legs
         [SerializeField] private float _defaultAdhesionForce = 35f;
 
         [Group("Paredes Imantadas")]
-        [SerializeField] private float _surfaceProbeRadius = 0.35f;
+        [SerializeField] private float _probeHeightOffset = 0.45f;
 
         [Group("Paredes Imantadas")]
-        [SerializeField] private float _probeHeightOffset = 0.45f;
+        [SerializeField] private float _footprintRadius = 0.30f;
+
+        [Group("Paredes Imantadas")]
+        [SerializeField] private float _transitionLatchDuration = 0.25f;
 
         [Group("Paredes Imantadas")]
         [SerializeField] private MagneticBootsVisuals _bootsVisuals;
 
         private readonly RaycastHit[] _groundHits = new RaycastHit[1];
+        private readonly RaycastHit[] _downCenterHits = new RaycastHit[1];
+        private readonly RaycastHit[] _downFrontHits = new RaycastHit[1];
+        private readonly RaycastHit[] _downBackHits = new RaycastHit[1];
+        private readonly RaycastHit[] _downLeftHits = new RaycastHit[1];
+        private readonly RaycastHit[] _downRightHits = new RaycastHit[1];
+        private readonly RaycastHit[] _whiskerLowHits = new RaycastHit[1];
+        private readonly RaycastHit[] _whiskerMidHits = new RaycastHit[1];
+        private readonly RaycastHit[] _ledgeWrapHits = new RaycastHit[1];
         private readonly RaycastHit[] _wallHits = new RaycastHit[4];
         private readonly Collider[] _kickColliders = new Collider[8];
         private readonly Collider[] _wallColliders = new Collider[4];
@@ -143,8 +154,10 @@ namespace Game.Gameplay.Player.Legs
         private bool _isGrounded;
         private bool _isOnMagneticSurface;
         private Vector3 _currentSurfaceNormal = Vector3.up;
+        private Vector3 _targetSurfaceNormal = Vector3.up;
         private IMagneticSurface _currentMagneticWall;
         private float _detachCooldownTimer;
+        private float _transitionLatchTimer;
         private float _nextKickTime;
         private float _catapultAirTime;
         private bool _isFused;
@@ -166,6 +179,8 @@ namespace Game.Gameplay.Player.Legs
         public float SprintSpeed => _sprintSpeed;
         public bool IsOnMagneticSurface => _isOnMagneticSurface;
         public Vector3 CurrentSurfaceNormal => _currentSurfaceNormal;
+        public Vector3 TargetSurfaceNormal => _targetSurfaceNormal;
+        public bool IsTransitioning => _transitionLatchTimer > 0f;
         public LayerMask MagneticWallLayer => _magneticWallLayer;
 
         public event Action OnKicked;
@@ -191,7 +206,7 @@ namespace Game.Gameplay.Player.Legs
             if (_rigidbody != null)
             {
                 _baseMass = _rigidbody.mass;
-                _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+                _rigidbody.constraints = RigidbodyConstraints.FreezeRotation;
             }
 
             if (_fusionSocket == null)
@@ -227,6 +242,22 @@ namespace Game.Gameplay.Player.Legs
             if (_selfCollider == null)
             {
                 _selfCollider = GetComponent<Collider>();
+            }
+
+            if (_selfCollider != null)
+            {
+                if (_selfCollider.sharedMaterial == null || _selfCollider.sharedMaterial.dynamicFriction > 0f)
+                {
+                    PhysicsMaterial frictionlessMat = new PhysicsMaterial("FrictionlessLegs")
+                    {
+                        dynamicFriction = 0f,
+                        staticFriction = 0f,
+                        bounciness = 0f,
+                        frictionCombine = PhysicsMaterialCombine.Minimum,
+                        bounceCombine = PhysicsMaterialCombine.Minimum
+                    };
+                    _selfCollider.material = frictionlessMat;
+                }
             }
 
             if (_splineAnimator == null)
@@ -441,193 +472,358 @@ namespace Game.Gameplay.Player.Legs
         private void UpdateGroundStatus()
         {
             Vector3 origin = _groundCheckPoint != null ? _groundCheckPoint.position : transform.position;
-            Vector3 probeOrigin = origin + transform.up * _probeHeightOffset;
             Vector3 travelDirection = CalculateTravelDirection();
 
-            bool surfaceAheadDetected = false;
-            Vector3 aheadNormal = Vector3.up;
-            IMagneticSurface aheadSurface = null;
-            float aheadDist = float.MaxValue;
-
-            if (_detachCooldownTimer <= 0f)
+            if (_detachCooldownTimer > 0f)
             {
-                surfaceAheadDetected = DetectSurfaceAhead(probeOrigin, travelDirection, out aheadNormal, out aheadSurface, out aheadDist);
+                _detachCooldownTimer -= Time.fixedDeltaTime;
+            }
+
+            if (_transitionLatchTimer > 0f)
+            {
+                _transitionLatchTimer -= Time.fixedDeltaTime;
+            }
+
+            // 1. Proactive detection of concave transition ahead (Wall, floor, ceiling junction)
+            bool concaveAhead = false;
+            Vector3 concaveNormal = Vector3.up;
+            IMagneticSurface concaveSurface = null;
+            float concaveDist = float.MaxValue;
+
+            if (_detachCooldownTimer <= 0f && travelDirection.sqrMagnitude > 0.001f)
+            {
+                concaveAhead = DetectConcaveSurfaceAhead(origin, travelDirection, out concaveNormal, out concaveSurface, out concaveDist);
+            }
+
+            // Approaching concave surface junction (threshold around 0.65m)
+            if (concaveAhead && concaveDist <= (_footprintRadius + 0.35f))
+            {
+                if (concaveSurface != null && concaveSurface.IsActive)
+                {
+                    _currentMagneticWall = concaveSurface;
+                    _targetSurfaceNormal = concaveNormal;
+                    _transitionLatchTimer = _transitionLatchDuration;
+                    SetMagneticState(true);
+                    _isGrounded = true;
+                    _currentSurfaceNormal = Vector3.Slerp(_currentSurfaceNormal, _targetSurfaceNormal, _wallAlignSpeed * Time.fixedDeltaTime);
+                    return;
+                }
+                else if (concaveSurface == null && concaveNormal.y > 0.7f && _isOnMagneticSurface)
+                {
+                    // Transitioned from magnetic wall down to regular floor
+                    _currentMagneticWall = null;
+                    _targetSurfaceNormal = concaveNormal;
+                    _transitionLatchTimer = _transitionLatchDuration;
+                    SetMagneticState(false);
+                    _isGrounded = true;
+                    _currentSurfaceNormal = Vector3.Slerp(_currentSurfaceNormal, _targetSurfaceNormal, _wallAlignSpeed * Time.fixedDeltaTime);
+                    return;
+                }
+            }
+
+            // 2. Evaluate ground footprint under feet
+            bool footprintHit = EvaluateFootprint(origin, out Vector3 footNormal, out IMagneticSurface footSurface, out float footDist);
+
+            // 3. Proactive detection of convex ledge ahead (Outer corners / over the edge)
+            bool convexAhead = false;
+            Vector3 convexNormal = Vector3.up;
+            IMagneticSurface convexSurface = null;
+
+            if (!footprintHit && _isOnMagneticSurface && _detachCooldownTimer <= 0f && travelDirection.sqrMagnitude > 0.001f)
+            {
+                convexAhead = DetectConvexLedgeAhead(origin, travelDirection, out convexNormal, out convexSurface);
+            }
+
+            if (convexAhead)
+            {
+                if (convexSurface != null && convexSurface.IsActive)
+                {
+                    _currentMagneticWall = convexSurface;
+                    _targetSurfaceNormal = convexNormal;
+                    _transitionLatchTimer = _transitionLatchDuration;
+                    SetMagneticState(true);
+                    _isGrounded = true;
+                    _currentSurfaceNormal = Vector3.Slerp(_currentSurfaceNormal, _targetSurfaceNormal, _wallAlignSpeed * Time.fixedDeltaTime);
+                    return;
+                }
+                else if (convexSurface == null && convexNormal.y > 0.7f)
+                {
+                    _currentMagneticWall = null;
+                    _targetSurfaceNormal = convexNormal;
+                    _transitionLatchTimer = _transitionLatchDuration;
+                    SetMagneticState(false);
+                    _isGrounded = true;
+                    _currentSurfaceNormal = Vector3.Slerp(_currentSurfaceNormal, _targetSurfaceNormal, _wallAlignSpeed * Time.fixedDeltaTime);
+                    return;
+                }
+            }
+
+            // 4. Ground state resolution with transition latching (hysteresis)
+            if (_transitionLatchTimer > 0f)
+            {
+                _isGrounded = true;
+                if (footprintHit && footSurface != null && footSurface.IsActive)
+                {
+                    _currentMagneticWall = footSurface;
+                    _targetSurfaceNormal = footNormal;
+                }
+                _currentSurfaceNormal = Vector3.Slerp(_currentSurfaceNormal, _targetSurfaceNormal, _wallAlignSpeed * Time.fixedDeltaTime);
+                return;
             }
 
             if (_isOnMagneticSurface)
             {
-                // 1. Proactive transition check: approaching a wall, ceiling, or floor junction
-                float transitionThreshold = _surfaceProbeRadius + 0.35f;
-                if (surfaceAheadDetected && aheadDist <= transitionThreshold && Vector3.Dot(_currentSurfaceNormal, aheadNormal) < 0.85f)
+                if (footprintHit)
                 {
-                    if (aheadSurface != null && aheadSurface.IsActive)
+                    if (footSurface != null && footSurface.IsActive)
                     {
-                        _currentMagneticWall = aheadSurface;
-                        _currentSurfaceNormal = aheadNormal;
+                        _currentMagneticWall = footSurface;
+                        _targetSurfaceNormal = footNormal;
                         _isGrounded = true;
-                        return;
                     }
-
-                    if (aheadSurface == null && aheadNormal.y > 0.7f)
+                    else if (footNormal.y > 0.7f)
                     {
-                        // Transitioned from magnetic wall back to floor
+                        // Walked onto normal floor
                         SetMagneticState(false);
-                        _isGrounded = true;
-                        return;
-                    }
-                }
-
-                // 2. Direct ground verification under feet
-                int hitCount = Physics.RaycastNonAlloc(origin, -transform.up, _groundHits, _groundCheckDistance + 0.45f, _groundLayer | _magneticWallLayer, QueryTriggerInteraction.Ignore);
-                if (hitCount > 0)
-                {
-                    Collider hitCollider = _groundHits[0].collider;
-                    if (hitCollider != null && (hitCollider.TryGetComponent<IMagneticSurface>(out var magSurface) || (hitCollider.GetComponentInParent<IMagneticSurface>() is { } pMag && (magSurface = pMag) != null)))
-                    {
-                        if (magSurface.IsActive)
-                        {
-                            _currentMagneticWall = magSurface;
-                            _currentSurfaceNormal = _groundHits[0].normal;
-                            _isGrounded = true;
-                        }
-                        else
-                        {
-                            SetMagneticState(false);
-                            _isGrounded = false;
-                        }
-                    }
-                    else if (_groundHits[0].normal.y > 0.7f)
-                    {
-                        // Transitioned from magnetic wall back to floor
-                        SetMagneticState(false);
+                        _targetSurfaceNormal = Vector3.up;
                         _isGrounded = true;
                     }
                     else
                     {
+                        // Inactive wall
                         SetMagneticState(false);
                         _isGrounded = false;
                     }
                 }
                 else
                 {
-                    // Walked past wall boundary into air
+                    // Past boundary into open air
                     SetMagneticState(false);
                     _isGrounded = false;
                 }
-                return;
-            }
-
-            int groundHitCount = Physics.RaycastNonAlloc(origin, Vector3.down, _groundHits, _groundCheckDistance, _groundLayer | _magneticWallLayer, QueryTriggerInteraction.Ignore);
-            bool wasGrounded = _isGrounded;
-            _isGrounded = groundHitCount > 0;
-
-            if (_catapultAirTime > 0f && _rigidbody != null && _rigidbody.linearVelocity.y < 0f && _isGrounded)
-            {
-                _catapultAirTime = 0f;
-            }
-
-            if (!wasGrounded && _isGrounded && _rigidbody != null)
-            {
-                if (_rigidbody.linearVelocity.y <= -_hardLandingThreshold && _kickImpulseSource != null)
-                {
-                    _kickImpulseSource.GenerateImpulse(Vector3.down * 0.8f);
-                    PlayAudioCue(Game.Core.Enums.AudioCue.HardLanding, origin);
-                }
-            }
-
-            if (_detachCooldownTimer > 0f)
-            {
-                _detachCooldownTimer -= Time.fixedDeltaTime;
             }
             else
             {
-                if (surfaceAheadDetected && aheadSurface != null && aheadSurface.IsActive && aheadDist <= _surfaceProbeRadius + 0.35f)
+                bool wasGrounded = _isGrounded;
+                _isGrounded = footprintHit;
+
+                if (_isGrounded)
                 {
-                    _currentMagneticWall = aheadSurface;
-                    _currentSurfaceNormal = aheadNormal;
-                    SetMagneticState(true);
-                    _isGrounded = true;
-                    return;
+                    _targetSurfaceNormal = footNormal.sqrMagnitude > 0.01f ? footNormal : Vector3.up;
+                }
+                else
+                {
+                    _targetSurfaceNormal = Vector3.up;
                 }
 
-                ProbeImmediateMagneticContact(origin);
+                if (_catapultAirTime > 0f && _rigidbody != null && _rigidbody.linearVelocity.y < 0f && _isGrounded)
+                {
+                    _catapultAirTime = 0f;
+                }
+
+                if (!wasGrounded && _isGrounded && _rigidbody != null)
+                {
+                    if (_rigidbody.linearVelocity.y <= -_hardLandingThreshold && _kickImpulseSource != null)
+                    {
+                        _kickImpulseSource.GenerateImpulse(Vector3.down * 0.8f);
+                        PlayAudioCue(Game.Core.Enums.AudioCue.HardLanding, origin);
+                    }
+                }
+
+                if (_detachCooldownTimer <= 0f)
+                {
+                    ProbeImmediateMagneticContact(origin);
+                }
             }
+
+            _currentSurfaceNormal = Vector3.Slerp(_currentSurfaceNormal, _targetSurfaceNormal, _wallAlignSpeed * Time.fixedDeltaTime);
         }
 
-        private bool DetectSurfaceAhead(Vector3 origin, Vector3 travelDirection, out Vector3 detectedNormal, out IMagneticSurface detectedSurface, out float hitDistance)
+        private bool EvaluateFootprint(Vector3 origin, out Vector3 dominantNormal, out IMagneticSurface dominantSurface, out float minDistance)
         {
-            detectedNormal = Vector3.up;
-            detectedSurface = null;
-            hitDistance = float.MaxValue;
+            dominantNormal = Vector3.up;
+            dominantSurface = null;
+            minDistance = float.MaxValue;
+
+            Vector3 downDir = -transform.up;
+            float rayDist = _isOnMagneticSurface ? (_groundCheckDistance + 0.45f) : (_groundCheckDistance + 0.25f);
+            LayerMask mask = _groundLayer | _magneticWallLayer;
+
+            Vector3 fwdOffset = transform.forward * _footprintRadius;
+            Vector3 rightOffset = transform.right * _footprintRadius;
+            Vector3 baseOrigin = origin + transform.up * 0.15f;
+
+            // Probe 1: Center
+            bool centerHit = CheckSingleFootProbe(baseOrigin, downDir, rayDist, mask, _downCenterHits, ref dominantNormal, ref dominantSurface, ref minDistance);
+            // Probe 2: Front
+            bool frontHit = CheckSingleFootProbe(baseOrigin + fwdOffset, downDir, rayDist, mask, _downFrontHits, ref dominantNormal, ref dominantSurface, ref minDistance);
+            // Probe 3: Back
+            bool backHit = CheckSingleFootProbe(baseOrigin - fwdOffset, downDir, rayDist, mask, _downBackHits, ref dominantNormal, ref dominantSurface, ref minDistance);
+            // Probe 4: Left
+            bool leftHit = CheckSingleFootProbe(baseOrigin - rightOffset, downDir, rayDist, mask, _downLeftHits, ref dominantNormal, ref dominantSurface, ref minDistance);
+            // Probe 5: Right
+            bool rightHit = CheckSingleFootProbe(baseOrigin + rightOffset, downDir, rayDist, mask, _downRightHits, ref dominantNormal, ref dominantSurface, ref minDistance);
+
+            return centerHit || frontHit || backHit || leftHit || rightHit;
+        }
+
+        private bool CheckSingleFootProbe(Vector3 probeOrigin, Vector3 direction, float distance, LayerMask mask, RaycastHit[] hitBuffer, ref Vector3 bestNormal, ref IMagneticSurface bestSurface, ref float bestDistance)
+        {
+            int count = Physics.RaycastNonAlloc(probeOrigin, direction, hitBuffer, distance, mask, QueryTriggerInteraction.Ignore);
+            if (count == 0)
+            {
+                return false;
+            }
+
+            RaycastHit hit = hitBuffer[0];
+            Collider col = hit.collider;
+            if (col == null || col == _selfCollider || col.transform.root == transform.root)
+            {
+                return false;
+            }
+
+            if (hit.distance < bestDistance)
+            {
+                bestDistance = hit.distance;
+                bestNormal = hit.normal;
+
+                if (col.TryGetComponent<IMagneticSurface>(out var mag) || (col.GetComponentInParent<IMagneticSurface>() is { } pMag && (mag = pMag) != null))
+                {
+                    if (mag.IsActive)
+                    {
+                        bestSurface = mag;
+                        Vector3 surfaceNorm = mag.GetSurfaceNormal(hit.point);
+                        if (surfaceNorm.sqrMagnitude > 0.01f)
+                        {
+                            bestNormal = surfaceNorm;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private bool DetectConcaveSurfaceAhead(Vector3 origin, Vector3 travelDirection, out Vector3 aheadNormal, out IMagneticSurface aheadSurface, out float aheadDist)
+        {
+            aheadNormal = Vector3.up;
+            aheadSurface = null;
+            aheadDist = float.MaxValue;
 
             if (travelDirection.sqrMagnitude < 0.001f)
             {
                 return false;
             }
 
-            int hitCount = Physics.SphereCastNonAlloc(
-                origin,
-                _surfaceProbeRadius,
-                travelDirection,
-                _wallHits,
-                _wallProbeDistance,
-                _groundLayer | _magneticWallLayer,
-                QueryTriggerInteraction.Ignore
-            );
+            LayerMask mask = _groundLayer | _magneticWallLayer;
+            Vector3 lowOrigin = origin + transform.up * 0.15f;
+            Vector3 midOrigin = origin + transform.up * _probeHeightOffset;
 
-            if (hitCount == 0)
+            // Low whisker (foot level)
+            bool hitLow = CheckSingleWhisker(lowOrigin, travelDirection, _wallProbeDistance, mask, _whiskerLowHits, ref aheadNormal, ref aheadSurface, ref aheadDist);
+            // Mid whisker (waist level)
+            bool hitMid = CheckSingleWhisker(midOrigin, travelDirection, _wallProbeDistance, mask, _whiskerMidHits, ref aheadNormal, ref aheadSurface, ref aheadDist);
+
+            return hitLow || hitMid;
+        }
+
+        private bool CheckSingleWhisker(Vector3 probeOrigin, Vector3 direction, float distance, LayerMask mask, RaycastHit[] hitBuffer, ref Vector3 bestNormal, ref IMagneticSurface bestSurface, ref float bestDist)
+        {
+            int count = Physics.RaycastNonAlloc(probeOrigin, direction, hitBuffer, distance, mask, QueryTriggerInteraction.Ignore);
+            if (count == 0)
             {
-                hitCount = Physics.RaycastNonAlloc(
-                    origin,
-                    travelDirection,
-                    _wallHits,
-                    _wallProbeDistance,
-                    _groundLayer | _magneticWallLayer,
-                    QueryTriggerInteraction.Ignore
-                );
+                return false;
             }
 
-            float closestDist = float.MaxValue;
-            int closestIdx = -1;
-
-            for (int i = 0; i < hitCount; i++)
+            RaycastHit hit = hitBuffer[0];
+            Collider col = hit.collider;
+            if (col == null || col == _selfCollider || col.transform.root == transform.root)
             {
-                Collider col = _wallHits[i].collider;
-                if (col == null || col == _selfCollider || col.transform.root == transform.root)
-                {
-                    continue;
-                }
-
-                if (_wallHits[i].distance < closestDist)
-                {
-                    closestDist = _wallHits[i].distance;
-                    closestIdx = i;
-                }
+                return false;
             }
 
-            if (closestIdx >= 0)
+            // Only consider surfaces with significant angle relative to current surface (concave junction)
+            if (Vector3.Dot(_currentSurfaceNormal, hit.normal) > 0.85f)
             {
-                RaycastHit bestHit = _wallHits[closestIdx];
-                Collider hitCol = bestHit.collider;
-                hitDistance = bestHit.distance;
+                return false;
+            }
 
-                if (hitCol.TryGetComponent<IMagneticSurface>(out var mag) ||
-                    (hitCol.GetComponentInParent<IMagneticSurface>() is { } pMag && (mag = pMag) != null))
+            if (hit.distance < bestDist)
+            {
+                bestDist = hit.distance;
+                bestNormal = hit.normal;
+
+                if (col.TryGetComponent<IMagneticSurface>(out var mag) || (col.GetComponentInParent<IMagneticSurface>() is { } pMag && (mag = pMag) != null))
                 {
                     if (mag.IsActive)
                     {
-                        detectedSurface = mag;
-                        Vector3 queryPoint = bestHit.point != Vector3.zero ? bestHit.point : origin;
-                        Vector3 surfaceNorm = mag.GetSurfaceNormal(queryPoint);
-                        detectedNormal = surfaceNorm.sqrMagnitude > 0.01f ? surfaceNorm : bestHit.normal;
+                        bestSurface = mag;
+                        Vector3 surfaceNorm = mag.GetSurfaceNormal(hit.point);
+                        if (surfaceNorm.sqrMagnitude > 0.01f)
+                        {
+                            bestNormal = surfaceNorm;
+                        }
                         return true;
                     }
                 }
-                else if (bestHit.normal.y > 0.7f)
+                else if (hit.normal.y > 0.7f)
                 {
-                    detectedNormal = bestHit.normal;
                     return true;
                 }
+            }
+
+            return bestSurface != null || bestNormal.y > 0.7f;
+        }
+
+        private bool DetectConvexLedgeAhead(Vector3 origin, Vector3 travelDirection, out Vector3 wrapNormal, out IMagneticSurface wrapSurface)
+        {
+            wrapNormal = Vector3.up;
+            wrapSurface = null;
+
+            if (travelDirection.sqrMagnitude < 0.001f)
+            {
+                return false;
+            }
+
+            // Cast from ahead of the character back/inward around the 90° corner
+            Vector3 castOrigin = origin + travelDirection * (_footprintRadius + 0.2f) + transform.up * 0.1f;
+            Vector3 wrapDir = (-transform.up - travelDirection * 0.65f).normalized;
+            float wrapDistance = _groundCheckDistance + 0.65f;
+            LayerMask mask = _groundLayer | _magneticWallLayer;
+
+            int count = Physics.RaycastNonAlloc(castOrigin, wrapDir, _ledgeWrapHits, wrapDistance, mask, QueryTriggerInteraction.Ignore);
+            if (count == 0)
+            {
+                return false;
+            }
+
+            RaycastHit hit = _ledgeWrapHits[0];
+            Collider col = hit.collider;
+            if (col == null || col == _selfCollider || col.transform.root == transform.root)
+            {
+                return false;
+            }
+
+            // Must turn significantly away from current surface normal
+            if (Vector3.Dot(_currentSurfaceNormal, hit.normal) > 0.85f)
+            {
+                return false;
+            }
+
+            if (col.TryGetComponent<IMagneticSurface>(out var mag) || (col.GetComponentInParent<IMagneticSurface>() is { } pMag && (mag = pMag) != null))
+            {
+                if (mag.IsActive)
+                {
+                    wrapSurface = mag;
+                    Vector3 surfaceNorm = mag.GetSurfaceNormal(hit.point);
+                    wrapNormal = surfaceNorm.sqrMagnitude > 0.01f ? surfaceNorm : hit.normal;
+                    return true;
+                }
+            }
+            else if (hit.normal.y > 0.7f)
+            {
+                wrapNormal = hit.normal;
+                return true;
             }
 
             return false;
@@ -684,7 +880,9 @@ namespace Game.Gameplay.Player.Legs
                 if ((col.TryGetComponent<IMagneticSurface>(out var magSurface) || (col.GetComponentInParent<IMagneticSurface>() is { } pMag && (magSurface = pMag) != null)) && magSurface.IsActive)
                 {
                     _currentMagneticWall = magSurface;
-                    _currentSurfaceNormal = magSurface.GetSurfaceNormal(origin);
+                    _targetSurfaceNormal = magSurface.GetSurfaceNormal(origin);
+                    _currentSurfaceNormal = _targetSurfaceNormal;
+                    _transitionLatchTimer = _transitionLatchDuration;
                     SetMagneticState(true);
                     _isGrounded = true;
                     break;
@@ -718,6 +916,7 @@ namespace Game.Gameplay.Player.Legs
             else
             {
                 _currentMagneticWall = null;
+                _targetSurfaceNormal = Vector3.up;
                 _currentSurfaceNormal = Vector3.up;
                 PlayAudioCue(Game.Core.Enums.AudioCue.Release, transform.position);
             }
@@ -765,7 +964,13 @@ namespace Game.Gameplay.Player.Legs
                 Vector3 targetTangentVel = desiredMoveDir * targetSpeed;
 
                 Vector3 newTangentVel = Vector3.MoveTowards(tangentVel, targetTangentVel, _acceleration * Time.fixedDeltaTime);
-                _rigidbody.linearVelocity = newTangentVel + normalVel;
+
+                // Damp and clamp normal velocity to avoid excessive penetration or bouncing against PhysX
+                float normalSpeed = Vector3.Dot(currentVel, N);
+                float clampedNormalSpeed = Mathf.Clamp(normalSpeed, -0.3f, 0.1f);
+                Vector3 clampedNormalVel = N * clampedNormalSpeed;
+
+                _rigidbody.linearVelocity = newTangentVel + clampedNormalVel;
 
                 float adhesion = _currentMagneticWall != null ? _currentMagneticWall.AdhesionForce : _defaultAdhesionForce;
                 _rigidbody.AddForce(-N * adhesion, ForceMode.Acceleration);
@@ -1243,21 +1448,46 @@ namespace Game.Gameplay.Player.Legs
 
         private void OnDrawGizmosSelected()
         {
-            Gizmos.color = Color.green;
             Vector3 groundOrigin = _groundCheckPoint != null ? _groundCheckPoint.position : transform.position;
-            Gizmos.DrawLine(groundOrigin, groundOrigin + Vector3.down * _groundCheckDistance);
 
+            // 1. Kick Gizmo
             Gizmos.color = Color.red;
             Vector3 kickOrigin = _kickPoint != null ? _kickPoint.position : transform.position + transform.forward * 0.8f;
             Gizmos.DrawWireSphere(kickOrigin, _kickRadius);
 
-            // Surface detection probe gizmo
-            Gizmos.color = Color.cyan;
-            Vector3 probeOrigin = groundOrigin + transform.up * _probeHeightOffset;
+            // 2. Footprint Probes Gizmos
+            float downDist = _isOnMagneticSurface ? (_groundCheckDistance + 0.45f) : (_groundCheckDistance + 0.25f);
+            Vector3 downDir = -transform.up;
+            Vector3 baseOrigin = groundOrigin + transform.up * 0.15f;
+            Vector3 fwdOffset = transform.forward * _footprintRadius;
+            Vector3 rightOffset = transform.right * _footprintRadius;
+
+            Gizmos.color = _isGrounded ? Color.green : Color.red;
+            Gizmos.DrawLine(baseOrigin, baseOrigin + downDir * downDist);
+            Gizmos.DrawLine(baseOrigin + fwdOffset, baseOrigin + fwdOffset + downDir * downDist);
+            Gizmos.DrawLine(baseOrigin - fwdOffset, baseOrigin - fwdOffset + downDir * downDist);
+            Gizmos.DrawLine(baseOrigin - rightOffset, baseOrigin - rightOffset + downDir * downDist);
+            Gizmos.DrawLine(baseOrigin + rightOffset, baseOrigin + rightOffset + downDir * downDist);
+
+            // 3. Whiskers Concave Probes
+            Gizmos.color = Color.yellow;
             Vector3 probeDir = transform.forward;
-            Gizmos.DrawWireSphere(probeOrigin, _surfaceProbeRadius);
-            Gizmos.DrawLine(probeOrigin, probeOrigin + probeDir * _wallProbeDistance);
-            Gizmos.DrawWireSphere(probeOrigin + probeDir * _wallProbeDistance, _surfaceProbeRadius);
+            Vector3 lowOrigin = groundOrigin + transform.up * 0.15f;
+            Vector3 midOrigin = groundOrigin + transform.up * _probeHeightOffset;
+            Gizmos.DrawLine(lowOrigin, lowOrigin + probeDir * _wallProbeDistance);
+            Gizmos.DrawLine(midOrigin, midOrigin + probeDir * _wallProbeDistance);
+
+            // 4. Ledge Wrap Convex Probe
+            Gizmos.color = Color.magenta;
+            Vector3 wrapOrigin = groundOrigin + probeDir * (_footprintRadius + 0.2f) + transform.up * 0.1f;
+            Vector3 wrapDir = (-transform.up - probeDir * 0.65f).normalized;
+            Gizmos.DrawLine(wrapOrigin, wrapOrigin + wrapDir * (_groundCheckDistance + 0.65f));
+
+            // 5. Surface Normal Vectors
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(groundOrigin, _currentSurfaceNormal * 1.5f);
+            Gizmos.color = Color.blue;
+            Gizmos.DrawRay(groundOrigin, _targetSurfaceNormal * 1.5f);
         }
     }
 }

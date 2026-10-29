@@ -464,12 +464,20 @@ namespace Game.Editor
 
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 70f;
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezeRotation;
 
             var col = root.AddComponent<CapsuleCollider>();
             col.center = new Vector3(0f, 0.9f, 0f);
             col.height = 1.8f;
             col.radius = 0.45f;
+            col.material = new PhysicsMaterial("FrictionlessLegs")
+            {
+                dynamicFriction = 0f,
+                staticFriction = 0f,
+                bounciness = 0f,
+                frictionCombine = PhysicsMaterialCombine.Minimum,
+                bounceCombine = PhysicsMaterialCombine.Minimum
+            };
 
             AddServerAuthoritativeTransform(root);
 
@@ -558,7 +566,7 @@ namespace Game.Editor
 
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 40f;
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezeRotation;
 
             var col = root.AddComponent<BoxCollider>();
             col.center = new Vector3(0f, 0.5f, 0f);

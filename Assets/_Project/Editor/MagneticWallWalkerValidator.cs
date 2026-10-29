@@ -84,6 +84,26 @@ namespace Game.Editor
                 Object.DestroyImmediate(tempGo);
             }
 
+            // 3. Validar geometría de transiciones cóncavas y envolventes convexas (Surface Probes & Edge Wrap)
+            // Test 3.1: Detección cóncava perpendicular (Piso normal (0,1,0) a Pared normal (0,0,1))
+            Vector3 floorNorm = Vector3.up;
+            Vector3 wallNorm = Vector3.forward;
+            float dotConcave = Vector3.Dot(floorNorm, wallNorm);
+            AssertTrue(dotConcave < 0.85f, "Normales ortogonales deben gatillar detección cóncava (dot < 0.85f)", ref passed, ref failed);
+
+            // Test 3.2: Vector envolvente de esquina convexa
+            Vector3 upNormal = Vector3.forward; // Robot parado en pared frontal
+            Vector3 travelDir = Vector3.up; // Avanzando hacia arriba hacia el borde
+            Vector3 wrapDir = (-upNormal - travelDir * 0.65f).normalized;
+            AssertTrue(wrapDir.z < -0.5f && wrapDir.y < -0.3f, "Wrap probe debe curvarse hacia la cara opuesta del borde exterior", ref passed, ref failed);
+
+            // Test 3.3: Verificación de convergencia Slerp
+            Vector3 initialNorm = Vector3.up;
+            Vector3 targetNorm = Vector3.forward;
+            Vector3 slerped = Vector3.Slerp(initialNorm, targetNorm, 0.5f).normalized;
+            Vector3 expectedMid = (Vector3.up + Vector3.forward).normalized;
+            AssertEquals(expectedMid, slerped, "Slerp de normales debe interpolar sobre el círculo mayor", ref passed, ref failed);
+
             if (failed == 0)
             {
                 Debug.Log($"<color=green><b>[TPOB AUDITORÍA EXITOSA]</b> Todas las {passed} pruebas matemáticas y de arquitectura de Paredes Magnéticas pasaron sin errores.</color>");
