@@ -59,6 +59,7 @@ namespace Game.Gameplay.Interactables
 
         private readonly Collider[] _hitBuffer = new Collider[32];
         private readonly Rigidbody[] _countedBodies = new Rigidbody[16];
+        private readonly System.Collections.Generic.HashSet<Collider> _ownColliders = new();
 
         public bool IsActivated => _isActivated;
         public float CurrentDetectedMass => _currentDetectedMass;
@@ -78,6 +79,12 @@ namespace Game.Gameplay.Interactables
             if (_indicatorRenderer == null)
             {
                 _indicatorRenderer = _platformPlate.GetComponent<Renderer>();
+            }
+
+            var colliders = GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                _ownColliders.Add(colliders[i]);
             }
 
             UpdateVisualColor(false);
@@ -103,7 +110,7 @@ namespace Game.Gameplay.Interactables
             for (int i = 0; i < hitCount; i++)
             {
                 Collider col = _hitBuffer[i];
-                if (col == null || col.transform == transform || col.transform.IsChildOf(transform))
+                if (col == null || col.transform == transform || _ownColliders.Contains(col))
                 {
                     continue;
                 }

@@ -2,6 +2,7 @@ using System;
 using Cysharp.Threading.Tasks;
 using Game.Core.Enums;
 using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using PurrNet;
 using TriInspector;
 using UnityEngine;
@@ -122,25 +123,21 @@ namespace Game.Network.Services
         {
             if (_playerRegistry != null && _levelManager != null && _networkService != null && _lobbyService != null) return;
 
-            var scopes = UnityEngine.Object.FindObjectsByType<VContainer.Unity.LifetimeScope>(FindObjectsSortMode.None);
-            for (int i = 0; i < scopes.Length; i++)
+            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
+            if (container != null)
             {
-                if (scopes[i] != null && scopes[i].Container != null)
+                try
                 {
-                    try
+                    if (_playerRegistry == null) _playerRegistry = container.Resolve<IPlayerRegistry>();
+                    if (_levelManager == null) _levelManager = container.Resolve<ILevelManager>();
+                    if (_networkService == null) _networkService = container.Resolve<INetworkService>();
+                    if (_lobbyService == null)
                     {
-                        if (_playerRegistry == null) _playerRegistry = scopes[i].Container.Resolve<IPlayerRegistry>();
-                        if (_levelManager == null) _levelManager = scopes[i].Container.Resolve<ILevelManager>();
-                        if (_networkService == null) _networkService = scopes[i].Container.Resolve<INetworkService>();
-                        if (_lobbyService == null)
-                        {
-                            var svc = scopes[i].Container.Resolve<ILobbyService>();
-                            if (svc is LobbyService concreteLobby) _lobbyService = concreteLobby;
-                        }
-                        if (_playerRegistry != null && _levelManager != null && _networkService != null && _lobbyService != null) break;
+                        var svc = container.Resolve<ILobbyService>();
+                        if (svc is LobbyService concreteLobby) _lobbyService = concreteLobby;
                     }
-                    catch { }
                 }
+                catch { }
             }
         }
 

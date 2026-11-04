@@ -31,14 +31,7 @@ namespace Game.Network.Scopes
                     }
                 }
 
-                if (transform.parent != null && transform.parent.name == "--- NETWORKING ---")
-                {
-                    Destroy(transform.parent.gameObject);
-                }
-                else
-                {
-                    Destroy(gameObject);
-                }
+                Destroy(gameObject);
                 return;
             }
 
@@ -84,6 +77,9 @@ namespace Game.Network.Scopes
                 audioService = gameObject.AddComponent<AudioService>();
             }
             builder.RegisterComponent(audioService).As<IAudioService>();
+
+            // Music Director (Reactive Coordinator)
+            builder.RegisterEntryPoint<Game.Network.Audio.MusicDirector>();
 
             // Settings Service
             builder.Register<Game.Core.Settings.SettingsService>(Lifetime.Singleton).As<ISettingsService>();

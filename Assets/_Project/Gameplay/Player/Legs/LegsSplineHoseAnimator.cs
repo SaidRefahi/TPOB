@@ -327,33 +327,33 @@ namespace Game.Gameplay.Player.Legs
         [SerializeField] private float _ankleArchHeight = 0.20f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
-        [SerializeField] private float _stepDistanceThreshold = 0.35f;
+        [SerializeField] private float _stepDistanceThreshold = 0.25f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
         [Tooltip("Duración base del paso al caminar lento o detenerse")]
-        [SerializeField] private float _stepDuration = 0.20f;
+        [SerializeField] private float _stepDuration = 0.11f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
         [Tooltip("Duración mínima del paso a máxima velocidad")]
-        [SerializeField] private float _minStepDuration = 0.11f;
+        [SerializeField] private float _minStepDuration = 0.06f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
         [Tooltip("Pausa obligatoria con las 4 patas firmemente apoyadas en el suelo al caminar lento")]
         [Range(0f, 0.25f)]
-        [SerializeField] private float _interStepPause = 0.08f;
+        [SerializeField] private float _interStepPause = 0.02f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
         [Tooltip("Pausa mínima de apoyo firme a máxima velocidad")]
         [Range(0f, 0.10f)]
-        [SerializeField] private float _minInterStepPause = 0.02f;
+        [SerializeField] private float _minInterStepPause = 0.005f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
         [Tooltip("Distancia máxima de zancada proyectada hacia adelante")]
-        [SerializeField] private float _maxForwardStride = 0.55f;
+        [SerializeField] private float _maxForwardStride = 0.85f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
         [Tooltip("Distancia máxima atrás en apoyo antes de acompañar suavemente al chasis")]
-        [SerializeField] private float _maxRearStanceDistance = 0.45f;
+        [SerializeField] private float _maxRearStanceDistance = 0.75f;
 
         [Group("Marcha Torpe y Caída de Golpe")]
         [Tooltip("Altura máxima del paso en Y (zancada vertical pronunciada)")]
@@ -483,8 +483,8 @@ namespace Game.Gameplay.Player.Legs
 
         [Group("Simulación y Pruebas en Editor (Odin/TriInspector)")]
         [Tooltip("Velocidad horizontal simulada (m/s) para la marcha")]
-        [Range(0.5f, 8.5f)]
-        [SerializeField] private float _simulatedSpeed = 4.5f;
+        [Range(0.5f, 18f)]
+        [SerializeField] private float _simulatedSpeed = 9.0f;
 
         [Group("Simulación y Pruebas en Editor (Odin/TriInspector)")]
         [Tooltip("Escala de velocidad de la animación para análisis milisegundo a milisegundo (0.0 = pausa, 0.05 = cámara 20x lenta, 1.0 = normal)")]
@@ -636,6 +636,7 @@ namespace Game.Gameplay.Player.Legs
             _interStepTimer = 0f;
             _currentSquash = 0f;
             _currentWobbleRotation = Quaternion.identity;
+            _isRestPoseSettled = true;
 
 #if UNITY_EDITOR
             StopEditorSimulation();
@@ -766,6 +767,7 @@ namespace Game.Gameplay.Player.Legs
         private int _nextGaitIndex;
         private float _interStepTimer;
         private bool _wasGrounded = true;
+        private bool _isRestPoseSettled;
 
         // Proximity Avoidance runtime states
         private float _currentAvoidanceHoseBulge;
@@ -1121,8 +1123,12 @@ namespace Game.Gameplay.Player.Legs
             bool isMoving = speed > 0.2f;
             bool isStationary = !Application.isPlaying || (_rigidbody == null || _rigidbody.linearVelocity.sqrMagnitude < 0.05f);
 
+            bool hasInput = _controller != null && _controller.MoveInput.sqrMagnitude > 0.01f;
+            bool isFootAnchored = _controller != null && _controller.LocomotionMode == LocomotionParadigm.FootAnchoredCentering;
+
+            float inputMag = _controller != null ? _controller.MoveInput.magnitude : 0f;
             float maxSpeed = _controller != null ? _controller.WalkSpeed : 5.0f;
-            float speedRatio = Mathf.Clamp01(speed / Mathf.Max(maxSpeed, 0.1f));
+            float speedRatio = Mathf.Clamp01(Mathf.Max(speed, inputMag * maxSpeed) / Mathf.Max(maxSpeed, 0.1f));
 
             float currentStepDuration = Mathf.Lerp(_stepDuration, _minStepDuration, speedRatio);
             float currentInterStepPause = Mathf.Lerp(_interStepPause, _minInterStepPause, speedRatio);
@@ -1205,7 +1211,7 @@ namespace Game.Gameplay.Player.Legs
 
                 // Treadmill conveyor: if robot is stationary in world space (e.g. editor preview or standing still),
                 // drift planted feet backward relative to body so walking in place cycles infinitely
-                if (isStationary && isMoving)
+                if (!isFootAnchored && isStationary && isMoving)
                 {
                     leg.PlantedFootPos -= horizontalVelocity * dt;
                 }
@@ -1237,7 +1243,52 @@ namespace Game.Gameplay.Player.Legs
 
                 Vector3 angularVel = _rigidbody != null ? _rigidbody.angularVelocity : Vector3.zero;
                 bool isTurning = Mathf.Abs(angularVel.y) > 0.15f;
-                bool hasLocomotionIntent = isMoving || isTurning;
+                bool hasLocomotionIntent = isFootAnchored ? (hasInput || isTurning) : (isMoving || isTurning || hasInput);
+
+                if (hasLocomotionIntent)
+                {
+                    _isRestPoseSettled = false;
+                }
+                else if (isFootAnchored)
+                {
+                    if (_isRestPoseSettled)
+                    {
+                        // Completely settled in aligned rest posture. 0 steps, 0 tapping.
+                        return;
+                    }
+
+                    // Settle to aligned rest pose: check if any leg is misaligned from its rest anchor ground position
+                    bool anyLegMisaligned = false;
+                    for (int s = 0; s < _legs.Length; s++)
+                    {
+                        int checkIndex = (_nextGaitIndex + s) % _legs.Length;
+                        SplineLeg checkLeg = _legs[checkIndex];
+                        if (checkLeg == null || checkLeg.RestAnchor == null) continue;
+
+                        Vector3 restTarget = EvaluateIdealGroundPosition(checkLeg, Vector3.zero);
+                        float distSqr = (checkLeg.PlantedFootPos - restTarget).sqrMagnitude;
+
+                        // Threshold: 0.10m (10cm) deviation triggers an alignment step directly to rest posture
+                        if (distSqr > 0.01f)
+                        {
+                            checkLeg.State = LegActionState.Stepping;
+                            checkLeg.StepTimer = 0f;
+                            checkLeg.StepStartFootPos = checkLeg.CurrentFootPos;
+                            checkLeg.StepTargetFootPos = restTarget;
+                            _activeSteppingIndex = checkIndex;
+                            _nextGaitIndex = (checkIndex + 1) % _legs.Length;
+                            anyLegMisaligned = true;
+                            return;
+                        }
+                    }
+
+                    if (!anyLegMisaligned)
+                    {
+                        // All 4 legs are cleanly aligned in symmetrical rest posture!
+                        _isRestPoseSettled = true;
+                        return;
+                    }
+                }
 
                 SplineLeg candidateLeg = _legs[_nextGaitIndex];
                 if (candidateLeg != null && candidateLeg.RestAnchor != null)
@@ -1245,7 +1296,7 @@ namespace Game.Gameplay.Player.Legs
                     Vector3 idealTarget = EvaluateIdealGroundPosition(candidateLeg, horizontalVelocity, currentStepDuration, currentInterStepPause);
                     float distanceToIdealSqr = (candidateLeg.PlantedFootPos - idealTarget).sqrMagnitude;
 
-                    if (distanceToIdealSqr > _stepDistanceThreshold * _stepDistanceThreshold || (hasLocomotionIntent && distanceToIdealSqr > 0.03f))
+                    if (distanceToIdealSqr > _stepDistanceThreshold * _stepDistanceThreshold || (hasLocomotionIntent && distanceToIdealSqr > 0.04f))
                     {
                         candidateLeg.State = LegActionState.Stepping;
                         candidateLeg.StepTimer = 0f;
@@ -1683,6 +1734,17 @@ namespace Game.Gameplay.Player.Legs
             Vector3 tangentialOnPlane = Vector3.ProjectOnPlane(tangentialVel, transform.up);
             Vector3 totalVelocity = horizontalVelocity + tangentialOnPlane;
 
+            if (_controller != null && _controller.MoveInput.sqrMagnitude > 0.01f)
+            {
+                Vector3 inputTravelDir = _controller.CalculateTravelDirection();
+                float desiredSpeed = _controller.IsSprinting ? _controller.SprintSpeed : _controller.WalkSpeed;
+                Vector3 inputVelocity = inputTravelDir * desiredSpeed;
+                if (totalVelocity.sqrMagnitude < (inputVelocity.sqrMagnitude * 0.5f))
+                {
+                    totalVelocity = Vector3.Lerp(totalVelocity, inputVelocity, 0.85f);
+                }
+            }
+
             Vector3 strideLead = totalVelocity * leadTime;
             float leadMag = strideLead.magnitude;
             if (leadMag > _maxForwardStride && leadMag > 0.0001f)
@@ -1733,6 +1795,72 @@ namespace Game.Gameplay.Player.Legs
                 leg.State = LegActionState.Planted;
             }
         }
+
+        public bool ComputeSupportCentroid(out Vector3 centroid, out Vector3 avgNormal, out float supportRadius)
+        {
+            centroid = transform.position;
+            avgNormal = transform.up;
+            supportRadius = 0.5f;
+
+            if (_legs == null || _legs.Length == 0)
+            {
+                return false;
+            }
+
+            Vector3 sumPos = Vector3.zero;
+            Vector3 sumNormal = Vector3.zero;
+            float totalWeight = 0f;
+
+            for (int i = 0; i < _legs.Length; i++)
+            {
+                SplineLeg leg = _legs[i];
+                if (leg == null) continue;
+
+                Vector3 footPos;
+                float weight;
+
+                if (leg.State == LegActionState.Planted)
+                {
+                    footPos = leg.PlantedFootPos;
+                    weight = 1f;
+                }
+                else if (leg.State == LegActionState.Stepping)
+                {
+                    footPos = Vector3.Lerp(leg.StepStartFootPos, leg.StepTargetFootPos, 0.5f);
+                    weight = 0.75f;
+                }
+                else
+                {
+                    footPos = leg.CurrentFootPos;
+                    weight = 0.25f;
+                }
+
+                sumPos += footPos * weight;
+                sumNormal += (leg.GroundNormal.sqrMagnitude > 0.01f ? leg.GroundNormal : transform.up) * weight;
+                totalWeight += weight;
+            }
+
+            if (totalWeight <= 0.0001f)
+            {
+                return false;
+            }
+
+            centroid = sumPos / totalWeight;
+            avgNormal = sumNormal.sqrMagnitude > 0.001f ? sumNormal.normalized : transform.up;
+
+            float maxDistSqr = 0f;
+            for (int i = 0; i < _legs.Length; i++)
+            {
+                if (_legs[i] == null) continue;
+                float dSqr = Vector3.ProjectOnPlane(_legs[i].CurrentFootPos - centroid, avgNormal).sqrMagnitude;
+                if (dSqr > maxDistSqr) maxDistSqr = dSqr;
+            }
+            supportRadius = Mathf.Sqrt(maxDistSqr);
+
+            return true;
+        }
+
+        public SplineLeg[] GetLegs() => _legs;
 
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()

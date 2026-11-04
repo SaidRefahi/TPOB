@@ -7,6 +7,7 @@ using Game.Gameplay.Interactables;
 using Game.Gameplay.Player.Legs;
 using Game.Gameplay.Player.Robot;
 using Game.Gameplay.Player.Torso;
+using Game.Network.Scopes;
 using PurrNet;
 using TriInspector;
 using UnityEngine;
@@ -82,13 +83,11 @@ namespace Game.Gameplay.Rooms
             if (_roomController == null)
             {
                 _roomController = GetComponentInParent<RoomController>();
-                if (_roomController == null) _roomController = FindFirstObjectByType<RoomController>();
             }
 
             if (_exitDoor == null)
             {
                 _exitDoor = GetComponentInParent<SlidingDoor>();
-                if (_exitDoor == null) _exitDoor = FindFirstObjectByType<SlidingDoor>();
             }
 
             UpdateVisualState(_lockedColor);
@@ -104,6 +103,16 @@ namespace Game.Gameplay.Rooms
 
         private void Start()
         {
+            if (_roomController == null)
+            {
+                _roomController = FindFirstObjectByType<RoomController>();
+            }
+
+            if (_exitDoor == null)
+            {
+                _exitDoor = FindFirstObjectByType<SlidingDoor>();
+            }
+
             if (_levelManager == null)
             {
                 _levelManager = FindFirstObjectByType<Game.Network.Services.LevelManager>();
@@ -128,18 +137,15 @@ namespace Game.Gameplay.Rooms
         private void ResolvePlayerRegistry()
         {
             if (_playerRegistry != null) return;
-            var scopes = UnityEngine.Object.FindObjectsByType<VContainer.Unity.LifetimeScope>(FindObjectsSortMode.None);
-            for (int i = 0; i < scopes.Length; i++)
+
+            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
+            if (container != null)
             {
-                if (scopes[i] != null && scopes[i].Container != null)
+                try
                 {
-                    try
-                    {
-                        _playerRegistry = scopes[i].Container.Resolve<IPlayerRegistry>();
-                        if (_playerRegistry != null) break;
-                    }
-                    catch { }
+                    _playerRegistry = container.Resolve<IPlayerRegistry>();
                 }
+                catch { }
             }
         }
 

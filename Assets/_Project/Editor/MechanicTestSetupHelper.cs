@@ -83,6 +83,7 @@ namespace Game.Editor
 
             // CatapultMechanism & Impulse
             var catapult = root.AddComponent<CatapultMechanism>();
+            root.AddComponent<CatapultTrajectoryVisualizer>();
             var impulse = root.AddComponent<CinemachineImpulseSource>();
 
             var so = new SerializedObject(catapult);

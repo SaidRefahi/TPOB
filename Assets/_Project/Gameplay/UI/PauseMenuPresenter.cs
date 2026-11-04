@@ -3,6 +3,7 @@ using Game.Core.Enums;
 using Game.Core.Interfaces;
 using Game.Gameplay.Player.Legs;
 using Game.Gameplay.Player.Torso;
+using Game.Network.Scopes;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -52,38 +53,17 @@ namespace Game.Gameplay.UI
 
         private void ResolveDependencies()
         {
-            if (_networkService != null && _gameManager != null)
-            {
-                return;
-            }
+            if (_networkService != null && _gameManager != null) return;
 
-            var scopes = UnityEngine.Object.FindObjectsByType<LifetimeScope>(FindObjectsSortMode.None);
-            for (int i = 0; i < scopes.Length; i++)
+            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
+            if (container != null)
             {
-                if (scopes[i] != null && scopes[i].Container != null)
+                try
                 {
-                    try
-                    {
-                        if (_networkService == null)
-                        {
-                            _networkService = scopes[i].Container.Resolve<INetworkService>();
-                        }
-
-                        if (_gameManager == null)
-                        {
-                            _gameManager = scopes[i].Container.Resolve<IGameManager>();
-                        }
-
-                        if (_networkService != null && _gameManager != null)
-                        {
-                            break;
-                        }
-                    }
-                    catch
-                    {
-                        // Scope does not contain the requested services
-                    }
+                    if (_networkService == null) _networkService = container.Resolve<INetworkService>();
+                    if (_gameManager == null) _gameManager = container.Resolve<IGameManager>();
                 }
+                catch { }
             }
         }
 

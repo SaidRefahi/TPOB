@@ -172,6 +172,26 @@ namespace Game.Editor
                 }
             }
 
+            // 4b. Find or create AudioService
+            var audioService = gameScopeGo.GetComponent<Game.Core.Audio.AudioService>();
+            if (audioService == null)
+            {
+                audioService = gameScopeGo.AddComponent<Game.Core.Audio.AudioService>();
+            }
+
+            var audioSo = new SerializedObject(audioService);
+            var menuClipProp = audioSo.FindProperty("_menuMusicClip");
+            if (menuClipProp != null && menuClipProp.objectReferenceValue == null)
+            {
+                menuClipProp.objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Assets importado/Clunky Electro-Funk Industrial (Take 2).mp3");
+            }
+            var levelClipProp = audioSo.FindProperty("_levelMusicClip");
+            if (levelClipProp != null && levelClipProp.objectReferenceValue == null)
+            {
+                levelClipProp.objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Assets importado/Clunky Electro-Funk Industrial.mp3");
+            }
+            audioSo.ApplyModifiedPropertiesWithoutUndo();
+
             // 5. Find or create LevelManager
             LevelManager levelManager = Object.FindFirstObjectByType<LevelManager>();
             if (levelManager == null)
@@ -245,6 +265,10 @@ namespace Game.Editor
             if (roomScope != null)
             {
                 var roomScopeSo = new SerializedObject(roomScope);
+                var roomCtrl = Object.FindFirstObjectByType<RoomController>();
+                if (roomCtrl != null) roomScopeSo.FindProperty("_roomController").objectReferenceValue = roomCtrl;
+                var spawnMgr = Object.FindFirstObjectByType<SpawnPointManager>();
+                if (spawnMgr != null) roomScopeSo.FindProperty("_spawnPointManager").objectReferenceValue = spawnMgr;
                 roomScopeSo.FindProperty("_networkEventRelay").objectReferenceValue = relay;
                 roomScopeSo.FindProperty("_networkAudioRelay").objectReferenceValue = audioRelay;
                 roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
@@ -754,45 +778,10 @@ namespace Game.Editor
 
         private static GameObject CreateSlidingDoorPrefab(Material frameMat, Material leafMat)
         {
+            ModularWallBuilder.EnsureBasePrefabsHaveColliders();
             string path = $"{PrefabsDir}/SlidingDoor.prefab";
             GameObject root = new GameObject("SlidingDoor");
-
-            var leftPost = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            leftPost.name = "LeftPost";
-            leftPost.transform.SetParent(root.transform);
-            leftPost.transform.localPosition = new Vector3(-1.8f, 1.75f, 0f);
-            leftPost.transform.localScale = new Vector3(0.4f, 3.5f, 0.6f);
-            leftPost.GetComponent<Renderer>().sharedMaterial = frameMat;
-
-            var rightPost = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rightPost.name = "RightPost";
-            rightPost.transform.SetParent(root.transform);
-            rightPost.transform.localPosition = new Vector3(1.8f, 1.75f, 0f);
-            rightPost.transform.localScale = new Vector3(0.4f, 3.5f, 0.6f);
-            rightPost.GetComponent<Renderer>().sharedMaterial = frameMat;
-
-            var lintel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            lintel.name = "Lintel";
-            lintel.transform.SetParent(root.transform);
-            lintel.transform.localPosition = new Vector3(0f, 3.65f, 0f);
-            lintel.transform.localScale = new Vector3(4f, 0.4f, 0.6f);
-            lintel.GetComponent<Renderer>().sharedMaterial = frameMat;
-
-            var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            leaf.name = "DoorLeaf";
-            leaf.transform.SetParent(root.transform);
-            leaf.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-            leaf.transform.localScale = new Vector3(3.2f, 3.2f, 0.25f);
-            leaf.GetComponent<Renderer>().sharedMaterial = leafMat;
-
-            var door = root.AddComponent<SlidingDoor>();
-            var impulse = root.AddComponent<CinemachineImpulseSource>();
-
-            var doorSo = new SerializedObject(door);
-            doorSo.FindProperty("_doorLeaf").objectReferenceValue = leaf.transform;
-            doorSo.FindProperty("_openOffset").vector3Value = new Vector3(0f, 3.3f, 0f);
-            doorSo.FindProperty("_impulseSource").objectReferenceValue = impulse;
-            doorSo.ApplyModifiedPropertiesWithoutUndo();
+            ModularWallBuilder.ConfigureSlidingDoorInstance(root);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
@@ -1178,6 +1167,7 @@ namespace Game.Editor
             ConfigureLineRenderer(lineRight, strapMat);
 
             var catapult = root.AddComponent<CatapultMechanism>();
+            root.AddComponent<CatapultTrajectoryVisualizer>();
             var impulse = root.AddComponent<CinemachineImpulseSource>();
 
             var so = new SerializedObject(catapult);
@@ -1583,6 +1573,7 @@ namespace Game.Editor
             var impulseSource = cmCamGo.AddComponent<CinemachineImpulseSource>();
 
             var cameraController = cameraRigGo.AddComponent<CameraController>();
+            var wallCoordinator = cameraRigGo.AddComponent<Game.Gameplay.Camera.WallTransparencyCoordinator>();
             var camCtrlSo = new SerializedObject(cameraController);
             camCtrlSo.FindProperty("_cinemachineCamera").objectReferenceValue = cmCam;
             camCtrlSo.FindProperty("_groupFraming").objectReferenceValue = groupFraming;

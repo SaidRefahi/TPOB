@@ -3,6 +3,7 @@ using Game.Core.Enums;
 using Game.Core.Interfaces;
 using Game.Gameplay.Player.Legs;
 using Game.Gameplay.Player.Torso;
+using Game.Network.Scopes;
 using PurrNet;
 using PurrNet.Modules;
 using TriInspector;
@@ -158,18 +159,14 @@ namespace Game.Gameplay.Spawning
         {
             if (_playerRegistry != null) return;
 
-            var scopes = Object.FindObjectsByType<VContainer.Unity.LifetimeScope>(FindObjectsSortMode.None);
-            for (int i = 0; i < scopes.Length; i++)
+            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
+            if (container != null)
             {
-                if (scopes[i] != null && scopes[i].Container != null)
+                try
                 {
-                    try
-                    {
-                        _playerRegistry = scopes[i].Container.Resolve<IPlayerRegistry>();
-                        if (_playerRegistry != null) break;
-                    }
-                    catch { }
+                    _playerRegistry = container.Resolve<IPlayerRegistry>();
                 }
+                catch { }
             }
         }
 

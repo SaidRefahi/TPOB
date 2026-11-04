@@ -1,6 +1,7 @@
 using Game.Core.Enums;
 using Game.Core.Events;
 using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using PurrNet;
 using TriInspector;
 using UnityEngine;
@@ -27,6 +28,24 @@ namespace Game.Network.Audio
             if (_audioService == null)
             {
                 _audioService = FindFirstObjectByType<Game.Core.Audio.AudioService>();
+            }
+
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
+            {
+                try
+                {
+                    _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>();
+                    if (_eventBus != null)
+                    {
+                        _eventBus.Subscribe<AudioCueEvent>(HandleAudioCueEvent);
+                        _eventBus.Subscribe<RobotFusedEvent>(HandleRobotFused);
+                        _eventBus.Subscribe<RobotSeparatedEvent>(HandleRobotSeparated);
+                        _eventBus.Subscribe<RoomCompletedEvent>(HandleRoomCompleted);
+                        _eventBus.Subscribe<PlayerDiedEvent>(HandlePlayerDied);
+                        _eventBus.Subscribe<PlayerRespawnedEvent>(HandlePlayerRespawned);
+                    }
+                }
+                catch { }
             }
         }
 

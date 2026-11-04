@@ -12,6 +12,8 @@ namespace Game.Gameplay.UI
         [SerializeField] private TextMeshProUGUI _masterVolumeValueText;
         [SerializeField] private Slider _sfxVolumeSlider;
         [SerializeField] private TextMeshProUGUI _sfxVolumeValueText;
+        [SerializeField] private Slider _musicVolumeSlider;
+        [SerializeField] private TextMeshProUGUI _musicVolumeValueText;
 
         [Header("Display / Video")]
         [SerializeField] private TMP_Dropdown _resolutionDropdown;
@@ -29,6 +31,8 @@ namespace Game.Gameplay.UI
         public TextMeshProUGUI MasterVolumeValueText => _masterVolumeValueText;
         public Slider SfxVolumeSlider => _sfxVolumeSlider;
         public TextMeshProUGUI SfxVolumeValueText => _sfxVolumeValueText;
+        public Slider MusicVolumeSlider => _musicVolumeSlider;
+        public TextMeshProUGUI MusicVolumeValueText => _musicVolumeValueText;
 
         public TMP_Dropdown ResolutionDropdown => _resolutionDropdown;
         public TMP_Dropdown FullscreenModeDropdown => _fullscreenModeDropdown;

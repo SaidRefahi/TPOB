@@ -579,24 +579,14 @@ namespace Game.Editor
             floor.transform.localScale = floorScale;
             floor.GetComponent<Renderer>().sharedMaterial = mats.Floor;
 
-            float halfX = floorScale.x * 0.5f;
             float halfZ = floorScale.z * 0.5f;
-            float wallH = 4f;
-            float wallT = 1f;
 
-            // Walls (leaving gateway at exitDoorPos)
-            PlaygroundBuilder.CreateWall("Wall_South", new Vector3(0f, wallH * 0.5f, -halfZ), new Vector3(floorScale.x, wallH, wallT), envGroup.transform, mats.Wall);
-            PlaygroundBuilder.CreateWall("Wall_West", new Vector3(-halfX, wallH * 0.5f, 0f), new Vector3(wallT, wallH, floorScale.z), envGroup.transform, mats.Wall);
-            PlaygroundBuilder.CreateWall("Wall_East", new Vector3(halfX, wallH * 0.5f, 0f), new Vector3(wallT, wallH, floorScale.z), envGroup.transform, mats.Wall);
-
-            // North Wall with gap for door
-            float doorGapHalf = 2.5f;
-            float northWallSegmentWidth = (floorScale.x - (doorGapHalf * 2f)) * 0.5f;
-            float leftCenterX = -halfX + (northWallSegmentWidth * 0.5f);
-            float rightCenterX = halfX - (northWallSegmentWidth * 0.5f);
-
-            PlaygroundBuilder.CreateWall("Wall_North_Left", new Vector3(leftCenterX, wallH * 0.5f, halfZ), new Vector3(northWallSegmentWidth, wallH, wallT), envGroup.transform, mats.Wall);
-            PlaygroundBuilder.CreateWall("Wall_North_Right", new Vector3(rightCenterX, wallH * 0.5f, halfZ), new Vector3(northWallSegmentWidth, wallH, wallT), envGroup.transform, mats.Wall);
+            // Modular Walls and Corners
+            var wallPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModularWallBuilder.WallPrefabPath);
+            var cornerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModularWallBuilder.WallCornerPrefabPath);
+            GameObject wallsRoot = new GameObject("Modular_Walls");
+            wallsRoot.transform.SetParent(envGroup.transform, false);
+            ModularWallBuilder.BuildPerimeterWalls(wallsRoot.transform, Vector3.zero, floorScale, wallPrefab, cornerPrefab);
 
             // Kill Volume underneath floor
             var killVol = (GameObject)PrefabUtility.InstantiatePrefab(prefabs.KillVolume, envGroup.transform);
@@ -800,6 +790,7 @@ namespace Game.Editor
             var impulseSource = cmCamGo.AddComponent<CinemachineImpulseSource>();
 
             var cameraController = cameraRigGo.AddComponent<CameraController>();
+            var wallCoordinator = cameraRigGo.AddComponent<Game.Gameplay.Camera.WallTransparencyCoordinator>();
             var camCtrlSo = new SerializedObject(cameraController);
             camCtrlSo.FindProperty("_cinemachineCamera").objectReferenceValue = cmCam;
             camCtrlSo.FindProperty("_groupFraming").objectReferenceValue = groupFraming;
@@ -812,6 +803,8 @@ namespace Game.Editor
             targetCoordSo.ApplyModifiedPropertiesWithoutUndo();
 
             var roomScopeSo = new SerializedObject(roomScope);
+            roomScopeSo.FindProperty("_roomController").objectReferenceValue = roomCtrl;
+            roomScopeSo.FindProperty("_spawnPointManager").objectReferenceValue = spawnManager;
             roomScopeSo.FindProperty("_cameraController").objectReferenceValue = cameraController;
             roomScopeSo.FindProperty("_networkEventRelay").objectReferenceValue = relay;
             roomScopeSo.ApplyModifiedPropertiesWithoutUndo();
@@ -832,27 +825,14 @@ namespace Game.Editor
 
         private static SlidingDoor CreateDividingWallWithDoor(RoomContext ctx, float zPos, float floorWidth, GameObject doorPrefab, PlaygroundBuilder.MaterialSet mats)
         {
-            float wallH = 4f;
-            float wallT = 0.8f;
-            float doorGap = 4f;
-            float halfWidth = floorWidth * 0.5f;
-            float sideWidth = (floorWidth - doorGap) * 0.5f;
+            var wallPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModularWallBuilder.WallPrefabPath);
+            ModularWallBuilder.BuildDividingWall(ctx.EnvGroup.transform, Vector3.zero, floorWidth, zPos, wallPrefab);
 
-            // Pared izquierda
-            float leftCenterX = -halfWidth + (sideWidth * 0.5f);
-            PlaygroundBuilder.CreateWall($"DividingWall_L_{zPos}", new Vector3(leftCenterX, wallH * 0.5f, zPos), new Vector3(sideWidth, wallH, wallT), ctx.EnvGroup.transform, mats.Wall);
-
-            // Pared derecha
-            float rightCenterX = halfWidth - (sideWidth * 0.5f);
-            PlaygroundBuilder.CreateWall($"DividingWall_R_{zPos}", new Vector3(rightCenterX, wallH * 0.5f, zPos), new Vector3(sideWidth, wallH, wallT), ctx.EnvGroup.transform, mats.Wall);
-
-            // Dintel superior
-            PlaygroundBuilder.CreateWall($"DividingWall_Lintel_{zPos}", new Vector3(0f, wallH - 0.25f, zPos), new Vector3(doorGap, 0.5f, wallT), ctx.EnvGroup.transform, mats.Wall);
-
-            // Compuerta deslizante en el centro
+            // Compuerta deslizante de doble hoja en el centro
             var doorGo = (GameObject)PrefabUtility.InstantiatePrefab(doorPrefab, ctx.InteractGroup.transform);
             doorGo.name = $"IntermediateSlidingDoor_{zPos}";
             doorGo.transform.position = new Vector3(0f, 0f, zPos);
+            ModularWallBuilder.ConfigureSlidingDoorInstance(doorGo);
             return doorGo.GetComponent<SlidingDoor>();
         }
 

@@ -6,6 +6,7 @@ namespace Game.Core.Interfaces
     {
         float MasterVolume { get; }
         float SfxVolume { get; }
+        float MusicVolume { get; }
         float AimSensitivity { get; }
         int FullscreenModeIndex { get; }
         bool VSyncEnabled { get; }
@@ -14,6 +15,7 @@ namespace Game.Core.Interfaces
 
         void SetMasterVolume(float volume);
         void SetSfxVolume(float volume);
+        void SetMusicVolume(float volume);
         void SetAimSensitivity(float sensitivity);
         void SetFullscreenMode(int modeIndex);
         void SetVSync(bool enabled);

@@ -137,7 +137,11 @@ namespace Game.Gameplay.Interactables
             bool canSimulate = !isSpawned || isServer;
             if (!canSimulate) return;
 
-            if (_isFullyOpened.value) return;
+            if (_isFullyOpened.value)
+            {
+                enabled = false;
+                return;
+            }
 
             if (_isMagnetLocked.value)
             {
@@ -178,6 +182,7 @@ namespace Game.Gameplay.Interactables
                             if (_openProgress.value >= 1f)
                             {
                                 _isFullyOpened.value = true;
+                                enabled = false;
                                 UnlockMagnet();
                                 if (!isSpawned)
                                 {
@@ -212,6 +217,7 @@ namespace Game.Gameplay.Interactables
         {
             if (_isFullyOpened.value) return;
 
+            enabled = true;
             _attachedOperator = operatorTransform;
             _attachedTorso = operatorTransform != null ? operatorTransform.GetComponentInParent<Game.Gameplay.Player.Torso.TorsoController>() : null;
             var coordinator = _attachedTorso != null ? _attachedTorso.Coordinator : UnityEngine.Object.FindFirstObjectByType<RobotCoordinator>();

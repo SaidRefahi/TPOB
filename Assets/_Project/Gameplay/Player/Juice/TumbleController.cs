@@ -2,9 +2,12 @@ using System;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using Game.Core.Enums;
-using Game.Network.Audio;
+using Game.Core.Events;
+using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using TriInspector;
 using UnityEngine;
+using VContainer;
 
 namespace Game.Gameplay.Player.Juice
 {
@@ -26,7 +29,7 @@ namespace Game.Gameplay.Player.Juice
         [SerializeField] private float _cooldown = 1.8f;
 
         private Rigidbody _rigidbody;
-        private NetworkAudioRelay _audioRelay;
+        private IGameEventBus _eventBus;
         private Transform _visualModel;
         private Vector3 _initialVisualScale = Vector3.one;
         private bool _isTumbling;
@@ -53,7 +56,10 @@ namespace Game.Gameplay.Player.Juice
 
         private void Start()
         {
-            _audioRelay = FindFirstObjectByType<NetworkAudioRelay>();
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
+            {
+                try { _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>(); } catch { }
+            }
         }
 
         private void OnDestroy()
@@ -85,10 +91,11 @@ namespace Game.Gameplay.Player.Juice
             _rigidbody.AddTorque(torqueAxis.normalized * _torqueStrength, ForceMode.Impulse);
 
             // Audio effect
-            if (_audioRelay != null)
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
             {
-                _audioRelay.PlayNetworkAudio(AudioCue.PlayerTumble, transform.position, 0.85f, UnityEngine.Random.Range(0.9f, 1.15f));
+                try { _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>(); } catch { }
             }
+            _eventBus?.Publish(new AudioCueEvent(AudioCue.PlayerTumble, transform.position, 0.85f, UnityEngine.Random.Range(0.9f, 1.15f)));
 
             WaitForRecoveryAsync().Forget();
         }

@@ -8,6 +8,7 @@ namespace Game.Core.Settings
     {
         private const string KeyMasterVol = "TPOB_MasterVol";
         private const string KeySfxVol = "TPOB_SfxVol";
+        private const string KeyMusicVol = "TPOB_MusicVol";
         private const string KeyAimSens = "TPOB_AimSens";
         private const string KeyFullscreen = "TPOB_Fullscreen";
         private const string KeyVSync = "TPOB_VSync";
@@ -19,6 +20,7 @@ namespace Game.Core.Settings
 
         public float MasterVolume { get; private set; } = 1f;
         public float SfxVolume { get; private set; } = 1f;
+        public float MusicVolume { get; private set; } = 1f;
         public float AimSensitivity { get; private set; } = 1f;
         public int FullscreenModeIndex { get; private set; } = 1; // Default Borderless/FullScreenWindow
         public bool VSyncEnabled { get; private set; } = true;
@@ -35,6 +37,7 @@ namespace Game.Core.Settings
         {
             MasterVolume = PlayerPrefs.GetFloat(KeyMasterVol, 1f);
             SfxVolume = PlayerPrefs.GetFloat(KeySfxVol, 1f);
+            MusicVolume = PlayerPrefs.GetFloat(KeyMusicVol, 1f);
             AimSensitivity = PlayerPrefs.GetFloat(KeyAimSens, 1f);
             FullscreenModeIndex = PlayerPrefs.GetInt(KeyFullscreen, 1);
             VSyncEnabled = PlayerPrefs.GetInt(KeyVSync, 1) == 1;
@@ -63,6 +66,13 @@ namespace Game.Core.Settings
         {
             SfxVolume = Mathf.Clamp01(volume);
             _audioService?.SetSfxVolume(SfxVolume);
+            OnSettingsChanged?.Invoke();
+        }
+
+        public void SetMusicVolume(float volume)
+        {
+            MusicVolume = Mathf.Clamp01(volume);
+            _audioService?.SetMusicVolume(MusicVolume);
             OnSettingsChanged?.Invoke();
         }
 
@@ -117,7 +127,7 @@ namespace Game.Core.Settings
         {
             PlayerPrefs.SetFloat(KeyMasterVol, MasterVolume);
             PlayerPrefs.SetFloat(KeySfxVol, SfxVolume);
-            PlayerPrefs.SetFloat(KeyAimSens, AimSensitivity);
+            PlayerPrefs.SetFloat(KeyMusicVol, MusicVolume);
             PlayerPrefs.SetInt(KeyFullscreen, FullscreenModeIndex);
             PlayerPrefs.SetInt(KeyVSync, VSyncEnabled ? 1 : 0);
             PlayerPrefs.Save();
@@ -127,6 +137,7 @@ namespace Game.Core.Settings
         {
             _audioService?.SetMasterVolume(MasterVolume);
             _audioService?.SetSfxVolume(SfxVolume);
+            _audioService?.SetMusicVolume(MusicVolume);
         }
 
         private void ApplyVSync()

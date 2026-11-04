@@ -64,6 +64,7 @@ namespace Game.Gameplay.Interactables
                     _slottedKey.transform.position = _snapPoint.position;
                     _slottedKey.transform.rotation = _snapPoint.rotation;
                 }
+                enabled = false;
                 return;
             }
 

@@ -1,5 +1,6 @@
 using Game.Core.Enums;
 using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -42,19 +43,15 @@ namespace Game.Gameplay.UI
         {
             if (_networkService != null && _gameManager != null) return;
 
-            var scopes = Object.FindObjectsByType<LifetimeScope>(FindObjectsSortMode.None);
-            for (int i = 0; i < scopes.Length; i++)
+            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
+            if (container != null)
             {
-                if (scopes[i] != null && scopes[i].Container != null)
+                try
                 {
-                    try
-                    {
-                        if (_networkService == null) _networkService = scopes[i].Container.Resolve<INetworkService>();
-                        if (_gameManager == null) _gameManager = scopes[i].Container.Resolve<IGameManager>();
-                        if (_networkService != null && _gameManager != null) break;
-                    }
-                    catch { }
+                    if (_networkService == null) _networkService = container.Resolve<INetworkService>();
+                    if (_gameManager == null) _gameManager = container.Resolve<IGameManager>();
                 }
+                catch { }
             }
         }
 

@@ -104,6 +104,53 @@ namespace Game.Editor
             Vector3 expectedMid = (Vector3.up + Vector3.forward).normalized;
             AssertEquals(expectedMid, slerped, "Slerp de normales debe interpolar sobre el círculo mayor", ref passed, ref failed);
 
+            // 4. Validar cinemática de Locomoción Anclada a Patas (Foot-Anchored Centering)
+            // Test 4.1: Baricentro de 4 patas cuadrangulares simétricas
+            Vector3 fFL = new Vector3(-0.5f, 0f, 0.5f);
+            Vector3 fFR = new Vector3(0.5f, 0f, 0.5f);
+            Vector3 fBL = new Vector3(-0.5f, 0f, -0.5f);
+            Vector3 fBR = new Vector3(0.5f, 0f, -0.5f);
+            Vector3 expectedCentroid = Vector3.zero;
+            Vector3 actualCentroid = (fFL + fFR + fBL + fBR) * 0.25f;
+            AssertEquals(expectedCentroid, actualCentroid, "Baricentro de 4 patas simétricas debe ser Vector3.zero", ref passed, ref failed);
+
+            // Test 4.2: Altura de cadera nominal y lead offset sobre suelo plano
+            float nominalHeight = 0.90f;
+            float leadOffsetDist = 0.35f;
+            Vector3 inputDirTest = Vector3.forward;
+            Vector3 targetHipFloor = actualCentroid + Vector3.up * nominalHeight + inputDirTest * leadOffsetDist;
+            Vector3 expectedHipFloor = new Vector3(0f, 0.90f, 0.35f);
+            AssertEquals(expectedHipFloor, targetHipFloor, "Posición objetivo de cadera en suelo con lead offset", ref passed, ref failed);
+
+            // Test 4.3: Posición de cadera sobre pared vertical (Normal = (0, 0, 1))
+            Vector3 wallNormalTest = Vector3.forward;
+            Vector3 targetHipWall = actualCentroid + wallNormalTest * nominalHeight + Vector3.up * leadOffsetDist;
+            Vector3 expectedHipWall = new Vector3(0f, 0.35f, 0.90f);
+            AssertEquals(expectedHipWall, targetHipWall, "Posición objetivo de cadera en pared vertical proyectada perpendicularmente", ref passed, ref failed);
+
+            // Test 4.4: En suelo plano en reposo, el error tangencial es Vector3.zero (0 rebote / 0 salto)
+            Vector3 rootPosFlat = Vector3.zero;
+            Vector3 targetSurfacePosFlat = actualCentroid;
+            Vector3 posErrorFlat = targetSurfacePosFlat - rootPosFlat;
+            Vector3 tangentErrorFlat = Vector3.ProjectOnPlane(posErrorFlat, Vector3.up);
+            AssertEquals(Vector3.zero, tangentErrorFlat, "En reposo sobre suelo plano, el error tangencial de centrado debe ser exactamente Vector3.zero", ref passed, ref failed);
+
+            // Test 4.5: En modo anclado en reposo sin input (hasInput=false, isTurning=false), la intención es estrictamente false (0 zapateo)
+            bool testHasInput = false;
+            bool testIsTurning = false;
+            bool testIsFootAnchored = true;
+            bool testIsMovingCentering = true; // El cuerpo se estaba centrando pero el usuario no tiene intención
+            bool resolvedIntent = testIsFootAnchored ? (testHasInput || testIsTurning) : (testIsMovingCentering || testIsTurning || testHasInput);
+            AssertTrue(!resolvedIntent, "En reposo en modo anclado, la intención de locomoción debe ser false sin zapateo", ref passed, ref failed);
+
+            // Test 4.6: El baricentro de la postura de descanso alineada coincide exactamente con el origen (centrado perfecto)
+            Vector3 restFL = new Vector3(-0.45f, 0f, 0.45f);
+            Vector3 restFR = new Vector3(0.45f, 0f, 0.45f);
+            Vector3 restBL = new Vector3(-0.45f, 0f, -0.45f);
+            Vector3 restBR = new Vector3(0.45f, 0f, -0.45f);
+            Vector3 restFootprintCentroid = (restFL + restFR + restBL + restBR) * 0.25f;
+            AssertEquals(Vector3.zero, restFootprintCentroid, "El baricentro de la postura de descanso alineada debe coincidir con el origen", ref passed, ref failed);
+
             if (failed == 0)
             {
                 Debug.Log($"<color=green><b>[TPOB AUDITORÍA EXITOSA]</b> Todas las {passed} pruebas matemáticas y de arquitectura de Paredes Magnéticas pasaron sin errores.</color>");

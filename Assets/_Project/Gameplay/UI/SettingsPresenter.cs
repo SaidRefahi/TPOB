@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using TMPro;
 using UnityEngine;
 using VContainer;
@@ -43,18 +44,14 @@ namespace Game.Gameplay.UI
         {
             if (_settingsService != null) return;
 
-            var scopes = Object.FindObjectsByType<LifetimeScope>(FindObjectsSortMode.None);
-            for (int i = 0; i < scopes.Length; i++)
+            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
+            if (container != null)
             {
-                if (scopes[i] != null && scopes[i].Container != null)
+                try
                 {
-                    try
-                    {
-                        _settingsService = scopes[i].Container.Resolve<ISettingsService>();
-                        if (_settingsService != null) break;
-                    }
-                    catch { }
+                    _settingsService = container.Resolve<ISettingsService>();
                 }
+                catch { }
             }
         }
 
@@ -128,6 +125,12 @@ namespace Game.Gameplay.UI
                 UpdateSfxVolumeLabel(_settingsService.SfxVolume);
             }
 
+            if (_view.MusicVolumeSlider != null)
+            {
+                _view.MusicVolumeSlider.value = _settingsService.MusicVolume;
+                UpdateMusicVolumeLabel(_settingsService.MusicVolume);
+            }
+
             if (_view.SensitivitySlider != null)
             {
                 _view.SensitivitySlider.value = _settingsService.AimSensitivity;
@@ -154,6 +157,9 @@ namespace Game.Gameplay.UI
             if (_view.SfxVolumeSlider != null)
                 _view.SfxVolumeSlider.onValueChanged.AddListener(HandleSfxVolumeChanged);
 
+            if (_view.MusicVolumeSlider != null)
+                _view.MusicVolumeSlider.onValueChanged.AddListener(HandleMusicVolumeChanged);
+
             if (_view.SensitivitySlider != null)
                 _view.SensitivitySlider.onValueChanged.AddListener(HandleSensitivityChanged);
 
@@ -177,6 +183,9 @@ namespace Game.Gameplay.UI
 
             if (_view.SfxVolumeSlider != null)
                 _view.SfxVolumeSlider.onValueChanged.RemoveListener(HandleSfxVolumeChanged);
+
+            if (_view.MusicVolumeSlider != null)
+                _view.MusicVolumeSlider.onValueChanged.RemoveListener(HandleMusicVolumeChanged);
 
             if (_view.SensitivitySlider != null)
                 _view.SensitivitySlider.onValueChanged.RemoveListener(HandleSensitivityChanged);
@@ -204,6 +213,12 @@ namespace Game.Gameplay.UI
         {
             _settingsService?.SetSfxVolume(value);
             UpdateSfxVolumeLabel(value);
+        }
+
+        private void HandleMusicVolumeChanged(float value)
+        {
+            _settingsService?.SetMusicVolume(value);
+            UpdateMusicVolumeLabel(value);
         }
 
         private void HandleSensitivityChanged(float value)
@@ -250,6 +265,14 @@ namespace Game.Gameplay.UI
             if (_view.SfxVolumeValueText != null)
             {
                 _view.SfxVolumeValueText.text = $"{Mathf.RoundToInt(volume * 100)}%";
+            }
+        }
+
+        private void UpdateMusicVolumeLabel(float volume)
+        {
+            if (_view.MusicVolumeValueText != null)
+            {
+                _view.MusicVolumeValueText.text = $"{Mathf.RoundToInt(volume * 100)}%";
             }
         }
 

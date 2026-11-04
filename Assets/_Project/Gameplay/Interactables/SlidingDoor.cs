@@ -15,7 +15,13 @@ namespace Game.Gameplay.Interactables
         [SerializeField] private Transform _doorLeaf;
 
         [Group("Configuración de Compuerta")]
-        [SerializeField] private Vector3 _openOffset = new Vector3(0f, 3.5f, 0f);
+        [SerializeField] private Transform _doorLeafRight;
+
+        [Group("Configuración de Compuerta")]
+        [SerializeField] private Vector3 _openOffset = new Vector3(-2.1f, 0f, 0f);
+
+        [Group("Configuración de Compuerta")]
+        [SerializeField] private Vector3 _openOffsetRight = new Vector3(2.1f, 0f, 0f);
 
         [Group("Configuración de Compuerta")]
         [SerializeField] private float _animationDuration = 0.8f;
@@ -34,7 +40,9 @@ namespace Game.Gameplay.Interactables
         private bool _isOpened;
 
         private Vector3 _closedLocalPosition;
+        private Vector3 _closedRightLocalPosition;
         private Tween _doorTween;
+        private Tween _doorRightTween;
 
         public bool IsOpened => _isOpened;
 
@@ -47,6 +55,11 @@ namespace Game.Gameplay.Interactables
 
             _closedLocalPosition = _doorLeaf.localPosition;
 
+            if (_doorLeafRight != null)
+            {
+                _closedRightLocalPosition = _doorLeafRight.localPosition;
+            }
+
             if (_impulseSource == null)
             {
                 _impulseSource = GetComponent<CinemachineImpulseSource>();
@@ -56,6 +69,7 @@ namespace Game.Gameplay.Interactables
         protected override void OnDestroy()
         {
             _doorTween?.Kill();
+            _doorRightTween?.Kill();
             base.OnDestroy();
         }
 
@@ -115,6 +129,7 @@ namespace Game.Gameplay.Interactables
         {
             _isOpened = open;
             _doorTween?.Kill();
+            _doorRightTween?.Kill();
 
             Vector3 targetPos = open ? _closedLocalPosition + _openOffset : _closedLocalPosition;
             Ease ease = open ? _openEase : _closeEase;
@@ -122,6 +137,13 @@ namespace Game.Gameplay.Interactables
             _doorTween = _doorLeaf.DOLocalMove(targetPos, _animationDuration)
                 .SetEase(ease)
                 .OnComplete(HandleAnimationComplete);
+
+            if (_doorLeafRight != null)
+            {
+                Vector3 targetRight = open ? _closedRightLocalPosition + _openOffsetRight : _closedRightLocalPosition;
+                _doorRightTween = _doorLeafRight.DOLocalMove(targetRight, _animationDuration)
+                    .SetEase(ease);
+            }
         }
 
         private void HandleAnimationComplete()

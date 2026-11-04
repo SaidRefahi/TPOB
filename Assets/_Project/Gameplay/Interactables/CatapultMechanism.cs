@@ -73,6 +73,11 @@ namespace Game.Gameplay.Interactables
         public Transform Transform => _strapHandle != null ? _strapHandle : transform;
         public Rigidbody Rigidbody => null;
         public float CurrentTensionRatio => _currentTensionRatio.value;
+        public float MinLaunchSpeed => _minLaunchSpeed;
+        public float MaxLaunchSpeed => _maxLaunchSpeed;
+        public float LaunchElevationAngle => _launchElevationAngle;
+        public float MaxPullDistance => _maxPullDistance;
+        public Transform AnchorPoint => _anchorPoint != null ? _anchorPoint : transform;
 
         [Inject]
         public void Construct(IGameEventBus eventBus = null)
@@ -100,6 +105,7 @@ namespace Game.Gameplay.Interactables
             }
 
             UpdateStrapLines();
+            enabled = false;
         }
 
         protected override void OnSpawned()
@@ -175,6 +181,7 @@ namespace Game.Gameplay.Interactables
 
         public void OnGrabbed(Transform holdSocket)
         {
+            enabled = true;
             _heldSocket = holdSocket;
             _heldTorso = holdSocket != null ? holdSocket.GetComponentInParent<Game.Gameplay.Player.Torso.TorsoController>() : null;
             _isGrabbed.value = true;
@@ -189,6 +196,7 @@ namespace Game.Gameplay.Interactables
 
         public void OnReleased(Vector3 throwVelocity)
         {
+            enabled = false;
             if (_attachedCoordinator != null)
             {
                 _attachedCoordinator.UnregisterCatapult(this);
@@ -198,7 +206,6 @@ namespace Game.Gameplay.Interactables
             _isGrabbed.value = false;
             _currentTensionRatio.value = 0f;
             _heldSocket = null;
-            _heldTorso = null;
             _heldTorso = null;
 
             ResetStrapVisuals();
@@ -257,6 +264,7 @@ namespace Game.Gameplay.Interactables
 
         private void HandleGrabbedStateChanged(bool grabbed)
         {
+            enabled = grabbed;
             if (!grabbed)
             {
                 ResetStrapVisuals();

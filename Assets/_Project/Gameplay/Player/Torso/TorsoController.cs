@@ -1,15 +1,18 @@
 using System;
 using Game.Core.Commands;
+using Game.Core.Events;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
 using Game.Gameplay.Player.Death;
 using Game.Gameplay.Player.Juice;
 using Game.Gameplay.Player.Robot;
+using Game.Network.Scopes;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
 using UnityEngine;
+using VContainer;
 
 namespace Game.Gameplay.Player.Torso
 {
@@ -96,7 +99,7 @@ namespace Game.Gameplay.Player.Torso
         private Quaternion _fusedWorldRotation = Quaternion.identity;
         private NetworkTransform _networkTransform;
         private TumbleController _tumbleController;
-        private Game.Network.Audio.NetworkAudioRelay _audioRelay;
+        private IGameEventBus _eventBus;
         private PlayerDeathHandler _deathHandler;
 
         [Group("Fusión")]
@@ -114,6 +117,12 @@ namespace Game.Gameplay.Player.Torso
         public event Action<IGrabbable> OnObjectReleased;
         public event Action OnThrow;
         public event Action<bool> OnMagnetStateChanged;
+
+        [Inject]
+        public void Construct(IGameEventBus eventBus = null)
+        {
+            _eventBus = eventBus;
+        }
 
         protected override void OnSpawned()
         {
@@ -179,6 +188,12 @@ namespace Game.Gameplay.Player.Torso
             if (_tumbleController == null)
             {
                 _tumbleController = GetComponent<TumbleController>();
+            }
+
+            if (GetComponent<Game.Gameplay.Player.Robot.PlayerXRaySilhouette>() == null)
+            {
+                var xray = gameObject.AddComponent<Game.Gameplay.Player.Robot.PlayerXRaySilhouette>();
+                xray.SetColor(new Color(1f, 0.43f, 0f, 0.85f));
             }
         }
 
@@ -781,14 +796,11 @@ namespace Game.Gameplay.Player.Torso
                 _tumbleController.TriggerTumble(launchDir * kickForce);
             }
 
-            if (_audioRelay == null)
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
             {
-                _audioRelay = FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
+                try { _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>(); } catch { }
             }
-            if (_audioRelay != null)
-            {
-                _audioRelay.PlayNetworkAudio(Game.Core.Enums.AudioCue.Kick, hitPoint, 1f, 1f);
-            }
+            _eventBus?.Publish(new Game.Core.Events.AudioCueEvent(Game.Core.Enums.AudioCue.Kick, hitPoint, 1f, 1f));
         }
 
         [ServerRpc(requireOwnership: false)]

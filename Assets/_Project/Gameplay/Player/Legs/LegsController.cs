@@ -1,5 +1,6 @@
 using System;
 using Game.Core.Commands;
+using Game.Core.Events;
 using Game.Core.Interfaces;
 using Game.Core.Structs;
 using Game.Gameplay.Player.Commands;
@@ -7,18 +8,27 @@ using Game.Gameplay.Player.Death;
 using Game.Gameplay.Player.Juice;
 using Game.Gameplay.Player.Robot;
 using Game.Gameplay.Player.Torso;
+using Game.Network.Scopes;
 using PurrNet;
 using PurrNet.Transports;
 using TriInspector;
 using Unity.Cinemachine;
 using UnityEngine;
+using VContainer;
 
 namespace Game.Gameplay.Player.Legs
 {
+    public enum LocomotionParadigm
+    {
+        VelocityDriven = 0,
+        FootAnchoredCentering = 1
+    }
+
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
     [DeclareBoxGroup("Componentes")]
     [DeclareBoxGroup("Locomoción")]
+    [DeclareBoxGroup("Locomoción Anclada a Patas")]
     [DeclareBoxGroup("Ground Check")]
     [DeclareBoxGroup("Patada")]
     [DeclareBoxGroup("Impulsos de Cámara")]
@@ -48,25 +58,45 @@ namespace Game.Gameplay.Player.Legs
         [SerializeField] private Transform _kickPoint;
 
         [Group("Locomoción")]
-        [SerializeField] private float _walkSpeed = 5f;
+        [SerializeField] private float _walkSpeed = 10f;
 
         [Group("Locomoción")]
-        [SerializeField] private float _sprintSpeed = 8.5f;
+        [SerializeField] private float _sprintSpeed = 16f;
 
         [Group("Locomoción")]
-        [SerializeField] private float _acceleration = 25f;
+        [SerializeField] private float _acceleration = 45f;
 
         [Group("Locomoción")]
         [SerializeField] private float _baseMass = 70f;
 
         [Group("Locomoción")]
-        [SerializeField] private float _rotationSpeed = 12f;
+        [SerializeField] private float _rotationSpeed = 14f;
 
         [Group("Locomoción")]
         [SerializeField] private float _jumpForce = 7f;
 
         [Group("Locomoción")]
         [SerializeField] private float _fallMultiplier = 2.5f;
+
+        [Group("Locomoción Anclada a Patas")]
+        [Tooltip("Paradigma de locomoción: VelocityDriven (clásico) o FootAnchoredCentering (nuevo)")]
+        [SerializeField] private LocomotionParadigm _locomotionMode = LocomotionParadigm.FootAnchoredCentering;
+
+        [Group("Locomoción Anclada a Patas")]
+        [Tooltip("Rigidez del servoing elástico hacia el centroide de apoyo de las patas")]
+        [SerializeField] private float _centeringStiffness = 22f;
+
+        [Group("Locomoción Anclada a Patas")]
+        [Tooltip("Altura nominal de la cadera sobre el plano promedio de las patas")]
+        [SerializeField] private float _chassisNominalHeight = 0.90f;
+
+        [Group("Locomoción Anclada a Patas")]
+        [Tooltip("Adelanto dinámico hacia la dirección del input para dar peso e inclinación")]
+        [SerializeField] private float _gaitLeadOffset = 0.35f;
+
+        [Group("Locomoción Anclada a Patas")]
+        [Tooltip("Umbral de ángulo para iniciar pasos de giro sobre el propio eje")]
+        [SerializeField] private float _turningStepAngleThreshold = 18f;
 
         [Group("Ground Check")]
         [SerializeField] private float _groundCheckDistance = 0.25f;
@@ -163,13 +193,15 @@ namespace Game.Gameplay.Player.Legs
         private bool _isFused;
         private PlayerDeathHandler _deathHandler;
         private Game.Gameplay.Player.Juice.TumbleController _tumbleController;
-        private Game.Network.Audio.NetworkAudioRelay _audioRelay;
+        private IGameEventBus _eventBus;
         private bool _isChargingKick;
         private float _currentChargeTimer;
         private bool _hasTriggeredMaxCharge;
         private float _pendingKickCharge = 1f;
         private LegsSplineHoseAnimator _splineAnimator;
         private Collider _selfCollider;
+        private Vector3 _debugCentroid;
+        private Vector3 _debugTargetHipPos;
 
         public Vector2 MoveInput => _pendingInput.MoveDirection;
         public bool IsGrounded => _isGrounded;
@@ -182,9 +214,21 @@ namespace Game.Gameplay.Player.Legs
         public Vector3 TargetSurfaceNormal => _targetSurfaceNormal;
         public bool IsTransitioning => _transitionLatchTimer > 0f;
         public LayerMask MagneticWallLayer => _magneticWallLayer;
+        public LocomotionParadigm LocomotionMode => _locomotionMode;
+        public void SetLocomotionMode(LocomotionParadigm mode) => _locomotionMode = mode;
+        public float ChassisNominalHeight => _chassisNominalHeight;
+        public float GaitLeadOffset => _gaitLeadOffset;
+        public float CenteringStiffness => _centeringStiffness;
+        public float TurningStepAngleThreshold => _turningStepAngleThreshold;
 
         public event Action OnKicked;
         public event Action<bool, Vector3> OnMagneticSurfaceChanged;
+
+        [Inject]
+        public void Construct(IGameEventBus eventBus = null)
+        {
+            _eventBus = eventBus;
+        }
 
         protected override void OnSpawned()
         {
@@ -227,6 +271,12 @@ namespace Game.Gameplay.Player.Legs
             if (_commandInvoker == null)
             {
                 _commandInvoker = GetComponent<CommandInvoker>();
+            }
+
+            if (GetComponent<PlayerXRaySilhouette>() == null)
+            {
+                var xray = gameObject.AddComponent<PlayerXRaySilhouette>();
+                xray.SetColor(new Color(0f, 0.9f, 1f, 0.85f));
             }
 
             if (_deathHandler == null)
@@ -829,7 +879,7 @@ namespace Game.Gameplay.Player.Legs
             return false;
         }
 
-        private Vector3 CalculateTravelDirection()
+        public Vector3 CalculateTravelDirection()
         {
             Vector2 input = _pendingInput.MoveDirection;
 
@@ -939,6 +989,118 @@ namespace Game.Gameplay.Player.Legs
                 targetSpeed *= _coordinator.DragSpeedMultiplier;
             }
 
+            if (_locomotionMode == LocomotionParadigm.FootAnchoredCentering && _splineAnimator != null && _isGrounded)
+            {
+                ApplyFootAnchoredLocomotion(input, targetSpeed);
+                return;
+            }
+
+            ApplyVelocityDrivenLocomotion(input, targetSpeed);
+        }
+
+        private void ApplyFootAnchoredLocomotion(Vector2 input, float targetSpeed)
+        {
+            bool hasCentroid = _splineAnimator.ComputeSupportCentroid(out Vector3 centroid, out Vector3 avgNormal, out float supportRadius);
+            Vector3 N = _isOnMagneticSurface ? _currentSurfaceNormal : (hasCentroid ? avgNormal : Vector3.up);
+
+            Vector3 tangentUp;
+            Vector3 tangentRight;
+
+            if (Mathf.Abs(N.y) > 0.7f)
+            {
+                tangentUp = Vector3.ProjectOnPlane(Vector3.forward, N).normalized;
+                tangentRight = Vector3.ProjectOnPlane(Vector3.right, N).normalized;
+            }
+            else
+            {
+                tangentUp = Vector3.ProjectOnPlane(Vector3.up, N).normalized;
+                tangentRight = Vector3.Cross(N, tangentUp).normalized;
+            }
+
+            Vector3 desiredMoveDir = (tangentRight * input.x + tangentUp * input.y);
+
+            // Compute ideal surface target: centered on feet centroid + dynamic lead offset
+            Vector3 leadOffset = desiredMoveDir * _gaitLeadOffset;
+            Vector3 targetSurfacePos = centroid + leadOffset;
+            _debugCentroid = centroid;
+            _debugTargetHipPos = targetSurfacePos + N * _chassisNominalHeight;
+
+            Vector3 currentPos = transform.position;
+            Vector3 posError = targetSurfacePos - currentPos;
+            Vector3 tangentError = Vector3.ProjectOnPlane(posError, N);
+
+            // Target tangent velocity derived from centering error towards support polygon
+            Vector3 targetTangentVel = Vector3.ClampMagnitude(tangentError * _centeringStiffness, targetSpeed);
+
+            // Deadband: when idle with no input, settle completely when within 2.5cm of the centroid
+            if (input.sqrMagnitude < 0.001f && tangentError.sqrMagnitude < 0.000625f)
+            {
+                targetTangentVel = Vector3.zero;
+            }
+
+            Vector3 currentVel = _rigidbody.linearVelocity;
+            Vector3 currentNormalVel = Vector3.Project(currentVel, N);
+            Vector3 currentTangentVel = currentVel - currentNormalVel;
+
+            Vector3 newTangentVel = Vector3.MoveTowards(currentTangentVel, targetTangentVel, _acceleration * Time.fixedDeltaTime);
+
+            if (input.sqrMagnitude < 0.001f && targetTangentVel == Vector3.zero && currentTangentVel.sqrMagnitude < 0.01f)
+            {
+                newTangentVel = Vector3.zero;
+            }
+
+            if (_isOnMagneticSurface)
+            {
+                float normalSpeed = Vector3.Dot(currentVel, N);
+                float clampedNormalSpeed = Mathf.Clamp(normalSpeed, -0.3f, 0.1f);
+                Vector3 clampedNormalVel = N * clampedNormalSpeed;
+
+                _rigidbody.linearVelocity = newTangentVel + clampedNormalVel;
+
+                float adhesion = _currentMagneticWall != null ? _currentMagneticWall.AdhesionForce : _defaultAdhesionForce;
+                _rigidbody.AddForce(-N * adhesion, ForceMode.Acceleration);
+
+                Quaternion surfaceAlignRot = Quaternion.FromToRotation(transform.up, N) * transform.rotation;
+                if (desiredMoveDir.sqrMagnitude > 0.001f)
+                {
+                    Quaternion lookRot = Quaternion.LookRotation(desiredMoveDir.normalized, N);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, _rotationSpeed * Time.fixedDeltaTime);
+                }
+                else
+                {
+                    transform.rotation = Quaternion.Slerp(transform.rotation, surfaceAlignRot, _wallAlignSpeed * Time.fixedDeltaTime);
+                }
+            }
+            else
+            {
+                // On normal ground: Rigidbody horizontal velocity tracks the support centroid + lead offset.
+                // Vertical velocity is governed by PhysX gravity and CapsuleCollider contact, eliminating resonance jumping.
+                if (Mathf.Abs(N.y) > 0.99f)
+                {
+                    _rigidbody.linearVelocity = new Vector3(newTangentVel.x, currentVel.y, newTangentVel.z);
+                }
+                else
+                {
+                    // Slopes / ramps: Tangent velocity projects along the incline to assist climbing, while gravity keeps contact
+                    Vector3 tangentOnSlope = Vector3.ProjectOnPlane(newTangentVel, N);
+                    _rigidbody.linearVelocity = new Vector3(tangentOnSlope.x, currentVel.y + tangentOnSlope.y * Time.fixedDeltaTime, tangentOnSlope.z);
+                }
+
+                if (desiredMoveDir.sqrMagnitude > 0.001f)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(desiredMoveDir.normalized, Vector3.up);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, _rotationSpeed * Time.fixedDeltaTime);
+                }
+                else if (transform.up != Vector3.up)
+                {
+                    Quaternion uprightRot = Quaternion.FromToRotation(transform.up, Vector3.up) * transform.rotation;
+                    transform.rotation = Quaternion.Slerp(transform.rotation, uprightRot, _wallAlignSpeed * Time.fixedDeltaTime);
+                }
+            }
+        }
+
+        private void ApplyVelocityDrivenLocomotion(Vector2 input, float targetSpeed)
+        {
             if (_isOnMagneticSurface)
             {
                 Vector3 N = _currentSurfaceNormal;
@@ -1124,14 +1286,11 @@ namespace Game.Gameplay.Player.Legs
 
         private void PlayAudioCue(Game.Core.Enums.AudioCue cue, Vector3 position)
         {
-            if (_audioRelay == null)
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
             {
-                _audioRelay = FindFirstObjectByType<Game.Network.Audio.NetworkAudioRelay>();
+                try { _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>(); } catch { }
             }
-            if (_audioRelay != null)
-            {
-                _audioRelay.PlayNetworkAudio(cue, position, 0.9f, 1f);
-            }
+            _eventBus?.Publish(new AudioCueEvent(cue, position, 0.9f, 1f));
         }
 
         private void TriggerKickImpulse(float chargeRatio = 1f)
@@ -1488,6 +1647,27 @@ namespace Game.Gameplay.Player.Legs
             Gizmos.DrawRay(groundOrigin, _currentSurfaceNormal * 1.5f);
             Gizmos.color = Color.blue;
             Gizmos.DrawRay(groundOrigin, _targetSurfaceNormal * 1.5f);
+
+            // 6. Foot-Anchored Support Polygon & Centroid Gizmos
+            if (_splineAnimator != null)
+            {
+                var legs = _splineAnimator.GetLegs();
+                if (legs != null && legs.Length >= 4 && legs[0] != null && legs[1] != null && legs[2] != null && legs[3] != null)
+                {
+                    Gizmos.color = Color.white;
+                    Gizmos.DrawLine(legs[0].CurrentFootPos, legs[1].CurrentFootPos);
+                    Gizmos.DrawLine(legs[1].CurrentFootPos, legs[3].CurrentFootPos);
+                    Gizmos.DrawLine(legs[3].CurrentFootPos, legs[2].CurrentFootPos);
+                    Gizmos.DrawLine(legs[2].CurrentFootPos, legs[0].CurrentFootPos);
+
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawWireSphere(_debugCentroid, 0.12f);
+
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawWireSphere(_debugTargetHipPos, 0.15f);
+                    Gizmos.DrawLine(transform.position, _debugTargetHipPos);
+                }
+            }
         }
     }
 }

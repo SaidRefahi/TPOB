@@ -1,5 +1,6 @@
 using Game.Core.Enums;
 using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -53,35 +54,30 @@ namespace Game.Gameplay.UI
 
         private void ResolveDependencies()
         {
-            if (_lobbyService == null || _networkService == null || _gameManager == null)
+            if (_lobbyService != null && _networkService != null && _gameManager != null) return;
+
+            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
+            if (container != null)
             {
-                var scopes = Object.FindObjectsByType<LifetimeScope>(FindObjectsSortMode.None);
-                for (int i = 0; i < scopes.Length; i++)
+                try
                 {
-                    if (scopes[i] != null && scopes[i].Container != null)
+                    if (_lobbyService == null)
                     {
-                        try
-                        {
-                            if (_lobbyService == null)
-                            {
-                                _lobbyService = scopes[i].Container.Resolve<ILobbyService>();
-                                HookLobbyEvents();
-                            }
-                            if (_networkService == null)
-                            {
-                                _networkService = scopes[i].Container.Resolve<INetworkService>();
-                                HookNetworkEvents();
-                            }
-                            if (_gameManager == null)
-                            {
-                                _gameManager = scopes[i].Container.Resolve<IGameManager>();
-                                HookGameManagerEvents();
-                            }
-                            if (_lobbyService != null && _networkService != null && _gameManager != null) break;
-                        }
-                        catch { }
+                        _lobbyService = container.Resolve<ILobbyService>();
+                        HookLobbyEvents();
+                    }
+                    if (_networkService == null)
+                    {
+                        _networkService = container.Resolve<INetworkService>();
+                        HookNetworkEvents();
+                    }
+                    if (_gameManager == null)
+                    {
+                        _gameManager = container.Resolve<IGameManager>();
+                        HookGameManagerEvents();
                     }
                 }
+                catch { }
             }
         }
 

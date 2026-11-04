@@ -63,16 +63,33 @@ namespace Game.Gameplay.Rooms
                     audioService = gameObject.AddComponent<Game.Core.Audio.AudioService>();
                 }
                 builder.RegisterComponent(audioService).As<IAudioService>();
+                audioService.PlayMusic(Game.Core.Enums.MusicTrack.Level, 0.5f);
             }
 
-            if (_roomController != null)
+            var roomCtrl = _roomController != null ? _roomController : GetComponent<RoomController>();
+            if (roomCtrl == null)
             {
-                builder.RegisterComponent(_roomController).As<IRoomController>();
+                roomCtrl = FindFirstObjectByType<RoomController>();
             }
 
-            if (_spawnPointManager != null)
+            if (roomCtrl != null)
             {
-                builder.RegisterComponent(_spawnPointManager);
+                builder.RegisterComponent(roomCtrl).As<IRoomController>();
+            }
+            else
+            {
+                builder.Register<NullRoomController>(Lifetime.Scoped).As<IRoomController>();
+            }
+
+            var spawnPointMgr = _spawnPointManager != null ? _spawnPointManager : GetComponent<SpawnPointManager>();
+            if (spawnPointMgr == null)
+            {
+                spawnPointMgr = FindFirstObjectByType<SpawnPointManager>();
+            }
+
+            if (spawnPointMgr != null)
+            {
+                builder.RegisterComponent(spawnPointMgr);
             }
 
             var playerSpawner = _playerSpawner != null ? _playerSpawner : FindFirstObjectByType<TPOBPlayerSpawner>();
@@ -91,6 +108,13 @@ namespace Game.Gameplay.Rooms
             if (cameraController != null)
             {
                 builder.RegisterComponent(cameraController).As<ICameraCoordinator>();
+
+                var wallCoordinator = cameraController.GetComponent<Game.Gameplay.Camera.WallTransparencyCoordinator>();
+                if (wallCoordinator == null)
+                {
+                    wallCoordinator = cameraController.gameObject.AddComponent<Game.Gameplay.Camera.WallTransparencyCoordinator>();
+                }
+                builder.RegisterComponent(wallCoordinator);
             }
             else
             {
@@ -142,6 +166,17 @@ namespace Game.Gameplay.Rooms
             {
                 builder.RegisterComponent(audioRelay);
             }
+        }
+
+        private sealed class NullRoomController : IRoomController
+        {
+            public Game.Core.Enums.RoomState CurrentState => Game.Core.Enums.RoomState.Active;
+            public int RoomIndex => 0;
+            public string RoomName => "FallbackRoom";
+            public event System.Action<Game.Core.Enums.RoomState> OnRoomStateChanged { add { } remove { } }
+            public void ActivateRoom() { }
+            public void CompleteRoom() { }
+            public void ResetRoom() { }
         }
 
         private sealed class NullCameraCoordinator : ICameraCoordinator

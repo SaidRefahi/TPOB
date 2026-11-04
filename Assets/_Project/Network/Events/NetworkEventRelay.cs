@@ -1,6 +1,7 @@
 using Game.Core.Enums;
 using Game.Core.Events;
 using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using PurrNet;
 using TriInspector;
 using UnityEngine;
@@ -20,8 +21,46 @@ namespace Game.Network.Events
         [Inject]
         public void Construct(IGameEventBus eventBus = null, IPlayerRegistry playerRegistry = null)
         {
+            if (_eventBus != null)
+            {
+                _eventBus.Unsubscribe<RobotFusedEvent>(OnLocalRobotFused);
+                _eventBus.Unsubscribe<RobotSeparatedEvent>(OnLocalRobotSeparated);
+                _eventBus.Unsubscribe<RoomCompletedEvent>(OnLocalRoomCompleted);
+                _eventBus.Unsubscribe<PlayerDiedEvent>(OnLocalPlayerDied);
+                _eventBus.Unsubscribe<PlayerRespawnedEvent>(OnLocalPlayerRespawned);
+            }
+
             _eventBus = eventBus;
             _playerRegistry = playerRegistry;
+
+            if (isActiveAndEnabled && _eventBus != null)
+            {
+                _eventBus.Subscribe<RobotFusedEvent>(OnLocalRobotFused);
+                _eventBus.Subscribe<RobotSeparatedEvent>(OnLocalRobotSeparated);
+                _eventBus.Subscribe<RoomCompletedEvent>(OnLocalRoomCompleted);
+                _eventBus.Subscribe<PlayerDiedEvent>(OnLocalPlayerDied);
+                _eventBus.Subscribe<PlayerRespawnedEvent>(OnLocalPlayerRespawned);
+            }
+        }
+
+        private void Start()
+        {
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
+            {
+                try
+                {
+                    _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>();
+                    if (_eventBus != null)
+                    {
+                        _eventBus.Subscribe<RobotFusedEvent>(OnLocalRobotFused);
+                        _eventBus.Subscribe<RobotSeparatedEvent>(OnLocalRobotSeparated);
+                        _eventBus.Subscribe<RoomCompletedEvent>(OnLocalRoomCompleted);
+                        _eventBus.Subscribe<PlayerDiedEvent>(OnLocalPlayerDied);
+                        _eventBus.Subscribe<PlayerRespawnedEvent>(OnLocalPlayerRespawned);
+                    }
+                }
+                catch { }
+            }
         }
 
         [ServerRpc(requireOwnership: false)]
@@ -29,21 +68,13 @@ namespace Game.Network.Events
         {
             if (!isServer) return;
 
-            if (_playerRegistry == null)
+            if (_playerRegistry == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
             {
-                var scopes = Object.FindObjectsByType<VContainer.Unity.LifetimeScope>(FindObjectsSortMode.None);
-                for (int i = 0; i < scopes.Length; i++)
+                try
                 {
-                    if (scopes[i] != null && scopes[i].Container != null)
-                    {
-                        try
-                        {
-                            _playerRegistry = scopes[i].Container.Resolve<IPlayerRegistry>();
-                            if (_playerRegistry != null) break;
-                        }
-                        catch { }
-                    }
+                    _playerRegistry = GameLifetimeScope.Instance.Container.Resolve<IPlayerRegistry>();
                 }
+                catch { }
             }
 
             _playerRegistry?.SwapRoles();

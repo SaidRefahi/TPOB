@@ -290,6 +290,9 @@ namespace Game.Editor
             // SFX Volume
             var sfxSlider = CreateLabeledSlider(contentGo.transform, "Slider_SfxVolume", "Volumen Efectos (SFX)", out var sfxValText);
 
+            // Music Volume
+            var musicSlider = CreateLabeledSlider(contentGo.transform, "Slider_MusicVolume", "Volumen Música", out var musicValText);
+
             // Aim Sensitivity
             var sensSlider = CreateLabeledSlider(contentGo.transform, "Slider_AimSens", "Sensibilidad de Puntería", out var sensValText, 0.2f, 3.0f);
 
@@ -312,6 +315,10 @@ namespace Game.Editor
             so.FindProperty("_masterVolumeValueText").objectReferenceValue = masterValText;
             so.FindProperty("_sfxVolumeSlider").objectReferenceValue = sfxSlider;
             so.FindProperty("_sfxVolumeValueText").objectReferenceValue = sfxValText;
+            var musicSliderProp = so.FindProperty("_musicVolumeSlider");
+            if (musicSliderProp != null) musicSliderProp.objectReferenceValue = musicSlider;
+            var musicValProp = so.FindProperty("_musicVolumeValueText");
+            if (musicValProp != null) musicValProp.objectReferenceValue = musicValText;
             so.FindProperty("_sensitivitySlider").objectReferenceValue = sensSlider;
             so.FindProperty("_sensitivityValueText").objectReferenceValue = sensValText;
             so.FindProperty("_fullscreenModeDropdown").objectReferenceValue = fsDropdown;

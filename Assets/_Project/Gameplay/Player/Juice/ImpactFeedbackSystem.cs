@@ -1,10 +1,13 @@
 using DG.Tweening;
 using Game.Core.Audio;
 using Game.Core.Enums;
-using Game.Network.Audio;
+using Game.Core.Events;
+using Game.Core.Interfaces;
+using Game.Network.Scopes;
 using TriInspector;
 using Unity.Cinemachine;
 using UnityEngine;
+using VContainer;
 
 namespace Game.Gameplay.Player.Juice
 {
@@ -38,7 +41,7 @@ namespace Game.Gameplay.Player.Juice
         [SerializeField] private int _squashVibrato = 8;
 
         private CinemachineImpulseSource _impulseSource;
-        private NetworkAudioRelay _audioRelay;
+        private IGameEventBus _eventBus;
         private TumbleController _tumbleController;
         private Vector3 _initialScale = Vector3.one;
         private Tween _squashTween;
@@ -77,7 +80,10 @@ namespace Game.Gameplay.Player.Juice
 
         private void Start()
         {
-            _audioRelay = FindFirstObjectByType<NetworkAudioRelay>();
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
+            {
+                try { _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>(); } catch { }
+            }
         }
 
         private void OnDestroy()
@@ -164,18 +170,12 @@ namespace Game.Gameplay.Player.Juice
             float volume = Mathf.Clamp(0.3f + intensity * 0.7f, 0.2f, 1f);
             float pitch = UnityEngine.Random.Range(0.9f, 1.12f);
 
-            if (_audioRelay != null)
+            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
             {
-                _audioRelay.PlayNetworkAudio(cue, position, volume, pitch);
+                try { _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>(); } catch { }
             }
-            else
-            {
-                var audioService = FindFirstObjectByType<AudioService>();
-                if (audioService != null)
-                {
-                    audioService.PlaySfx(cue, position, volume, pitch);
-                }
-            }
+
+            _eventBus?.Publish(new AudioCueEvent(cue, position, volume, pitch));
         }
     }
 }
