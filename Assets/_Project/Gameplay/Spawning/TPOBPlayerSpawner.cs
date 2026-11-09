@@ -177,11 +177,25 @@ namespace Game.Gameplay.Spawning
             var legs = Object.FindFirstObjectByType<LegsController>();
             if (legs != null && legs.TryGetComponent<NetworkIdentity>(out var legsIdentity))
             {
-                if (!legsIdentity.hasOwner)
+                if (!legsIdentity.hasOwner || legsIdentity.owner == PlayerID.Server)
                 {
                     legsIdentity.GiveOwnership(localPlayer);
                 }
             }
+
+#if UNITY_EDITOR
+            if (_spawnedPlayers.Count <= 1)
+            {
+                var torso = Object.FindFirstObjectByType<TorsoController>();
+                if (torso != null && torso.TryGetComponent<NetworkIdentity>(out var torsoIdentity))
+                {
+                    if (!torsoIdentity.hasOwner || torsoIdentity.owner == PlayerID.Server)
+                    {
+                        torsoIdentity.GiveOwnership(localPlayer);
+                    }
+                }
+            }
+#endif
         }
 
         private void HandleServerPlayerJoined(PlayerID player, bool isReconnect, bool asServer)
@@ -198,6 +212,17 @@ namespace Game.Gameplay.Spawning
                 {
                     legsId.GiveOwnership(player);
                 }
+
+#if UNITY_EDITOR
+                if (_spawnedPlayers.Count <= 1)
+                {
+                    var existingTorso = Object.FindFirstObjectByType<TorsoController>();
+                    if (existingTorso != null && existingTorso.TryGetComponent<NetworkIdentity>(out var torsoId))
+                    {
+                        torsoId.GiveOwnership(player);
+                    }
+                }
+#endif
             }
             else
             {

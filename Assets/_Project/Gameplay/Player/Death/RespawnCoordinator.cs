@@ -23,11 +23,18 @@ namespace Game.Gameplay.Player.Death
         [SerializeField] private CheckpointSystem _checkpointSystem;
 
         private ICheckpointSystem _injectedCheckpointSystem;
+        private IRobotCoordinator _robotCoordinator;
+
+        private bool _legsDiedFused;
+        private bool _torsoDiedFused;
+        private float _legsDeathTime;
+        private float _torsoDeathTime;
 
         [Inject]
-        public void Construct(ICheckpointSystem checkpointSystem = null)
+        public void Construct(ICheckpointSystem checkpointSystem = null, IRobotCoordinator robotCoordinator = null)
         {
             _injectedCheckpointSystem = checkpointSystem;
+            _robotCoordinator = robotCoordinator;
         }
 
         private void Awake()
@@ -36,9 +43,14 @@ namespace Game.Gameplay.Player.Death
             {
                 _checkpointSystem = FindFirstObjectByType<CheckpointSystem>();
             }
+
+            if (_robotCoordinator == null)
+            {
+                _robotCoordinator = FindFirstObjectByType<Robot.RobotCoordinator>();
+            }
         }
 
-        public void RequestRespawn(IDamageable player, PlayerRole role, float delaySeconds = 1.0f)
+        public void RequestRespawn(IDamageable player, PlayerRole role, float delaySeconds = 1.0f, bool wasFused = false)
         {
             if (player == null)
             {
@@ -48,6 +60,17 @@ namespace Game.Gameplay.Player.Death
             if (isSpawned && !isServer)
             {
                 return;
+            }
+
+            if (role == PlayerRole.Legs)
+            {
+                _legsDiedFused = wasFused;
+                _legsDeathTime = Time.time;
+            }
+            else if (role == PlayerRole.Torso)
+            {
+                _torsoDiedFused = wasFused;
+                _torsoDeathTime = Time.time;
             }
 
             float delay = delaySeconds > 0f ? delaySeconds : _defaultRespawnDelay;
@@ -86,6 +109,27 @@ namespace Game.Gameplay.Player.Death
             }
 
             player.Respawn(spawnPos, spawnRot);
+
+            // If both players died while fused, coordinate re-fusion upon respawning
+            if (_legsDiedFused && _torsoDiedFused && Mathf.Abs(_legsDeathTime - _torsoDeathTime) < 2.5f)
+            {
+                _legsDiedFused = false;
+                _torsoDiedFused = false;
+
+                try
+                {
+                    await UniTask.Yield(PlayerLoopTiming.FixedUpdate, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                if (_robotCoordinator != null && !_robotCoordinator.IsFused)
+                {
+                    _robotCoordinator.RequestFusion();
+                }
+            }
         }
     }
 }

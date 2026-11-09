@@ -244,6 +244,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
   m_PrefabInstance: {fileID: 84350794}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &84350796 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5067084288698115963, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+  m_PrefabInstance: {fileID: 84350794}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d62b5192f12cdc45b307c0085a15537, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Hazards.KillVolume
 --- !u!1001 &188152849
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3299,7 +3310,8 @@ MonoBehaviour:
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
   _checkpoints: []
-  _activeCheckpoint: {fileID: 0}
+  _activeLegsCheckpoint: {fileID: 0}
+  _activeTorsoCheckpoint: {fileID: 0}
   _spawnPointManager: {fileID: 1457143423}
 --- !u!4 &1050969253
 Transform:
@@ -3860,6 +3872,112 @@ Transform:
   - {fileID: 1619528217}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1164266230
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1164266232}
+  - component: {fileID: 1164266231}
+  m_Layer: 0
+  m_Name: Level_Root
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1164266231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1164266230}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d74d1c9b91c58a4fa9e1acb175818dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Level.LevelDefinition
+  _levelName: Level_01
+  _levelIndex: 1
+  _groundY: 0
+  _subterraneanDeadzoneY: -3
+  _deadzonePadding: 15
+  _subterraneanKillVolume: {fileID: 84350796}
+  _legsSpawnPoint: {fileID: 245914457}
+  _torsoSpawnPoint: {fileID: 338908386}
+  _checkpoints: []
+  _exitTrigger: {fileID: 802723204}
+  _showMetricGizmos: 1
+  _walkJumpDistance: 4
+  _sprintJumpDistance: 7
+  _jumpHeight: 2.5
+  _throwForce: 14
+  _magnetRange: 8
+  _sourceMechanism: {fileID: 0}
+  _targetDoor: {fileID: 0}
+  _customWallPrefab: {fileID: 0}
+  _wallSectionShape: 0
+  _straightDirection: 0
+  _widthModules: 6
+  _lengthModules: 8
+  _heightTiers: 1
+  _moduleLength: 2
+  _moduleHeight: 3
+  _rotationOffset: 0
+  _flipFacing: 0
+  _centerOnSelection: 1
+  _faceOutward: 1
+  _generateFloorWithWalls: 0
+  _customFloorPrefab: {fileID: 0}
+  _floorWidthModules: 6
+  _floorLengthModules: 8
+  _floorModuleLengthX: 4
+  _floorModuleLengthZ: 4
+  _floorYOffset: 0
+  _floorCenterOnSelection: 1
+  _createFloorVoid: 0
+  _voidHoleWidth: 2
+  _voidHoleLength: 2
+  _customMagneticWallPrefab: {fileID: 0}
+  _magneticTrackDirection: 0
+  _magneticTrackAxis: 1
+  _magneticPanelCount: 5
+  _magneticPanelLength: 8
+  _magneticPanelHeight: 8
+  _magneticCeilingHeight: 6
+  _magneticRotationOffset: 0
+  _magneticFlipFacing: 0
+  _magneticCenterOnSelection: 1
+  _customPlatformPrefab: {fileID: 0}
+  _platformCount: 5
+  _platformGap: 2.5
+  _stepHeightDelta: 0
+  _customSeeSawPrefab: {fileID: 0}
+  _customLedgePrefab: {fileID: 0}
+  _catapultTargetLedgeHeight: 6
+  _enableGridSnapping: 1
+  _gridSize: 1
+  _alignToSurface: 1
+  _spawnAtOriginZero: 1
+--- !u!4 &1164266232
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1164266230}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1311283569
 GameObject:
   m_ObjectHideFlags: 0
@@ -4052,6 +4170,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1376183839}
   - component: {fileID: 1376183840}
+  - component: {fileID: 1376183841}
   m_Layer: 0
   m_Name: '[CAMERA_RIG]'
   m_TagString: Untagged
@@ -4095,6 +4214,27 @@ MonoBehaviour:
   _separatedFramingSize: 0.52
   _fusedFramingSize: 0.42
   _framingTransitionSpeed: 2.5
+--- !u!114 &1376183841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1376183838}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edd3fcb8d0c10704595bd90c37b6a276, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Camera.WallTransparencyCoordinator
+  _defaultRadius: 2.2
+  _softness: 0.8
+  _minAlpha: 0.18
+  _fusedRadius: 3
+  _heightOffset: 0.85
+  _transitionSpeed: 5
+  _player1Transform: {fileID: 0}
+  _player2Transform: {fileID: 0}
+  _robotCoordinator: {fileID: 0}
 --- !u!1 &1416426899
 GameObject:
   m_ObjectHideFlags: 0
@@ -4396,7 +4536,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 808ed299087c4cf47ab77954761cdce3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Spawning.SpawnPointManager
-  _spawnPoints: []
+  _spawnPoints:
+  - {fileID: 245914458}
+  - {fileID: 338908387}
 --- !u!4 &1457143424
 Transform:
   m_ObjectHideFlags: 0
@@ -6251,8 +6393,8 @@ MonoBehaviour:
   autoInjectGameObjects: []
   _roomController: {fileID: 2009676942}
   _spawnPointManager: {fileID: 1457143423}
-  _playerSpawner: {fileID: 0}
-  _robotCoordinator: {fileID: 0}
+  _playerSpawner: {fileID: 329101604}
+  _robotCoordinator: {fileID: 1534567297}
   _cameraController: {fileID: 1376183840}
   _networkEventRelay: {fileID: 73694424}
   _networkAudioRelay: {fileID: 254993345}
@@ -6279,8 +6421,8 @@ MonoBehaviour:
   _directChildren: []
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
-  _roomIndex: 0
-  _roomName: Room_01
+  _roomIndex: 1
+  _roomName: Level_01
   _roomState:
     _value: 0
     _ownerAuth: 0
@@ -6513,3 +6655,4 @@ SceneRoots:
   - {fileID: 314778573}
   - {fileID: 1550077064}
   - {fileID: 1946635721}
+  - {fileID: 1164266232}

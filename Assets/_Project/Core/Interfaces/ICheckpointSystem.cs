@@ -7,5 +7,6 @@ namespace Game.Core.Interfaces
     {
         Vector3 GetRespawnPosition(PlayerRole role);
         Quaternion GetRespawnRotation(PlayerRole role);
+        bool HasActiveCheckpoint(PlayerRole role);
     }
 }

@@ -22,6 +22,12 @@ namespace Game.Gameplay.Player.Death
         [Group("Configuración")]
         [SerializeField] private PlayerRole _role;
 
+        [Group("Configuración")]
+        [SerializeField] private float _subterraneanThresholdY = -15f;
+
+        [Group("Configuración")]
+        [SerializeField] private bool _useSubterraneanThreshold = true;
+
         [Group("Referencias")]
         [SerializeField] private Rigidbody _rigidbody;
 
@@ -39,6 +45,7 @@ namespace Game.Gameplay.Player.Death
 
         public bool IsAlive => _isAlive;
         public PlayerRole Role => _role;
+        public bool IsFused => _robotCoordinator != null && _robotCoordinator.IsFused;
 
         public event Action<DeathCause> OnDied;
         public event Action OnRespawned;
@@ -82,6 +89,30 @@ namespace Game.Gameplay.Player.Death
             base.OnDestroy();
         }
 
+        public void SetSubterraneanThreshold(float yThreshold)
+        {
+            _subterraneanThresholdY = yThreshold;
+            _useSubterraneanThreshold = true;
+        }
+
+        private void FixedUpdate()
+        {
+            if (isSpawned && !isServer)
+            {
+                return;
+            }
+
+            if (!_isAlive || !_useSubterraneanThreshold)
+            {
+                return;
+            }
+
+            if (transform.position.y < _subterraneanThresholdY)
+            {
+                Kill(DeathCause.Fall);
+            }
+        }
+
         public void Kill(DeathCause cause = DeathCause.Hazard)
         {
             if (!_isAlive)
@@ -97,8 +128,10 @@ namespace Game.Gameplay.Player.Death
 
             _isAlive = false;
 
+            bool wasFused = _robotCoordinator != null && _robotCoordinator.IsFused;
+
             // 1. Separate if fused
-            if (_robotCoordinator != null && _robotCoordinator.IsFused)
+            if (wasFused)
             {
                 _robotCoordinator.RequestSeparation();
             }
@@ -141,7 +174,7 @@ namespace Game.Gameplay.Player.Death
                 _respawnCoordinator = FindFirstObjectByType<RespawnCoordinator>();
             }
 
-            _respawnCoordinator?.RequestRespawn(this, _role, 1.0f);
+            _respawnCoordinator?.RequestRespawn(this, _role, 1.0f, wasFused);
         }
 
         [ServerRpc(requireOwnership: false)]

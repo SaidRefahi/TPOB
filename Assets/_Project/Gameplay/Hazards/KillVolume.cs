@@ -22,6 +22,25 @@ namespace Game.Gameplay.Hazards
 
         private BoxCollider _boxCollider;
 
+        public BoxCollider BoxCollider => _boxCollider != null ? _boxCollider : (_boxCollider = GetComponent<BoxCollider>());
+        public DeathCause DeathCause => _deathCause;
+        public Transform ObjectSafePoint => _objectSafePoint;
+
+        public void SetSafePoint(Transform safePoint)
+        {
+            _objectSafePoint = safePoint;
+        }
+
+        public void SetDefaultResetPosition(Vector3 pos)
+        {
+            _defaultObjectResetPosition = pos;
+        }
+
+        public void SetDeathCause(DeathCause cause)
+        {
+            _deathCause = cause;
+        }
+
         private void Awake()
         {
             _boxCollider = GetComponent<BoxCollider>();

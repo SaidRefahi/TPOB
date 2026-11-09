@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="70" result="Passed" total="70" passed="70" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-07 05:09:52Z" end-time="2026-11-07 05:09:55Z" duration="2,9641839">
+  <test-suite type="TestSuite" id="1000" name="TwoPilotsOneBody" fullname="TwoPilotsOneBody" runstate="Runnable" testcasecount="71" result="Passed" start-time="2026-11-07 05:09:52Z" end-time="2026-11-07 05:09:55Z" duration="2.964184" total="70" passed="70" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1076" name="Game.Editor.Tests.dll" fullname="C:/Users/SaidR/Documents/GitHub/TPOB/Library/ScriptAssemblies/Game.Editor.Tests.dll" runstate="Runnable" testcasecount="70" result="Passed" start-time="2026-11-07 05:09:54Z" end-time="2026-11-07 05:09:55Z" duration="1.089863" total="70" passed="70" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="5896" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1077" name="Game" fullname="Game" runstate="Runnable" testcasecount="70" result="Passed" start-time="2026-11-07 05:09:54Z" end-time="2026-11-07 05:09:55Z" duration="1.087705" total="70" passed="70" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1078" name="Editor" fullname="Game.Editor" runstate="Runnable" testcasecount="70" result="Passed" start-time="2026-11-07 05:09:54Z" end-time="2026-11-07 05:09:55Z" duration="1.085584" total="70" passed="70" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1079" name="Tests" fullname="Game.Editor.Tests" runstate="Runnable" testcasecount="70" result="Passed" start-time="2026-11-07 05:09:54Z" end-time="2026-11-07 05:09:55Z" duration="1.082907" total="70" passed="70" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1001" name="HierarchyPathResolverTests" fullname="Game.Editor.Tests.HierarchyPathResolverTests" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.121062" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1018" name="BuildIdentifier_NullGameObject_ReturnsDefaultIdentifierWithoutThrowing" fullname="Game.Editor.Tests.HierarchyPathResolverTests.BuildIdentifier_NullGameObject_ReturnsDefaultIdentifierWithoutThrowing" methodname="BuildIdentifier_NullGameObject_ReturnsDefaultIdentifierWithoutThrowing" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="1457290748" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.037634" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1007" name="Disambiguation_DuplicateChildNames_ResolvesCorrectChildBySiblingIndex" fullname="Game.Editor.Tests.HierarchyPathResolverTests.Disambiguation_DuplicateChildNames_ResolvesCorrectChildBySiblingIndex" methodname="Disambiguation_DuplicateChildNames_ResolvesCorrectChildBySiblingIndex" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="896209583" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.016201" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1006" name="Disambiguation_DuplicateRootNames_ResolvesCorrectInstanceBySiblingIndex" fullname="Game.Editor.Tests.HierarchyPathResolverTests.Disambiguation_DuplicateRootNames_ResolvesCorrectInstanceBySiblingIndex" methodname="Disambiguation_DuplicateRootNames_ResolvesCorrectInstanceBySiblingIndex" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="1942073189" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.006829" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1008" name="Disambiguation_MultiLevelDuplicateNames_ResolvesCorrectLeaf" fullname="Game.Editor.Tests.HierarchyPathResolverTests.Disambiguation_MultiLevelDuplicateNames_ResolvesCorrectLeaf" methodname="Disambiguation_MultiLevelDuplicateNames_ResolvesCorrectLeaf" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="2012125981" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.001029" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1016" name="Fallback_GlobalObjectIdStrategy_ResolvesFastPathEvenIfPathIsCorrupted" fullname="Game.Editor.Tests.HierarchyPathResolverTests.Fallback_GlobalObjectIdStrategy_ResolvesFastPathEvenIfPathIsCorrupted" methodname="Fallback_GlobalObjectIdStrategy_ResolvesFastPathEvenIfPathIsCorrupted" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="675317313" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.008256" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1017" name="Fallback_NameSearchStrategy_ResolvesWhenHierarchyWasRestructured" fullname="Game.Editor.Tests.HierarchyPathResolverTests.Fallback_NameSearchStrategy_ResolvesWhenHierarchyWasRestructured" methodname="Fallback_NameSearchStrategy_ResolvesWhenHierarchyWasRestructured" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="289917247" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.002536" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1004" name="ResolveIdentifier_DeeplyInactiveHierarchy_ResolvesSuccessfully" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_DeeplyInactiveHierarchy_ResolvesSuccessfully" methodname="ResolveIdentifier_DeeplyInactiveHierarchy_ResolvesSuccessfully" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="246093713" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.002321" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1010" name="ResolveIdentifier_DefaultEmptyIdentifier_ReturnsNull" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_DefaultEmptyIdentifier_ReturnsNull" methodname="ResolveIdentifier_DefaultEmptyIdentifier_ReturnsNull" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="1551031127" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000674" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1011" name="ResolveIdentifier_EmptyHierarchyPathAndEmptySegments_ReturnsNull" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_EmptyHierarchyPathAndEmptySegments_ReturnsNull" methodname="ResolveIdentifier_EmptyHierarchyPathAndEmptySegments_ReturnsNull" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="1077151549" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000519" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1003" name="ResolveIdentifier_InactiveChildGameObject_ResolvesSuccessfully" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_InactiveChildGameObject_ResolvesSuccessfully" methodname="ResolveIdentifier_InactiveChildGameObject_ResolvesSuccessfully" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="344514890" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000755" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1005" name="ResolveIdentifier_InactiveLeafUnderInactiveParent_ResolvesSuccessfully" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_InactiveLeafUnderInactiveParent_ResolvesSuccessfully" methodname="ResolveIdentifier_InactiveLeafUnderInactiveParent_ResolvesSuccessfully" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="423877286" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000851" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1002" name="ResolveIdentifier_InactiveRootGameObject_ResolvesSuccessfully" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_InactiveRootGameObject_ResolvesSuccessfully" methodname="ResolveIdentifier_InactiveRootGameObject_ResolvesSuccessfully" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="501451682" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000762" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1012" name="ResolveIdentifier_MalformedPathWithConsecutiveSlashes_HandlesGracefullyWithoutThrowing" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_MalformedPathWithConsecutiveSlashes_HandlesGracefullyWithoutThrowing" methodname="ResolveIdentifier_MalformedPathWithConsecutiveSlashes_HandlesGracefullyWithoutThrowing" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="729934947" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.002287" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1015" name="ResolveIdentifier_NonExistentObjectAcrossAllScenes_ReturnsNullSafely" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_NonExistentObjectAcrossAllScenes_ReturnsNullSafely" methodname="ResolveIdentifier_NonExistentObjectAcrossAllScenes_ReturnsNullSafely" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="45282942" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000606" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1009" name="ResolveIdentifier_NullIdentifier_ReturnsNull" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_NullIdentifier_ReturnsNull" methodname="ResolveIdentifier_NullIdentifier_ReturnsNull" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="2019580276" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000293" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1013" name="ResolveIdentifier_SiblingIndexOutOfBounds_FallsBackToNameMatching" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_SiblingIndexOutOfBounds_FallsBackToNameMatching" methodname="ResolveIdentifier_SiblingIndexOutOfBounds_FallsBackToNameMatching" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="1552963794" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000769" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1014" name="ResolveIdentifier_UnloadedOrMissingScene_FallsBackToActiveScene" fullname="Game.Editor.Tests.HierarchyPathResolverTests.ResolveIdentifier_UnloadedOrMissingScene_FallsBackToActiveScene" methodname="ResolveIdentifier_UnloadedOrMissingScene_FallsBackToActiveScene" classname="Game.Editor.Tests.HierarchyPathResolverTests" runstate="Runnable" seed="275605082" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.001225" asserts="0">
+                <properties />
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1019" name="InspectorSanitizerTests" fullname="Game.Editor.Tests.InspectorSanitizerTests" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.182965" total="18" passed="18" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1020" name="Test01_Reflection_PropertyEditorType_Resolved" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test01_Reflection_PropertyEditorType_Resolved" methodname="Test01_Reflection_PropertyEditorType_Resolved" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="837854996" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.007247" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1021" name="Test02_Reflection_InspectorWindowType_Resolved" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test02_Reflection_InspectorWindowType_Resolved" methodname="Test02_Reflection_InspectorWindowType_Resolved" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="346617180" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.007410" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1022" name="Test03_Reflection_TrackerMember_ExistsInHierarchy" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test03_Reflection_TrackerMember_ExistsInHierarchy" methodname="Test03_Reflection_TrackerMember_ExistsInHierarchy" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="598912104" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.006454" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1023" name="Test04_Reflection_ClearEditorsAndRebuildMethod_Exists" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test04_Reflection_ClearEditorsAndRebuildMethod_Exists" methodname="Test04_Reflection_ClearEditorsAndRebuildMethod_Exists" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="724700437" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.004360" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1024" name="Test05_Reflection_ClearSerializedLockedObjectsMethod_Exists" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test05_Reflection_ClearSerializedLockedObjectsMethod_Exists" methodname="Test05_Reflection_ClearSerializedLockedObjectsMethod_Exists" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1560239150" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.008035" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1025" name="Test06_Reflection_IsLockedProperty_ExistsOnInspectorWindow" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test06_Reflection_IsLockedProperty_ExistsOnInspectorWindow" methodname="Test06_Reflection_IsLockedProperty_ExistsOnInspectorWindow" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1260979038" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.003517" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1026" name="Test07_Reflection_InspectorsCollectionField_Exists" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test07_Reflection_InspectorsCollectionField_Exists" methodname="Test07_Reflection_InspectorsCollectionField_Exists" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1893708828" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.005744" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1027" name="Test08_Reflection_LogEntriesClearMethod_Exists" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test08_Reflection_LogEntriesClearMethod_Exists" methodname="Test08_Reflection_LogEntriesClearMethod_Exists" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="294582703" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.005489" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1028" name="Test09_PurgeSharedTracker_DoesNotDestroyNativeTrackerInstance" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test09_PurgeSharedTracker_DoesNotDestroyNativeTrackerInstance" methodname="Test09_PurgeSharedTracker_DoesNotDestroyNativeTrackerInstance" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1260650706" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.007002" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1029" name="Test10_DestroyOrphanAndSceneEditors_DestroysSceneBoundEditors" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test10_DestroyOrphanAndSceneEditors_DestroysSceneBoundEditors" methodname="Test10_DestroyOrphanAndSceneEditors_DestroysSceneBoundEditors" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1277203373" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.025862" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1030" name="Test11_DestroyOrphanAndSceneEditors_DestroysOrphanEditors" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test11_DestroyOrphanAndSceneEditors_DestroysOrphanEditors" methodname="Test11_DestroyOrphanAndSceneEditors_DestroysOrphanEditors" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="681802306" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.009085" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1031" name="Test12_DestroyOrphanAndSceneEditors_PreservesPersistentAssetEditors" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test12_DestroyOrphanAndSceneEditors_PreservesPersistentAssetEditors" methodname="Test12_DestroyOrphanAndSceneEditors_PreservesPersistentAssetEditors" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="247346709" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.013141" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1032" name="Test13_UnlockAllInspectors_ExecutesGracefully" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test13_UnlockAllInspectors_ExecutesGracefully" methodname="Test13_UnlockAllInspectors_ExecutesGracefully" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1776956086" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.005957" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1033" name="Test14_PurgeAllInspectors_ExecutesFullSanitizationCycle" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test14_PurgeAllInspectors_ExecutesFullSanitizationCycle" methodname="Test14_PurgeAllInspectors_ExecutesFullSanitizationCycle" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1887669635" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.006475" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1034" name="Test15_ClearConsole_ExecutesWithoutExceptions" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test15_ClearConsole_ExecutesWithoutExceptions" methodname="Test15_ClearConsole_ExecutesWithoutExceptions" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="537584907" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.004543" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1035" name="Test16_ExecutionOrder_ConformsToPlayModeExecutionOrderConstant" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test16_ExecutionOrder_ConformsToPlayModeExecutionOrderConstant" methodname="Test16_ExecutionOrder_ConformsToPlayModeExecutionOrderConstant" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="443813783" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.008489" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1036" name="Test17_InspectorTrackerSanitizerFacade_DelegatesToService" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test17_InspectorTrackerSanitizerFacade_DelegatesToService" methodname="Test17_InspectorTrackerSanitizerFacade_DelegatesToService" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="1483719859" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.008549" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1037" name="Test18_LifecycleCallbacks_ExecutePurgeAllInspectors" fullname="Game.Editor.Tests.InspectorSanitizerTests.Test18_LifecycleCallbacks_ExecutePurgeAllInspectors" methodname="Test18_LifecycleCallbacks_ExecutePurgeAllInspectors" classname="Game.Editor.Tests.InspectorSanitizerTests" runstate="Runnable" seed="2123460980" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.035694" asserts="0">
+                <properties />
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1038" name="PlayModeObserverIntegrationTests" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.047324" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1039" name="Test01_PrioritySorting_SubscribersSortedAscendingByExecutionOrder" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test01_PrioritySorting_SubscribersSortedAscendingByExecutionOrder" methodname="Test01_PrioritySorting_SubscribersSortedAscendingByExecutionOrder" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1737773799" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.001658" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1040" name="Test02_PrioritySorting_ExecutionOrderPreservedDuringDispatch" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test02_PrioritySorting_ExecutionOrderPreservedDuringDispatch" methodname="Test02_PrioritySorting_ExecutionOrderPreservedDuringDispatch" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1015807793" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.001327" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1041" name="Test03_PrioritySorting_StableForEqualExecutionOrders" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test03_PrioritySorting_StableForEqualExecutionOrders" methodname="Test03_PrioritySorting_StableForEqualExecutionOrders" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="382383058" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.001308" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1042" name="Test04_ExceptionIsolation_ThrowingSubscriberDoesNotHaltSubsequent" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test04_ExceptionIsolation_ThrowingSubscriberDoesNotHaltSubsequent" methodname="Test04_ExceptionIsolation_ThrowingSubscriberDoesNotHaltSubsequent" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1682894163" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.010521" asserts="0">
+                <properties />
+                <output><![CDATA[[PlayModeTransitionObserver] Subscriber 'ThrowingSubscriber' threw exception during OnExitingEditMode: System.InvalidOperationException: Intentional Test Exception in OnExitingEditMode
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingSubscriber.OnExitingEditMode () [0x00023] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:500 
+  at Game.Editor.Core.Lifecycle.PlayModeTransitionObserver.DispatchExitingEditMode () [0x00005] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\Services\PlayModeTransitionObserver.cs:178 
+]]></output>
+              </test-case>
+              <test-case id="1043" name="Test05_ExceptionIsolation_AcrossAllSevenLifecyclePhases" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test05_ExceptionIsolation_AcrossAllSevenLifecyclePhases" methodname="Test05_ExceptionIsolation_AcrossAllSevenLifecyclePhases" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1004599638" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.013630" asserts="0">
+                <properties />
+                <output><![CDATA[[PlayModeTransitionObserver] Subscriber 'ThrowingSubscriber' threw exception during OnEnteredPlayMode: System.InvalidOperationException: Intentional Test Exception in OnEnteredPlayMode
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingSubscriber.OnEnteredPlayMode () [0x00023] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:509 
+  at Game.Editor.Core.Lifecycle.PlayModeTransitionObserver.DispatchEnteredPlayMode () [0x00005] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\Services\PlayModeTransitionObserver.cs:193 
+[PlayModeTransitionObserver] Subscriber 'ThrowingSubscriber' threw exception during OnExitingPlayMode: System.InvalidOperationException: Intentional Test Exception in OnExitingPlayMode
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingSubscriber.OnExitingPlayMode () [0x00023] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:518 
+  at Game.Editor.Core.Lifecycle.PlayModeTransitionObserver.DispatchExitingPlayMode () [0x00005] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\Services\PlayModeTransitionObserver.cs:208 
+[PlayModeTransitionObserver] Subscriber 'ThrowingSubscriber' threw exception during OnEnteredEditMode: System.InvalidOperationException: Intentional Test Exception in OnEnteredEditMode
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingSubscriber.OnEnteredEditMode () [0x00023] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:527 
+  at Game.Editor.Core.Lifecycle.PlayModeTransitionObserver.DispatchEnteredEditMode () [0x00005] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\Services\PlayModeTransitionObserver.cs:223 
+[PlayModeTransitionObserver] Subscriber 'ThrowingSubscriber' threw exception during OnBeforeAssemblyReload: System.InvalidOperationException: Intentional Test Exception in OnBeforeAssemblyReload
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingSubscriber.OnBeforeAssemblyReload () [0x00023] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:536 
+  at Game.Editor.Core.Lifecycle.PlayModeTransitionObserver.DispatchBeforeAssemblyReload () [0x00005] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\Services\PlayModeTransitionObserver.cs:238 
+[PlayModeTransitionObserver] Subscriber 'ThrowingSubscriber' threw exception during OnAfterAssemblyReload: System.InvalidOperationException: Intentional Test Exception in OnAfterAssemblyReload
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingSubscriber.OnAfterAssemblyReload () [0x00023] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:545 
+  at Game.Editor.Core.Lifecycle.PlayModeTransitionObserver.DispatchAfterAssemblyReload () [0x00005] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\Services\PlayModeTransitionObserver.cs:253 
+[PlayModeTransitionObserver] Subscriber 'ThrowingSubscriber' threw exception during OnSceneClosing: System.InvalidOperationException: Intentional Test Exception in OnSceneClosing
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingSubscriber.OnSceneClosing (UnityEngine.SceneManagement.Scene scene) [0x00023] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:554 
+  at Game.Editor.Core.Lifecycle.PlayModeTransitionObserver.DispatchSceneClosing (UnityEngine.SceneManagement.Scene scene) [0x00005] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\Services\PlayModeTransitionObserver.cs:268 
+]]></output>
+              </test-case>
+              <test-case id="1044" name="Test06_LifecyclePhases_DispatchPlayModeStateChanged_MapsAllStates" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test06_LifecyclePhases_DispatchPlayModeStateChanged_MapsAllStates" methodname="Test06_LifecyclePhases_DispatchPlayModeStateChanged_MapsAllStates" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="891785925" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000860" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1045" name="Test07_LifecyclePhases_DispatchBeforeAndAfterAssemblyReload" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test07_LifecyclePhases_DispatchBeforeAndAfterAssemblyReload" methodname="Test07_LifecyclePhases_DispatchBeforeAndAfterAssemblyReload" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="466459284" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000381" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1046" name="Test08_LifecyclePhases_DispatchSceneClosing_PassesScene" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test08_LifecyclePhases_DispatchSceneClosing_PassesScene" methodname="Test08_LifecyclePhases_DispatchSceneClosing_PassesScene" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1133867346" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000919" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1047" name="Test09_LegacySubscriberAdapter_BridgesAllLifecycleMethods" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test09_LegacySubscriberAdapter_BridgesAllLifecycleMethods" methodname="Test09_LegacySubscriberAdapter_BridgesAllLifecycleMethods" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1138551185" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.003160" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1048" name="Test10_LegacySubscriberAdapter_ExceptionIsolation" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test10_LegacySubscriberAdapter_ExceptionIsolation" methodname="Test10_LegacySubscriberAdapter_ExceptionIsolation" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1917435842" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.002821" asserts="0">
+                <properties />
+                <output><![CDATA[[EditorLifecycleCoordinator] Legacy subscriber 'ThrowingLegacySubscriber' threw exception in OnBeforePlayModeEntered: System.InvalidOperationException: Legacy subscriber failure
+  at Game.Editor.Tests.PlayModeObserverIntegrationTests+ThrowingLegacySubscriber.OnBeforePlayModeEntered () [0x00000] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Tests\Editor\PlayModeObserverIntegrationTests.cs:577 
+  at Game.Editor.Core.Lifecycle.EditorLifecycleCoordinator+LegacySubscriberAdapter.OnExitingEditMode () [0x00000] in C:\Users\SaidR\Documents\GitHub\TPOB\Assets\_Project\Editor\Core\Lifecycle\EditorLifecycleCoordinator.cs:139 
+]]></output>
+              </test-case>
+              <test-case id="1049" name="Test11_DualInterfaceSubscriber_DirectRegistrationWithoutAdapter" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test11_DualInterfaceSubscriber_DirectRegistrationWithoutAdapter" methodname="Test11_DualInterfaceSubscriber_DirectRegistrationWithoutAdapter" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1373437782" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000765" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1050" name="Test12_RegistrationIdempotency_DuplicateSubscriberIgnored" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test12_RegistrationIdempotency_DuplicateSubscriberIgnored" methodname="Test12_RegistrationIdempotency_DuplicateSubscriberIgnored" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1419057566" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000435" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1051" name="Test13_RegistrationIdempotency_NullSubscriberIgnored" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test13_RegistrationIdempotency_NullSubscriberIgnored" methodname="Test13_RegistrationIdempotency_NullSubscriberIgnored" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1969238931" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000620" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1052" name="Test14_Unregistration_NullOrUnknownSubscriber_Safe" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test14_Unregistration_NullOrUnknownSubscriber_Safe" methodname="Test14_Unregistration_NullOrUnknownSubscriber_Safe" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1043458292" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000501" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1053" name="Test15_EventHooking_SymmetricalAndIdempotent" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test15_EventHooking_SymmetricalAndIdempotent" methodname="Test15_EventHooking_SymmetricalAndIdempotent" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="1506091111" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000823" asserts="0">
+                <properties />
+              </test-case>
+              <test-case id="1054" name="Test16_RegisterDefaultSubscribers_IncludesSelectionMementoAndSanitizer" fullname="Game.Editor.Tests.PlayModeObserverIntegrationTests.Test16_RegisterDefaultSubscribers_IncludesSelectionMementoAndSanitizer" methodname="Test16_RegisterDefaultSubscribers_IncludesSelectionMementoAndSanitizer" classname="Game.Editor.Tests.PlayModeObserverIntegrationTests" runstate="Runnable" seed="507230403" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:23Z" duration="0.000520" asserts="0">
+                <properties />
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1055" name="PlayModeTransitionE2ETests" fullname="Game.Editor.Tests.PlayModeTransitionE2ETests" classname="Game.Editor.Tests.PlayModeTransitionE2ETests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-07 05:09:54Z" end-time="2026-11-07 05:09:55Z" duration="0.969116" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1056" name="Test01_PlayModeTransition_AllFourComponentScenarios_ZeroExceptionsAndSelectionPreserved" fullname="Game.Editor.Tests.PlayModeTransitionE2ETests.Test01_PlayModeTransition_AllFourComponentScenarios_ZeroExceptionsAndSelectionPreserved" methodname="Test01_PlayModeTransition_AllFourComponentScenarios_ZeroExceptionsAndSelectionPreserved" classname="Game.Editor.Tests.PlayModeTransitionE2ETests" runstate="Runnable" seed="1135977481" result="Passed" start-time="2026-11-07 05:09:23Z" end-time="2026-11-07 05:09:34Z" duration="10.718901" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                </properties>
+              </test-case>
+              <test-case id="1057" name="Test02_PlayModeTransition_WithLockedInspectorWindow_ZeroExceptions" fullname="Game.Editor.Tests.PlayModeTransitionE2ETests.Test02_PlayModeTransition_WithLockedInspectorWindow_ZeroExceptions" methodname="Test02_PlayModeTransition_WithLockedInspectorWindow_ZeroExceptions" classname="Game.Editor.Tests.PlayModeTransitionE2ETests" runstate="Runnable" seed="1462019858" result="Passed" start-time="2026-11-07 05:09:34Z" end-time="2026-11-07 05:09:55Z" duration="21.609352" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1058" name="SelectionMementoUnitTests" fullname="Game.Editor.Tests.SelectionMementoUnitTests" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.036307" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1075" name="BackwardCompatibility_LegacyCaptureSelectionAlias_ReturnsIdenticalResult" fullname="Game.Editor.Tests.SelectionMementoUnitTests.BackwardCompatibility_LegacyCaptureSelectionAlias_ReturnsIdenticalResult" methodname="BackwardCompatibility_LegacyCaptureSelectionAlias_ReturnsIdenticalResult" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1300947464" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.007814" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1074" name="BackwardCompatibility_LegacyConstructor_BuildsValidIdentifiers" fullname="Game.Editor.Tests.SelectionMementoUnitTests.BackwardCompatibility_LegacyConstructor_BuildsValidIdentifiers" methodname="BackwardCompatibility_LegacyConstructor_BuildsValidIdentifiers" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="472120705" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.001104" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1073" name="BackwardCompatibility_ScenePathsAndAssetGUIDs_ExposeExpectedArrays" fullname="Game.Editor.Tests.SelectionMementoUnitTests.BackwardCompatibility_ScenePathsAndAssetGUIDs_ExposeExpectedArrays" methodname="BackwardCompatibility_ScenePathsAndAssetGUIDs_ExposeExpectedArrays" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="629750059" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000786" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1066" name="CaptureCurrentSelection_ActiveAndMultiSelection_CapturesCorrectSceneIdentifiers" fullname="Game.Editor.Tests.SelectionMementoUnitTests.CaptureCurrentSelection_ActiveAndMultiSelection_CapturesCorrectSceneIdentifiers" methodname="CaptureCurrentSelection_ActiveAndMultiSelection_CapturesCorrectSceneIdentifiers" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1010951004" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.004297" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1067" name="CaptureCurrentSelection_WhenSelectionEmpty_ReturnsEmptyMemento" fullname="Game.Editor.Tests.SelectionMementoUnitTests.CaptureCurrentSelection_WhenSelectionEmpty_ReturnsEmptyMemento" methodname="CaptureCurrentSelection_WhenSelectionEmpty_ReturnsEmptyMemento" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1668145710" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000500" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1068" name="CaptureCurrentSelection_WithComponentSelected_CapturesParentGameObject" fullname="Game.Editor.Tests.SelectionMementoUnitTests.CaptureCurrentSelection_WithComponentSelected_CapturesParentGameObject" methodname="CaptureCurrentSelection_WithComponentSelected_CapturesParentGameObject" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="605775471" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000877" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1069" name="ClearSelectionSafely_EmptiesSelectionAndPurgesInspectors" fullname="Game.Editor.Tests.SelectionMementoUnitTests.ClearSelectionSafely_EmptiesSelectionAndPurgesInspectors" methodname="ClearSelectionSafely_EmptiesSelectionAndPurgesInspectors" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="2000888534" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.001339" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1060" name="JsonSerialization_EmptyMemento_PreservesEmptyState" fullname="Game.Editor.Tests.SelectionMementoUnitTests.JsonSerialization_EmptyMemento_PreservesEmptyState" methodname="JsonSerialization_EmptyMemento_PreservesEmptyState" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="774949405" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000876" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1059" name="JsonSerialization_PopulatedMemento_RoundTripMatchesExactValues" fullname="Game.Editor.Tests.SelectionMementoUnitTests.JsonSerialization_PopulatedMemento_RoundTripMatchesExactValues" methodname="JsonSerialization_PopulatedMemento_RoundTripMatchesExactValues" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="967125006" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.001682" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1063" name="Persistence_ClearMemento_ErasesSessionState" fullname="Game.Editor.Tests.SelectionMementoUnitTests.Persistence_ClearMemento_ErasesSessionState" methodname="Persistence_ClearMemento_ErasesSessionState" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="999379739" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000569" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1061" name="Persistence_InitiallyEmpty_HasMementoIsFalse" fullname="Game.Editor.Tests.SelectionMementoUnitTests.Persistence_InitiallyEmpty_HasMementoIsFalse" methodname="Persistence_InitiallyEmpty_HasMementoIsFalse" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="2045634661" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000541" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1065" name="Persistence_SaveEmptyMemento_ClearsSessionState" fullname="Game.Editor.Tests.SelectionMementoUnitTests.Persistence_SaveEmptyMemento_ClearsSessionState" methodname="Persistence_SaveEmptyMemento_ClearsSessionState" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1167015081" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000621" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1062" name="Persistence_SaveMemento_SetsHasMementoTrueAndLoadsEquivalentData" fullname="Game.Editor.Tests.SelectionMementoUnitTests.Persistence_SaveMemento_SetsHasMementoTrueAndLoadsEquivalentData" methodname="Persistence_SaveMemento_SetsHasMementoTrueAndLoadsEquivalentData" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1641578142" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.001021" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1064" name="Persistence_SaveNullMemento_ClearsSessionState" fullname="Game.Editor.Tests.SelectionMementoUnitTests.Persistence_SaveNullMemento_ClearsSessionState" methodname="Persistence_SaveNullMemento_ClearsSessionState" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1548898418" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.000797" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1072" name="RestoreFromPersistence_RestoresAndClearsPersistentStore" fullname="Game.Editor.Tests.SelectionMementoUnitTests.RestoreFromPersistence_RestoresAndClearsPersistentStore" methodname="RestoreFromPersistence_RestoresAndClearsPersistentStore" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1806074217" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.001506" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1070" name="RestoreSelection_NullOrEmptyMemento_ExecutesSafelyWithoutException" fullname="Game.Editor.Tests.SelectionMementoUnitTests.RestoreSelection_NullOrEmptyMemento_ExecutesSafelyWithoutException" methodname="RestoreSelection_NullOrEmptyMemento_ExecutesSafelyWithoutException" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="1263172162" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.001809" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1071" name="RestoreSelection_SceneGameObjects_RestoresActiveAndMultiSelection" fullname="Game.Editor.Tests.SelectionMementoUnitTests.RestoreSelection_SceneGameObjects_RestoresActiveAndMultiSelection" methodname="RestoreSelection_SceneGameObjects_RestoresActiveAndMultiSelection" classname="Game.Editor.Tests.SelectionMementoUnitTests" runstate="Runnable" seed="802365263" result="Passed" start-time="2026-11-07 05:09:55Z" end-time="2026-11-07 05:09:55Z" duration="0.003140" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/SaidR/AppData/LocalLow/DefaultCompany/TwoPilotsOneBody\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

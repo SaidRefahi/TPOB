@@ -1147,7 +1147,8 @@ MonoBehaviour:
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
   _checkpoints: []
-  _activeCheckpoint: {fileID: 0}
+  _activeLegsCheckpoint: {fileID: 0}
+  _activeTorsoCheckpoint: {fileID: 0}
   _spawnPointManager: {fileID: 575211938}
 --- !u!4 &293228571
 Transform:
@@ -3340,6 +3341,7 @@ GameObject:
   - component: {fileID: 1366375175}
   - component: {fileID: 1366375177}
   - component: {fileID: 1366375176}
+  - component: {fileID: 1366375178}
   m_Layer: 0
   m_Name: '[GAME_LIFETIME_SCOPE]'
   m_TagString: Untagged
@@ -3404,6 +3406,58 @@ MonoBehaviour:
   _networkManager: {fileID: 1626524508}
   _levelManager: {fileID: 1366375176}
   _lobbyNetworkControllerPrefab: {fileID: 100001, guid: 7b310a08e1f54cf4b593672d8e4129b1, type: 3}
+--- !u!114 &1366375178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1366375174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b32d3b0fecc3b24409a3d10af04d50b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Core::Game.Core.Audio.AudioService
+  _masterVolume: 1
+  _sfxVolume: 1
+  _musicVolume: 1
+  _menuMusicClip: {fileID: 8300000, guid: ac912ba9301b37d48b1008dd473242f1, type: 3}
+  _levelMusicClip: {fileID: 8300000, guid: fe4c6a5647e41a949b436eaadb5697f1, type: 3}
+  _defaultPoolCapacity: 16
+  _maxPoolSize: 32
+  _clipOverrides:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
 --- !u!1 &1428760556
 GameObject:
   m_ObjectHideFlags: 0
@@ -3482,8 +3536,8 @@ MonoBehaviour:
     TypeName: 
   autoRun: 1
   autoInjectGameObjects: []
-  _roomController: {fileID: 0}
-  _spawnPointManager: {fileID: 0}
+  _roomController: {fileID: 1428760560}
+  _spawnPointManager: {fileID: 575211938}
   _playerSpawner: {fileID: 0}
   _robotCoordinator: {fileID: 0}
   _cameraController: {fileID: 2007243001}

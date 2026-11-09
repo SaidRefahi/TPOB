@@ -17,12 +17,17 @@ namespace Game.Gameplay.Checkpoints
         [SerializeField] private List<Checkpoint> _checkpoints = new(4);
 
         [Group("Checkpoints")]
-        [SerializeField] private Checkpoint _activeCheckpoint;
+        [SerializeField] private Checkpoint _activeLegsCheckpoint;
+
+        [Group("Checkpoints")]
+        [SerializeField] private Checkpoint _activeTorsoCheckpoint;
 
         [Group("Referencias")]
         [SerializeField] private SpawnPointManager _spawnPointManager;
 
-        public Checkpoint ActiveCheckpoint => _activeCheckpoint;
+        public Checkpoint ActiveLegsCheckpoint => _activeLegsCheckpoint;
+        public Checkpoint ActiveTorsoCheckpoint => _activeTorsoCheckpoint;
+        public Checkpoint ActiveCheckpoint => _activeLegsCheckpoint != null ? _activeLegsCheckpoint : _activeTorsoCheckpoint;
 
         private void Awake()
         {
@@ -41,9 +46,24 @@ namespace Game.Gameplay.Checkpoints
             }
         }
 
-        public void SetActiveCheckpoint(Checkpoint checkpoint)
+        public bool HasActiveCheckpoint(PlayerRole role)
         {
-            if (checkpoint == null || checkpoint == _activeCheckpoint)
+            if (role == PlayerRole.Legs)
+            {
+                return _activeLegsCheckpoint != null;
+            }
+
+            if (role == PlayerRole.Torso)
+            {
+                return _activeTorsoCheckpoint != null;
+            }
+
+            return _activeLegsCheckpoint != null || _activeTorsoCheckpoint != null;
+        }
+
+        public void RegisterCheckpointReached(Checkpoint checkpoint, PlayerRole role, bool isFused)
+        {
+            if (checkpoint == null)
             {
                 return;
             }
@@ -53,22 +73,59 @@ namespace Game.Gameplay.Checkpoints
                 return;
             }
 
-            if (_activeCheckpoint != null)
+            if (isFused)
             {
-                _activeCheckpoint.SetActive(false);
+                UpdateRoleCheckpoint(ref _activeLegsCheckpoint, checkpoint, PlayerRole.Legs);
+                UpdateRoleCheckpoint(ref _activeTorsoCheckpoint, checkpoint, PlayerRole.Torso);
+            }
+            else
+            {
+                if (role == PlayerRole.Legs)
+                {
+                    UpdateRoleCheckpoint(ref _activeLegsCheckpoint, checkpoint, PlayerRole.Legs);
+                }
+                else if (role == PlayerRole.Torso)
+                {
+                    UpdateRoleCheckpoint(ref _activeTorsoCheckpoint, checkpoint, PlayerRole.Torso);
+                }
+            }
+        }
+
+        public void SetActiveCheckpoint(Checkpoint checkpoint)
+        {
+            RegisterCheckpointReached(checkpoint, PlayerRole.None, isFused: true);
+        }
+
+        private void UpdateRoleCheckpoint(ref Checkpoint current, Checkpoint next, PlayerRole role)
+        {
+            if (next == current)
+            {
+                return;
             }
 
-            _activeCheckpoint = checkpoint;
-            _activeCheckpoint.SetActive(true);
+            if (current != null && next.Priority < current.Priority)
+            {
+                return;
+            }
+
+            if (current != null)
+            {
+                current.SetRoleReached(role, false);
+            }
+
+            current = next;
+            current.SetRoleReached(role, true);
         }
 
         public Vector3 GetRespawnPosition(PlayerRole role)
         {
-            if (_activeCheckpoint != null)
+            Checkpoint targetCheckpoint = role == PlayerRole.Legs ? _activeLegsCheckpoint : _activeTorsoCheckpoint;
+
+            if (targetCheckpoint != null)
             {
                 Transform targetPoint = role == PlayerRole.Legs
-                    ? _activeCheckpoint.LegsSpawnPoint
-                    : _activeCheckpoint.TorsoSpawnPoint;
+                    ? targetCheckpoint.LegsSpawnPoint
+                    : targetCheckpoint.TorsoSpawnPoint;
 
                 if (targetPoint != null)
                 {
@@ -76,7 +133,7 @@ namespace Game.Gameplay.Checkpoints
                 }
 
                 Vector3 offset = role == PlayerRole.Legs ? new Vector3(-1f, 0f, 0f) : new Vector3(1f, 0f, 0f);
-                return _activeCheckpoint.transform.position + offset;
+                return targetCheckpoint.transform.position + offset;
             }
 
             if (_spawnPointManager != null)
@@ -93,18 +150,20 @@ namespace Game.Gameplay.Checkpoints
 
         public Quaternion GetRespawnRotation(PlayerRole role)
         {
-            if (_activeCheckpoint != null)
+            Checkpoint targetCheckpoint = role == PlayerRole.Legs ? _activeLegsCheckpoint : _activeTorsoCheckpoint;
+
+            if (targetCheckpoint != null)
             {
                 Transform targetPoint = role == PlayerRole.Legs
-                    ? _activeCheckpoint.LegsSpawnPoint
-                    : _activeCheckpoint.TorsoSpawnPoint;
+                    ? targetCheckpoint.LegsSpawnPoint
+                    : targetCheckpoint.TorsoSpawnPoint;
 
                 if (targetPoint != null)
                 {
                     return targetPoint.rotation;
                 }
 
-                return _activeCheckpoint.transform.rotation;
+                return targetCheckpoint.transform.rotation;
             }
 
             if (_spawnPointManager != null)

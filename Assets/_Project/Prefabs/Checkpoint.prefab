@@ -257,12 +257,17 @@ MonoBehaviour:
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
   _priority: 10
-  _isActive: 0
+  _hasLegsReached: 0
+  _hasTorsoReached: 0
   _legsSpawnPoint: {fileID: 8629928315729425343}
   _torsoSpawnPoint: {fileID: 486665651718954616}
   _indicatorRenderer: {fileID: 3541224111510808611}
-  _inactiveColor: {r: 0.85, g: 0.45, b: 0.1, a: 1}
-  _activeColor: {r: 0.1, g: 0.9, b: 0.85, a: 1}
+  _legsIndicatorRenderer: {fileID: 0}
+  _torsoIndicatorRenderer: {fileID: 0}
+  _inactiveColor: {r: 0.35, g: 0.35, b: 0.35, a: 1}
+  _legsColor: {r: 0.1, g: 0.85, b: 0.95, a: 1}
+  _torsoColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}
+  _bothActiveColor: {r: 0.2, g: 1, b: 0.8, a: 1}
   _impulseSource: {fileID: 383075656525433049}
 --- !u!1 &6089787337934816664
 GameObject:

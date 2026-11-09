@@ -99,6 +99,8 @@ namespace Game.Gameplay.Player.Torso
         private Quaternion _fusedWorldRotation = Quaternion.identity;
         private NetworkTransform _networkTransform;
         private TumbleController _tumbleController;
+        private TorsoProceduralArms _proceduralArms;
+        private Collider _selfCollider;
         private IGameEventBus _eventBus;
         private PlayerDeathHandler _deathHandler;
 
@@ -107,6 +109,7 @@ namespace Game.Gameplay.Player.Torso
 
         public bool IsHoldingObject => _currentHeldObject != null;
         public IGrabbable CurrentHeldObject => _currentHeldObject;
+        public float CrawlSpeed => _crawlSpeed;
         public float ThrowForce => _throwForce;
         public bool IsMagnetActive => _isMagnetActive;
         public Transform AimPivot => _aimPivot;
@@ -190,6 +193,25 @@ namespace Game.Gameplay.Player.Torso
                 _tumbleController = GetComponent<TumbleController>();
             }
 
+            if (_proceduralArms == null)
+            {
+                _proceduralArms = GetComponent<TorsoProceduralArms>();
+            }
+
+            _selfCollider = GetComponent<Collider>();
+            if (_selfCollider != null)
+            {
+                PhysicsMaterial zeroFrictionMat = new PhysicsMaterial("FrictionlessTorso")
+                {
+                    dynamicFriction = 0f,
+                    staticFriction = 0f,
+                    bounciness = 0f,
+                    frictionCombine = PhysicsMaterialCombine.Minimum,
+                    bounceCombine = PhysicsMaterialCombine.Minimum
+                };
+                _selfCollider.material = zeroFrictionMat;
+            }
+
             if (GetComponent<Game.Gameplay.Player.Robot.PlayerXRaySilhouette>() == null)
             {
                 var xray = gameObject.AddComponent<Game.Gameplay.Player.Robot.PlayerXRaySilhouette>();
@@ -234,7 +256,7 @@ namespace Game.Gameplay.Player.Torso
                 return;
             }
 
-            bool hasAuthority = !isSpawned ? true : isOwner;
+            bool hasAuthority = !isSpawned || isOwner || (isServer && (!hasOwner || owner == PlayerID.Server));
             if (!hasAuthority || _inputReader == null)
             {
                 return;
@@ -346,10 +368,22 @@ namespace Game.Gameplay.Player.Torso
             ApplyThrow();
             ApplyMagnet();
             ApplyMechanismInteraction();
+
+            if (!_rigidbody.isKinematic)
+            {
+                _rigidbody.angularVelocity = Vector3.zero;
+            }
         }
 
         private void ApplyClimbing()
         {
+            if (IsHoldingObject)
+            {
+                Vector3 currentVel = _rigidbody.linearVelocity;
+                _rigidbody.linearVelocity = new Vector3(0f, 0f, currentVel.z);
+                return;
+            }
+
             Vector3 currentVelocity = _rigidbody.linearVelocity;
             Vector3 targetVelocity = new Vector3(_climbDirection.x * _crawlSpeed, _climbDirection.y * _crawlSpeed, currentVelocity.z);
             _rigidbody.linearVelocity = Vector3.MoveTowards(currentVelocity, targetVelocity, _acceleration * Time.fixedDeltaTime);
@@ -357,26 +391,53 @@ namespace Game.Gameplay.Player.Torso
 
         private void ApplyCrawlLocomotion()
         {
-            Vector2 input = _pendingInput.MoveDirection;
-            Vector3 targetVelocity = new Vector3(input.x, 0f, input.y) * _crawlSpeed;
             Vector3 currentVelocity = _rigidbody.linearVelocity;
-
             Vector3 horizontalVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
+
+            if (IsHoldingObject)
+            {
+                Vector3 stoppedHorizontal = Vector3.MoveTowards(horizontalVelocity, Vector3.zero, (_acceleration * 2.5f) * Time.fixedDeltaTime);
+                _rigidbody.linearVelocity = new Vector3(stoppedHorizontal.x, currentVelocity.y, stoppedHorizontal.z);
+                return;
+            }
+
+            Vector2 input = _pendingInput.MoveDirection;
+            if (input.sqrMagnitude < 0.01f)
+            {
+                Vector3 deceleratedHorizontal = Vector3.MoveTowards(horizontalVelocity, Vector3.zero, (_acceleration * 1.5f) * Time.fixedDeltaTime);
+                _rigidbody.linearVelocity = new Vector3(deceleratedHorizontal.x, currentVelocity.y, deceleratedHorizontal.z);
+                return;
+            }
+
+            float surgeMultiplier = 1f;
+            if (_proceduralArms != null && _proceduralArms.ComputeCrawlSupportCentroid(out _, out _, out float pullSurge))
+            {
+                surgeMultiplier = pullSurge;
+            }
+
+            Vector3 desiredMoveDir = new Vector3(input.x, 0f, input.y);
+            if (desiredMoveDir.sqrMagnitude > 1f)
+            {
+                desiredMoveDir.Normalize();
+            }
+
+            Vector3 targetVelocity = desiredMoveDir * (_crawlSpeed * surgeMultiplier);
             Vector3 newHorizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, _acceleration * Time.fixedDeltaTime);
 
             _rigidbody.linearVelocity = new Vector3(newHorizontalVelocity.x, currentVelocity.y, newHorizontalVelocity.z);
 
-            if (_pendingInput.AimDirection.sqrMagnitude < 0.04f && targetVelocity.sqrMagnitude > 0.001f)
+            if (_pendingInput.AimDirection.sqrMagnitude < 0.04f && desiredMoveDir.sqrMagnitude > 0.001f)
             {
-                Quaternion crawlRotation = Quaternion.LookRotation(targetVelocity.normalized, Vector3.up);
-                transform.rotation = Quaternion.Slerp(transform.rotation, crawlRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+                Quaternion crawlRotation = Quaternion.LookRotation(desiredMoveDir.normalized, Vector3.up);
+                Quaternion nextRot = Quaternion.Slerp(_rigidbody.rotation, crawlRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+                _rigidbody.MoveRotation(nextRot);
             }
         }
 
         private void ApplyAiming()
         {
             Vector2 aimInput = _pendingInput.AimDirection;
-            if (_isFused && aimInput.sqrMagnitude < 0.04f && _pendingInput.MoveDirection.sqrMagnitude >= 0.04f)
+            if ((_isFused || IsHoldingObject) && aimInput.sqrMagnitude < 0.04f && _pendingInput.MoveDirection.sqrMagnitude >= 0.04f)
             {
                 aimInput = _pendingInput.MoveDirection;
             }
@@ -411,7 +472,16 @@ namespace Game.Gameplay.Player.Torso
             Vector3 crawlAimDir = new Vector3(aimInput.x, 0f, aimInput.y).normalized;
             Quaternion crawlTargetRotation = Quaternion.LookRotation(crawlAimDir, Vector3.up);
 
-            transform.rotation = Quaternion.Slerp(transform.rotation, crawlTargetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+            Quaternion nextAimRot = Quaternion.Slerp(_rigidbody.rotation, crawlTargetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+            if (!_rigidbody.isKinematic)
+            {
+                _rigidbody.MoveRotation(nextAimRot);
+            }
+            else
+            {
+                transform.rotation = nextAimRot;
+            }
+
             if (_aimPivot != null && _aimPivot != transform)
             {
                 _aimPivot.localRotation = Quaternion.identity;
@@ -721,6 +791,11 @@ namespace Game.Gameplay.Player.Torso
                 {
                     _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
                 }
+            }
+
+            if (!isFused && _proceduralArms != null)
+            {
+                _proceduralArms.SnapAllHandsToGround();
             }
         }
 

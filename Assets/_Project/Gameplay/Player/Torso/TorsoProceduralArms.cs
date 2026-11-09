@@ -60,11 +60,11 @@ namespace Game.Gameplay.Player.Torso
         {
             if (_proximal != null)
             {
-                _proximal.localRotation = _proximalRestLocalRot * Quaternion.Euler(curlAngle, 0f, 0f);
+                _proximal.localRotation = _proximalRestLocalRot * Quaternion.Euler(0f, 0f, -curlAngle);
             }
             if (_distal != null)
             {
-                _distal.localRotation = _distalRestLocalRot * Quaternion.Euler(curlAngle * distalMultiplier, 0f, 0f);
+                _distal.localRotation = _distalRestLocalRot * Quaternion.Euler(0f, 0f, -curlAngle * distalMultiplier);
             }
         }
     }
@@ -98,6 +98,7 @@ namespace Game.Gameplay.Player.Torso
         [NonSerialized] private Vector3 _plantedGroundPos;
         [NonSerialized] private Vector3 _stepStartPos;
         [NonSerialized] private Vector3 _stepTargetPos;
+        [NonSerialized] private Vector3 _groundNormal = Vector3.up;
         [NonSerialized] private float _crawlStepTimer;
         [NonSerialized] private bool _isCrawlingSwing;
 
@@ -117,6 +118,7 @@ namespace Game.Gameplay.Player.Torso
         public Vector3 PlantedGroundPos { get => _plantedGroundPos; set => _plantedGroundPos = value; }
         public Vector3 StepStartPos { get => _stepStartPos; set => _stepStartPos = value; }
         public Vector3 StepTargetPos { get => _stepTargetPos; set => _stepTargetPos = value; }
+        public Vector3 GroundNormal { get => _groundNormal; set => _groundNormal = value; }
         public float CrawlStepTimer { get => _crawlStepTimer; set => _crawlStepTimer = value; }
         public bool IsCrawlingSwing { get => _isCrawlingSwing; set => _isCrawlingSwing = value; }
 
@@ -207,10 +209,13 @@ namespace Game.Gameplay.Player.Torso
             _plantedGroundPos = initialPos;
             _stepStartPos = initialPos;
             _stepTargetPos = initialPos;
+            _groundNormal = Vector3.up;
+            _crawlStepTimer = 0f;
+            _isCrawlingSwing = false;
             _handVelocity = Vector3.zero;
         }
 
-        public void SolveSpline(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, Transform rootTransform)
+        public void SolveSpline(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, Transform rootTransform, float minFloorY = float.NegativeInfinity)
         {
             EnsureBuffers();
             if (_bones == null || _bones.Length < 8 || _bones[0] == null) return;
@@ -225,8 +230,12 @@ namespace Game.Gameplay.Player.Torso
             {
                 float u = k / 24f;
                 Vector3 pt = BezierSplineHose.EvaluatePoint(p0, p1, p2, p3, u);
+                if (minFloorY > -99999f && pt.y < minFloorY)
+                {
+                    pt.y = minFloorY;
+                }
                 _arcFineSamples[k] = pt;
-                totalCurveLength += Vector3.Distance(_arcFineSamples[k - 1], pt);
+                totalCurveLength += (_arcFineSamples[k - 1] - pt).magnitude;
                 _arcCumulativeLengths[k] = totalCurveLength;
             }
 
@@ -239,7 +248,12 @@ namespace Game.Gameplay.Player.Torso
             for (int i = 1; i < 8; i++)
             {
                 accumulatedDist += _restSegmentLengths[i - 1] * lengthScale;
-                _splinePoints[i] = SamplePointAtDistance(accumulatedDist, totalCurveLength);
+                Vector3 sampled = SamplePointAtDistance(accumulatedDist, totalCurveLength);
+                if (i < 7 && minFloorY > -99999f && sampled.y < minFloorY)
+                {
+                    sampled.y = minFloorY;
+                }
+                _splinePoints[i] = sampled;
             }
 
             for (int i = 0; i < 7; i++)
@@ -301,6 +315,20 @@ namespace Game.Gameplay.Player.Torso
                     _fingers[f].ApplyCurl(curlAngle, distalMultiplier);
                 }
             }
+        }
+
+        public Quaternion ComputeWorldHandRotation(Vector3 worldPointingDir, Transform rootTransform)
+        {
+            Quaternion rootRot = rootTransform != null ? rootTransform.rotation : Quaternion.identity;
+            Quaternion restRot = (_restLocalRotations != null && _restLocalRotations.Length > 7 &&
+                                  (_restLocalRotations[7].w != 0f || _restLocalRotations[7].x != 0f || _restLocalRotations[7].y != 0f || _restLocalRotations[7].z != 0f))
+                ? _restLocalRotations[7]
+                : Quaternion.Euler(180f, 0f, 0f);
+
+            Vector3 restWorldDir = rootRot * Vector3.down;
+            Vector3 safeTargetDir = worldPointingDir.sqrMagnitude > 0.0001f ? worldPointingDir.normalized : restWorldDir;
+            Quaternion alignDelta = Quaternion.FromToRotation(restWorldDir, safeTargetDir);
+            return alignDelta * (rootRot * restRot);
         }
     }
 
@@ -395,17 +423,80 @@ namespace Game.Gameplay.Player.Torso
         [Group("Imán Magnético")]
         [SerializeField] private float _magnetCurlAngle = -22f;
 
-        [Group("Marcha Gateo")]
-        [SerializeField] private float _crawlCycleDuration = 0.36f;
+        [Group("Referencias")]
+        [SerializeField] private Transform _bodyRoot;
 
         [Group("Marcha Gateo")]
-        [SerializeField] private float _crawlStrideForward = 0.45f;
+        [SerializeField] private float _crawlCycleDuration = 0.48f;
 
         [Group("Marcha Gateo")]
-        [SerializeField] private float _crawlStepHeight = 0.20f;
+        [SerializeField] private float _crawlMinStepDuration = 0.14f;
 
         [Group("Marcha Gateo")]
-        [SerializeField] private float _crawlHandSpread = 0.48f;
+        [SerializeField] private float _crawlInterStepPause = 0.06f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlMinInterStepPause = 0.02f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlStepDistanceThreshold = 0.30f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlStrideForward = 0.50f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlRestForwardOffset = 0.24f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _maxRearHandDistance = 0.62f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlStepHeight = 0.24f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlHandSpread = 0.46f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _palmGroundOffset = 0.18f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlPlantedFingerCurl = -45f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlSwingFingerCurl = 10f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlSlapSquash = 0.055f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlWobbleRollAngle = 4.5f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlWobblePitchAngle = 3.5f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlWobbleSmoothSpeed = 14f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private float _crawlSquashRecoverySpeed = 11f;
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private AnimationCurve _crawlHorizontalCurve = new AnimationCurve(
+            new Keyframe(0f, 0f, 0f, 0f),
+            new Keyframe(0.25f, 0.15f, 1.2f, 1.2f),
+            new Keyframe(0.65f, 0.95f, 0.8f, 0.8f),
+            new Keyframe(0.85f, 1.0f, 0f, 0f),
+            new Keyframe(1f, 1.0f, 0f, 0f)
+        );
+
+        [Group("Marcha Gateo")]
+        [SerializeField] private AnimationCurve _crawlHeightCurve = new AnimationCurve(
+            new Keyframe(0f, 0f, 5f, 5f),
+            new Keyframe(0.30f, 1.0f, 0f, 0f),
+            new Keyframe(0.60f, 0.65f, -1.8f, -1.8f),
+            new Keyframe(0.85f, 0f, -1.5f, 0f),
+            new Keyframe(1f, 0f, 0f, 0f)
+        );
 
         [Group("Marcha Gateo")]
         [SerializeField] private LayerMask _crawlGroundLayer = ~0;
@@ -424,7 +515,7 @@ namespace Game.Gameplay.Player.Torso
 
         [Group("Curvatura Spline")]
         [Tooltip("Elevación en P2")]
-        [SerializeField] private float _wristApproachHeight = 0.10f;
+        [SerializeField] private float _wristApproachHeight = 0.14f;
 
         [Group("Dedos Articulados")]
         [SerializeField] private float _idleFingerCurl = 15f;
@@ -437,7 +528,16 @@ namespace Game.Gameplay.Player.Torso
 
         private readonly RaycastHit[] _crawlRayHits = new RaycastHit[4];
         private float _throwTimer;
-        private float _crawlTimer;
+        private float _interStepTimer;
+        private int _activeSteppingArmIndex = -1;
+        private int _nextArmGaitIndex;
+        private bool _isRestPoseSettled;
+        private bool _wasCrawling;
+        private Vector3 _defaultBodyPosition;
+        private Quaternion _defaultBodyRotation = Quaternion.identity;
+        private bool _defaultBodyTransformCached;
+        private float _currentSquash;
+        private Quaternion _currentWobbleRotation = Quaternion.identity;
         private bool _isInitialized;
 
         public ProceduralArm LeftArm => _leftArm;
@@ -500,6 +600,19 @@ namespace Game.Gameplay.Player.Torso
                 AutoFindArmatureBones();
             }
 
+            if (_bodyRoot == null)
+            {
+                _bodyRoot = FindChildRecursive(transform, "Armature");
+                if (_bodyRoot == null) _bodyRoot = FindChildRecursive(transform, "Torso_Unity");
+            }
+
+            if (_bodyRoot != null && !_defaultBodyTransformCached)
+            {
+                _defaultBodyPosition = _bodyRoot.localPosition;
+                _defaultBodyRotation = _bodyRoot.localRotation;
+                _defaultBodyTransformCached = true;
+            }
+
             if (_leftArm != null)
             {
                 _leftArm.EnsureBuffers();
@@ -512,10 +625,40 @@ namespace Game.Gameplay.Player.Torso
                 _rightArm.CacheRestPose(transform, forceRecache: false);
             }
 
-            if (_crawlGroundLayer.value == 0)
+            if (_crawlGroundLayer.value == 0 || _crawlGroundLayer.value == ~0)
             {
                 _crawlGroundLayer = LayerMask.GetMask("Default", "Ground", "Environment");
                 if (_crawlGroundLayer.value == 0) _crawlGroundLayer = ~0;
+            }
+
+            if (_crawlPlantedFingerCurl > -25f)
+            {
+                _crawlPlantedFingerCurl = -45f;
+            }
+
+            if (_palmGroundOffset < 0.14f)
+            {
+                _palmGroundOffset = 0.18f;
+            }
+
+            if (_crawlStepDistanceThreshold < 0.24f)
+            {
+                _crawlStepDistanceThreshold = 0.30f;
+            }
+
+            if (_crawlCycleDuration < 0.42f)
+            {
+                _crawlCycleDuration = 0.48f;
+            }
+
+            if (_crawlInterStepPause < 0.045f)
+            {
+                _crawlInterStepPause = 0.06f;
+            }
+
+            if (_wristApproachHeight < 0.22f)
+            {
+                _wristApproachHeight = 0.26f;
             }
 
             _isInitialized = true;
@@ -526,18 +669,52 @@ namespace Game.Gameplay.Player.Torso
             Transform aimTrans = _aimPivot != null ? _aimPivot : transform;
             Vector3 aimPos = aimTrans.position;
             Quaternion aimRot = aimTrans.rotation;
+            Vector3 downDir = (Vector3.down + aimTrans.forward * 0.25f).normalized;
 
             if (_leftArm != null)
             {
                 Vector3 leftRest = aimPos + aimRot * new Vector3(-_restArmSpacing, _restArmHeight, _restArmForwardOffset);
-                _leftArm.InitializeHandPos(leftRest, aimRot);
+                Quaternion leftRot = _leftArm.ComputeWorldHandRotation(downDir, transform);
+                _leftArm.InitializeHandPos(leftRest, leftRot);
             }
 
             if (_rightArm != null)
             {
                 Vector3 rightRest = aimPos + aimRot * new Vector3(_restArmSpacing, _restArmHeight, _restArmForwardOffset);
-                _rightArm.InitializeHandPos(rightRest, aimRot);
+                Quaternion rightRot = _rightArm.ComputeWorldHandRotation(downDir, transform);
+                _rightArm.InitializeHandPos(rightRest, rightRot);
             }
+
+            _activeSteppingArmIndex = -1;
+            _interStepTimer = 0f;
+            _isRestPoseSettled = false;
+            _wasCrawling = false;
+        }
+
+        public void SnapAllHandsToGround()
+        {
+            float baseStepDur = Mathf.Max(0.08f, _crawlCycleDuration * 0.5f);
+            if (_leftArm != null)
+            {
+                Vector3 leftGround = EvaluateIdealHandGroundPosition(_leftArm, Vector3.zero, baseStepDur, _crawlInterStepPause, out Vector3 leftNorm);
+                Quaternion leftRot = ComputePlantedHandRotation(_leftArm, leftNorm);
+                _leftArm.InitializeHandPos(leftGround, leftRot);
+                _leftArm.GroundNormal = leftNorm;
+                _leftArm.ApplyFingerCurl(_crawlPlantedFingerCurl, _distalCurlMultiplier);
+            }
+
+            if (_rightArm != null)
+            {
+                Vector3 rightGround = EvaluateIdealHandGroundPosition(_rightArm, Vector3.zero, baseStepDur, _crawlInterStepPause, out Vector3 rightNorm);
+                Quaternion rightRot = ComputePlantedHandRotation(_rightArm, rightNorm);
+                _rightArm.InitializeHandPos(rightGround, rightRot);
+                _rightArm.GroundNormal = rightNorm;
+                _rightArm.ApplyFingerCurl(_crawlPlantedFingerCurl, _distalCurlMultiplier);
+            }
+
+            _activeSteppingArmIndex = -1;
+            _interStepTimer = 0f;
+            _isRestPoseSettled = true;
         }
 
         private void HandleThrow()
@@ -558,18 +735,32 @@ namespace Game.Gameplay.Player.Torso
             bool isFused = _controller != null ? _controller.IsFused : true;
             bool isHolding = _controller != null ? _controller.IsHoldingObject : false;
             bool isMagnet = _controller != null ? _controller.IsMagnetActive : false;
+            bool isCrawling = !isFused && !isHolding && !isMagnet;
 
-            if (isFused || isHolding || isMagnet)
+            if (isCrawling)
             {
-                SolveFusedOrManipulatingPose(dt, isHolding, isMagnet);
+                if (!_wasCrawling)
+                {
+                    SnapAllHandsToGround();
+                }
+                _wasCrawling = true;
+
+                SolveCrawlingPose(dt);
+                UpdateCrawlBodyWobble(dt, true);
             }
             else
             {
-                SolveCrawlingPose(dt);
+                _wasCrawling = false;
+                _activeSteppingArmIndex = -1;
+                _interStepTimer = 0f;
+                _isRestPoseSettled = false;
+
+                SolveFusedOrManipulatingPose(dt, isHolding, isMagnet);
+                UpdateCrawlBodyWobble(dt, false);
             }
 
-            SolveArmSpline(_leftArm);
-            SolveArmSpline(_rightArm);
+            SolveArmSpline(_leftArm, isCrawling);
+            SolveArmSpline(_rightArm, isCrawling);
         }
 
         private void SolveFusedOrManipulatingPose(float dt, bool isHolding, bool isMagnet)
@@ -600,12 +791,12 @@ namespace Game.Gameplay.Player.Torso
                 Vector3 toCenterLeft = (socketPos - targetLeftHandPos);
                 Vector3 toCenterRight = (socketPos - targetRightHandPos);
 
-                targetLeftHandRot = toCenterLeft.sqrMagnitude > 0.0001f
-                    ? Quaternion.LookRotation(toCenterLeft.normalized, socket.up)
+                targetLeftHandRot = _leftArm != null
+                    ? _leftArm.ComputeWorldHandRotation(toCenterLeft, transform)
                     : socket.rotation;
 
-                targetRightHandRot = toCenterRight.sqrMagnitude > 0.0001f
-                    ? Quaternion.LookRotation(toCenterRight.normalized, socket.up)
+                targetRightHandRot = _rightArm != null
+                    ? _rightArm.ComputeWorldHandRotation(toCenterRight, transform)
                     : socket.rotation;
 
                 targetFingerCurl = _holdingCurlAngle;
@@ -625,8 +816,12 @@ namespace Game.Gameplay.Player.Torso
                 targetLeftHandPos = centerTarget - (origin.right * _magnetHandSpacing) + jitter;
                 targetRightHandPos = centerTarget + (origin.right * _magnetHandSpacing) + jitter;
 
-                targetLeftHandRot = Quaternion.LookRotation(origin.forward, origin.up);
-                targetRightHandRot = targetLeftHandRot;
+                targetLeftHandRot = _leftArm != null
+                    ? _leftArm.ComputeWorldHandRotation(origin.forward, transform)
+                    : Quaternion.LookRotation(origin.forward, origin.up);
+                targetRightHandRot = _rightArm != null
+                    ? _rightArm.ComputeWorldHandRotation(origin.forward, transform)
+                    : targetLeftHandRot;
 
                 targetFingerCurl = _magnetCurlAngle;
             }
@@ -657,8 +852,13 @@ namespace Game.Gameplay.Player.Torso
                     targetRightHandPos += aimForward * throwThrust;
                 }
 
-                targetLeftHandRot = Quaternion.LookRotation(aimForward * 0.5f + Vector3.down * 0.5f, aimUp);
-                targetRightHandRot = targetLeftHandRot;
+                Vector3 idlePointingDir = (Vector3.down + aimForward * 0.25f).normalized;
+                targetLeftHandRot = _leftArm != null
+                    ? _leftArm.ComputeWorldHandRotation(idlePointingDir, transform)
+                    : Quaternion.LookRotation(aimForward, aimUp);
+                targetRightHandRot = _rightArm != null
+                    ? _rightArm.ComputeWorldHandRotation(idlePointingDir, transform)
+                    : targetLeftHandRot;
 
                 targetFingerCurl = _idleFingerCurl;
             }
@@ -669,89 +869,427 @@ namespace Game.Gameplay.Player.Torso
 
         private void SolveCrawlingPose(float dt)
         {
+            if (_currentSquash > 0.001f)
+            {
+                _currentSquash = Mathf.MoveTowards(_currentSquash, 0f, _crawlSquashRecoverySpeed * dt);
+            }
+
+            Vector3 linearVelocity = _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
+            Vector3 horizontalVelocity = Vector3.ProjectOnPlane(linearVelocity, transform.up);
+            float speedSqr = horizontalVelocity.sqrMagnitude;
+            float speed = Mathf.Sqrt(speedSqr);
+            bool isMoving = speedSqr > 0.20f;
+
             Vector2 moveInput = _controller != null ? _controller.MoveInput : Vector2.zero;
-            Vector3 vel = _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
-            bool isMoving = moveInput.sqrMagnitude > 0.04f || vel.sqrMagnitude > 0.04f;
+            float inputSqr = moveInput.sqrMagnitude;
+            bool hasInput = inputSqr > 0.01f;
+            float inputMag = Mathf.Sqrt(inputSqr);
+            bool hasLocomotionIntent = hasInput || isMoving;
 
-            Transform aimTrans = _aimPivot != null ? _aimPivot : transform;
-            Vector3 charPos = transform.position;
-            Vector3 charForward = transform.forward;
-            Vector3 charRight = transform.right;
+            float maxSpeed = _controller != null ? _controller.CrawlSpeed : 3.5f;
+            float speedRatio = Mathf.Clamp01(Mathf.Max(speed, inputMag * maxSpeed) / Mathf.Max(maxSpeed, 0.1f));
 
-            if (!isMoving)
+            float baseStepDuration = Mathf.Max(0.12f, _crawlCycleDuration * 0.45f);
+            float currentStepDuration = Mathf.Lerp(baseStepDuration, _crawlMinStepDuration, speedRatio);
+            float currentInterStepPause = Mathf.Lerp(_crawlInterStepPause, _crawlMinInterStepPause, speedRatio);
+
+            // 1. Advance currently stepping hand along non-linear gait curves and plant firmly on ground
+            if (_activeSteppingArmIndex != -1)
             {
-                _crawlTimer = 0f;
-                Vector3 leftGround = FindGroundPoint(charPos - (charRight * _crawlHandSpread) + (charForward * 0.25f));
-                Vector3 rightGround = FindGroundPoint(charPos + (charRight * _crawlHandSpread) + (charForward * 0.25f));
+                ProceduralArm steppingArm = GetArmByIndex(_activeSteppingArmIndex);
+                if (steppingArm != null)
+                {
+                    steppingArm.CrawlStepTimer += dt;
+                    float progress = Mathf.Clamp01(steppingArm.CrawlStepTimer / currentStepDuration);
 
-                Quaternion leftRot = Quaternion.LookRotation(charForward, Vector3.up);
-                Quaternion rightRot = Quaternion.LookRotation(charForward, Vector3.up);
+                    if (hasLocomotionIntent)
+                    {
+                        Vector3 dynamicTarget = EvaluateIdealHandGroundPosition(steppingArm, horizontalVelocity, currentStepDuration, currentInterStepPause, out Vector3 targetNormal);
+                        steppingArm.StepTargetPos = dynamicTarget;
+                        steppingArm.GroundNormal = targetNormal;
+                    }
 
-                UpdateArmTarget(_leftArm, leftGround, leftRot, 0f, dt);
-                UpdateArmTarget(_rightArm, rightGround, rightRot, 0f, dt);
-                return;
+                    float horizProgress = _crawlHorizontalCurve.Evaluate(progress);
+                    Vector3 baseHoriz = Vector3.LerpUnclamped(steppingArm.StepStartPos, steppingArm.StepTargetPos, horizProgress);
+
+                    float lateralProgress = Mathf.Clamp01(progress / 0.85f);
+                    float lateralSample = Mathf.Sin(lateralProgress * Mathf.PI);
+                    Vector3 outwardDir = steppingArm.Side == ArmSide.Left ? -transform.right : transform.right;
+                    Vector3 lateralOffset = outwardDir * (lateralSample * 0.05f);
+
+                    float heightSample = _crawlHeightCurve.Evaluate(progress);
+                    Vector3 liftOffset = transform.up * (heightSample * _crawlStepHeight);
+
+                    steppingArm.CurrentHandPos = baseHoriz + lateralOffset + liftOffset;
+                    steppingArm.TargetHandPos = steppingArm.CurrentHandPos;
+
+                    Quaternion plantedRot = ComputePlantedHandRotation(steppingArm, steppingArm.GroundNormal);
+                    Vector3 swingPointingDir = (-steppingArm.GroundNormal + transform.forward * (0.35f * heightSample)).normalized;
+                    Quaternion swingRot = steppingArm.ComputeWorldHandRotation(swingPointingDir, transform);
+                    steppingArm.CurrentHandRot = Quaternion.Slerp(steppingArm.CurrentHandRot, swingRot, 24f * dt);
+
+                    float flattenBlend = Mathf.Clamp01((progress - 0.55f) / 0.30f);
+                    float targetCurl = Mathf.Lerp(_crawlSwingFingerCurl, _crawlPlantedFingerCurl, flattenBlend);
+                    float nextCurl = Mathf.MoveTowards(steppingArm.CurrentFingerCurl, targetCurl, _fingerCurlSpeed * dt);
+                    steppingArm.ApplyFingerCurl(nextCurl, _distalCurlMultiplier);
+
+                    if (progress >= 1f)
+                    {
+                        steppingArm.CurrentHandPos = steppingArm.StepTargetPos;
+                        steppingArm.PlantedGroundPos = steppingArm.StepTargetPos;
+                        steppingArm.CurrentHandRot = plantedRot;
+                        steppingArm.IsCrawlingSwing = false;
+                        steppingArm.ApplyFingerCurl(_crawlPlantedFingerCurl, _distalCurlMultiplier);
+
+                        _currentSquash = Mathf.Max(_currentSquash, _crawlSlapSquash);
+                        _activeSteppingArmIndex = -1;
+                        _interStepTimer = currentInterStepPause;
+                        _nextArmGaitIndex = (_nextArmGaitIndex + 1) % 2;
+                    }
+                }
+                else
+                {
+                    _activeSteppingArmIndex = -1;
+                }
             }
 
-            _crawlTimer += dt;
-            float cycleDuration = Mathf.Max(0.05f, _crawlCycleDuration);
-            float normalizedCycle = (_crawlTimer % cycleDuration) / cycleDuration;
-
-            bool isLeftSwing = normalizedCycle < 0.5f;
-            float stepProgress = isLeftSwing ? (normalizedCycle * 2f) : ((normalizedCycle - 0.5f) * 2f);
-
-            Vector3 leadVelocity = vel * 0.25f;
-            if (leadVelocity.sqrMagnitude > _crawlStrideForward * _crawlStrideForward)
+            // 2. Maintain planted hands locked in world space on the floor with rear leash limit
+            for (int i = 0; i < 2; i++)
             {
-                leadVelocity = leadVelocity.normalized * _crawlStrideForward;
+                if (i == _activeSteppingArmIndex) continue;
+
+                ProceduralArm arm = GetArmByIndex(i);
+                if (arm == null) continue;
+
+                arm.IsCrawlingSwing = false;
+                Vector3 anchorPos = GetHandRestAnchorWorld(arm);
+                Vector3 deltaTotal = arm.PlantedGroundPos - anchorPos;
+                Vector3 deltaOnPlane = Vector3.ProjectOnPlane(deltaTotal, transform.up);
+
+                float distOnPlaneSqr = deltaOnPlane.sqrMagnitude;
+                float maxRearSqr = _maxRearHandDistance * _maxRearHandDistance;
+                if (distOnPlaneSqr > maxRearSqr && distOnPlaneSqr > 0.0001f)
+                {
+                    float distOnPlane = Mathf.Sqrt(distOnPlaneSqr);
+                    Vector3 clampedWorld = anchorPos + (deltaOnPlane / distOnPlane) * _maxRearHandDistance;
+                    arm.PlantedGroundPos = FindGroundPoint(clampedWorld, out Vector3 clampedNorm);
+                    arm.GroundNormal = clampedNorm;
+                }
+
+                arm.CurrentHandPos = arm.PlantedGroundPos;
+                arm.TargetHandPos = arm.PlantedGroundPos;
+
+                Quaternion plantedRot = ComputePlantedHandRotation(arm, arm.GroundNormal);
+                arm.CurrentHandRot = Quaternion.Slerp(arm.CurrentHandRot, plantedRot, 22f * dt);
+
+                float nextCurl = Mathf.MoveTowards(arm.CurrentFingerCurl, _crawlPlantedFingerCurl, _fingerCurlSpeed * dt);
+                arm.ApplyFingerCurl(nextCurl, _distalCurlMultiplier);
             }
 
-            Vector3 leftAnchor = charPos - (charRight * _crawlHandSpread) + (charForward * 0.20f) + leadVelocity;
-            Vector3 rightAnchor = charPos + (charRight * _crawlHandSpread) + (charForward * 0.20f) + leadVelocity;
-
-            if (isLeftSwing)
+            // 3. Initiate step on next candidate hand ONLY after inter-step pause (both hands planted first!)
+            if (_activeSteppingArmIndex == -1)
             {
-                float arcHeight = Mathf.Sin(stepProgress * Mathf.PI) * _crawlStepHeight;
-                Vector3 groundTarget = FindGroundPoint(leftAnchor);
-                Vector3 leftPos = Vector3.Lerp(_leftArm.StepStartPos, groundTarget, stepProgress) + Vector3.up * arcHeight;
-                Quaternion leftRot = Quaternion.LookRotation(charForward, Vector3.up);
-                UpdateArmTarget(_leftArm, leftPos, leftRot, 25f, dt);
+                if (_interStepTimer > 0f)
+                {
+                    _interStepTimer -= dt;
+                    return;
+                }
 
-                Vector3 rightPlanted = FindGroundPoint(charPos + (charRight * _crawlHandSpread) - (charForward * 0.15f));
-                UpdateArmTarget(_rightArm, rightPlanted, Quaternion.LookRotation(charForward, Vector3.up), -5f, dt);
+                if (hasLocomotionIntent)
+                {
+                    _isRestPoseSettled = false;
+                }
+                else
+                {
+                    if (_isRestPoseSettled)
+                    {
+                        return;
+                    }
 
-                _leftArm.StepStartPos = leftPos;
-                _rightArm.StepStartPos = rightPlanted;
-            }
-            else
-            {
-                float arcHeight = Mathf.Sin(stepProgress * Mathf.PI) * _crawlStepHeight;
-                Vector3 groundTarget = FindGroundPoint(rightAnchor);
-                Vector3 rightPos = Vector3.Lerp(_rightArm.StepStartPos, groundTarget, stepProgress) + Vector3.up * arcHeight;
-                Quaternion rightRot = Quaternion.LookRotation(charForward, Vector3.up);
-                UpdateArmTarget(_rightArm, rightPos, rightRot, 25f, dt);
+                    bool anyHandMisaligned = false;
+                    for (int s = 0; s < 2; s++)
+                    {
+                        int checkIndex = (_nextArmGaitIndex + s) % 2;
+                        ProceduralArm checkArm = GetArmByIndex(checkIndex);
+                        if (checkArm == null) continue;
 
-                Vector3 leftPlanted = FindGroundPoint(charPos - (charRight * _crawlHandSpread) - (charForward * 0.15f));
-                UpdateArmTarget(_leftArm, leftPlanted, Quaternion.LookRotation(charForward, Vector3.up), -5f, dt);
+                        Vector3 restTarget = EvaluateIdealHandGroundPosition(checkArm, Vector3.zero, currentStepDuration, currentInterStepPause, out Vector3 restNormal);
+                        float distSqr = (checkArm.PlantedGroundPos - restTarget).sqrMagnitude;
 
-                _rightArm.StepStartPos = rightPos;
-                _leftArm.StepStartPos = leftPlanted;
+                        if (distSqr > 0.025f)
+                        {
+                            checkArm.IsCrawlingSwing = true;
+                            checkArm.CrawlStepTimer = 0f;
+                            checkArm.StepStartPos = checkArm.CurrentHandPos;
+                            checkArm.StepTargetPos = restTarget;
+                            checkArm.GroundNormal = restNormal;
+                            _activeSteppingArmIndex = checkIndex;
+                            _nextArmGaitIndex = (checkIndex + 1) % 2;
+                            anyHandMisaligned = true;
+                            return;
+                        }
+                    }
+
+                    if (!anyHandMisaligned)
+                    {
+                        _isRestPoseSettled = true;
+                        return;
+                    }
+                }
+
+                ProceduralArm candidateArm = GetArmByIndex(_nextArmGaitIndex);
+                if (candidateArm != null)
+                {
+                    Vector3 idealTarget = EvaluateIdealHandGroundPosition(candidateArm, horizontalVelocity, currentStepDuration, currentInterStepPause, out Vector3 idealNormal);
+                    float distToIdealSqr = (candidateArm.PlantedGroundPos - idealTarget).sqrMagnitude;
+                    float thresholdSqr = _crawlStepDistanceThreshold * _crawlStepDistanceThreshold;
+
+                    if (distToIdealSqr > thresholdSqr || (hasInput && distToIdealSqr > 0.04f))
+                    {
+                        candidateArm.IsCrawlingSwing = true;
+                        candidateArm.CrawlStepTimer = 0f;
+                        candidateArm.StepStartPos = candidateArm.CurrentHandPos;
+                        candidateArm.StepTargetPos = idealTarget;
+                        candidateArm.GroundNormal = idealNormal;
+                        _activeSteppingArmIndex = _nextArmGaitIndex;
+                    }
+                    else
+                    {
+                        int otherIndex = (_nextArmGaitIndex + 1) % 2;
+                        ProceduralArm otherArm = GetArmByIndex(otherIndex);
+                        if (otherArm != null)
+                        {
+                            Vector3 otherTarget = EvaluateIdealHandGroundPosition(otherArm, horizontalVelocity, currentStepDuration, currentInterStepPause, out Vector3 otherNormal);
+                            if ((otherArm.PlantedGroundPos - otherTarget).sqrMagnitude > thresholdSqr)
+                            {
+                                _nextArmGaitIndex = otherIndex;
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        private Vector3 FindGroundPoint(Vector3 samplePoint)
+        private ProceduralArm GetArmByIndex(int index)
         {
-            Vector3 origin = samplePoint + Vector3.up * 0.6f;
-            int count = Physics.RaycastNonAlloc(origin, Vector3.down, _crawlRayHits, 1.4f, _crawlGroundLayer, QueryTriggerInteraction.Ignore);
+            return index == 0 ? _leftArm : _rightArm;
+        }
+
+        private Vector3 GetHandRestAnchorWorld(ProceduralArm arm)
+        {
+            float lateralSign = arm != null && arm.Side == ArmSide.Left ? -1f : 1f;
+            return transform.position
+                + (transform.right * (lateralSign * _crawlHandSpread))
+                + (transform.forward * _crawlRestForwardOffset);
+        }
+
+        private Quaternion ComputePlantedHandRotation(ProceduralArm arm, Vector3 groundNormal)
+        {
+            Vector3 up = groundNormal.sqrMagnitude > 0.001f ? groundNormal.normalized : Vector3.up;
+            if (arm != null)
+            {
+                return arm.ComputeWorldHandRotation(-up, transform);
+            }
+
+            Vector3 forwardOnGround = Vector3.ProjectOnPlane(transform.forward, up);
+            if (forwardOnGround.sqrMagnitude < 0.0001f)
+            {
+                forwardOnGround = transform.forward;
+            }
+            else
+            {
+                forwardOnGround.Normalize();
+            }
+
+            return Quaternion.LookRotation(forwardOnGround, up);
+        }
+
+        private Vector3 EvaluateIdealHandGroundPosition(
+            ProceduralArm arm,
+            Vector3 horizontalVelocity,
+            float currentStepDuration,
+            float currentInterStepPause,
+            out Vector3 groundNormal)
+        {
+            Vector3 anchorPos = GetHandRestAnchorWorld(arm);
+
+            float stanceDuration = currentStepDuration + currentInterStepPause;
+            float leadTime = (currentStepDuration * 0.85f) + (stanceDuration * 0.5f);
+
+            Vector3 angularVel = _rigidbody != null ? _rigidbody.angularVelocity : Vector3.zero;
+            Vector3 tangentialVel = Vector3.Cross(angularVel, anchorPos - transform.position);
+            Vector3 tangentialOnPlane = Vector3.ProjectOnPlane(tangentialVel, transform.up);
+            Vector3 totalVelocity = horizontalVelocity + tangentialOnPlane;
+
+            if (_controller != null && _controller.MoveInput.sqrMagnitude > 0.01f)
+            {
+                Vector2 input = _controller.MoveInput;
+                Vector3 inputDir = new Vector3(input.x, 0f, input.y);
+                if (inputDir.sqrMagnitude > 1f) inputDir.Normalize();
+                Vector3 inputVelocity = inputDir * _controller.CrawlSpeed;
+                if (totalVelocity.sqrMagnitude < (inputVelocity.sqrMagnitude * 0.5f))
+                {
+                    totalVelocity = Vector3.Lerp(totalVelocity, inputVelocity, 0.85f);
+                }
+            }
+
+            Vector3 strideLead = totalVelocity * leadTime;
+            float leadMagSqr = strideLead.sqrMagnitude;
+            float maxStrideSqr = _crawlStrideForward * _crawlStrideForward;
+            if (leadMagSqr > maxStrideSqr && leadMagSqr > 0.0001f)
+            {
+                strideLead = (strideLead / Mathf.Sqrt(leadMagSqr)) * _crawlStrideForward;
+            }
+
+            Vector3 projectedPos = anchorPos + strideLead;
+            return FindGroundPoint(projectedPos, out groundNormal);
+        }
+
+        private Vector3 FindGroundPoint(Vector3 samplePoint, out Vector3 groundNormal)
+        {
+            Vector3 origin = samplePoint + Vector3.up * 0.75f;
+            int count = Physics.RaycastNonAlloc(origin, Vector3.down, _crawlRayHits, 1.6f, _crawlGroundLayer, QueryTriggerInteraction.Ignore);
+
+            float bestDist = float.MaxValue;
+            Vector3 bestPoint = Vector3.zero;
+            Vector3 bestNormal = Vector3.up;
+            bool found = false;
 
             for (int i = 0; i < count; i++)
             {
                 RaycastHit hit = _crawlRayHits[i];
                 if (hit.collider == null) continue;
                 if (hit.collider.transform.root == transform.root) continue;
-                return hit.point;
+
+                if (hit.distance < bestDist)
+                {
+                    bestDist = hit.distance;
+                    bestPoint = hit.point;
+                    bestNormal = hit.normal.sqrMagnitude > 0.01f ? hit.normal : Vector3.up;
+                    found = true;
+                }
             }
 
-            return samplePoint + Vector3.down * 0.2f;
+            if (found)
+            {
+                groundNormal = bestNormal;
+                return bestPoint + (bestNormal * _palmGroundOffset);
+            }
+
+            groundNormal = Vector3.up;
+            return new Vector3(samplePoint.x, transform.position.y + _palmGroundOffset, samplePoint.z);
+        }
+
+        private void UpdateCrawlBodyWobble(float dt, bool isCrawling)
+        {
+            if (_bodyRoot == null || !_defaultBodyTransformCached) return;
+
+            if (!isCrawling)
+            {
+                _currentSquash = Mathf.MoveTowards(_currentSquash, 0f, _crawlSquashRecoverySpeed * dt);
+                _currentWobbleRotation = Quaternion.Slerp(_currentWobbleRotation, Quaternion.identity, _crawlWobbleSmoothSpeed * dt);
+                _bodyRoot.localRotation = _defaultBodyRotation * _currentWobbleRotation;
+                _bodyRoot.localPosition = _defaultBodyPosition - Vector3.up * _currentSquash;
+                return;
+            }
+
+            Quaternion targetWobble = Quaternion.identity;
+            if (_activeSteppingArmIndex == 0)
+            {
+                targetWobble = Quaternion.Euler(-_crawlWobblePitchAngle, 0f, _crawlWobbleRollAngle);
+            }
+            else if (_activeSteppingArmIndex == 1)
+            {
+                targetWobble = Quaternion.Euler(-_crawlWobblePitchAngle, 0f, -_crawlWobbleRollAngle);
+            }
+
+            Vector3 avgNormal = Vector3.zero;
+            int normalCount = 0;
+            if (_leftArm != null && _leftArm.GroundNormal.sqrMagnitude > 0.1f)
+            {
+                avgNormal += _leftArm.GroundNormal;
+                normalCount++;
+            }
+            if (_rightArm != null && _rightArm.GroundNormal.sqrMagnitude > 0.1f)
+            {
+                avgNormal += _rightArm.GroundNormal;
+                normalCount++;
+            }
+
+            if (normalCount > 0)
+            {
+                avgNormal /= normalCount;
+                if (avgNormal.sqrMagnitude > 0.001f) avgNormal.Normalize();
+                else avgNormal = transform.up;
+            }
+            else
+            {
+                avgNormal = transform.up;
+            }
+
+            Quaternion slopeOffset = Quaternion.FromToRotation(transform.up, avgNormal);
+            Quaternion localSlopeOffset = Quaternion.Inverse(transform.rotation) * slopeOffset * transform.rotation;
+
+            _currentWobbleRotation = Quaternion.Slerp(_currentWobbleRotation, targetWobble * localSlopeOffset, _crawlWobbleSmoothSpeed * dt);
+            _bodyRoot.localRotation = _defaultBodyRotation * _currentWobbleRotation;
+            _bodyRoot.localPosition = _defaultBodyPosition - Vector3.up * _currentSquash;
+        }
+
+        public bool ComputeCrawlSupportCentroid(out Vector3 centroid, out Vector3 avgNormal, out float pullSurgeMultiplier)
+        {
+            centroid = transform.position;
+            avgNormal = transform.up;
+            pullSurgeMultiplier = 1f;
+
+            if (_leftArm == null || _rightArm == null)
+            {
+                return false;
+            }
+
+            Vector3 sumPos = Vector3.zero;
+            Vector3 sumNormal = Vector3.zero;
+            float totalWeight = 0f;
+
+            for (int i = 0; i < 2; i++)
+            {
+                ProceduralArm arm = i == 0 ? _leftArm : _rightArm;
+                Vector3 handPos;
+                float weight;
+
+                if (!arm.IsCrawlingSwing)
+                {
+                    handPos = arm.PlantedGroundPos;
+                    weight = 1f;
+                }
+                else
+                {
+                    handPos = Vector3.Lerp(arm.StepStartPos, arm.StepTargetPos, 0.5f);
+                    weight = 0.70f;
+                }
+
+                sumPos += handPos * weight;
+                sumNormal += (arm.GroundNormal.sqrMagnitude > 0.01f ? arm.GroundNormal : transform.up) * weight;
+                totalWeight += weight;
+            }
+
+            if (totalWeight <= 0.0001f)
+            {
+                return false;
+            }
+
+            centroid = sumPos / totalWeight;
+            avgNormal = sumNormal.sqrMagnitude > 0.001f ? sumNormal.normalized : transform.up;
+
+            // Rhythmic traction surge: while a hand is actively swinging/pulling, modulate crawl surge smoothly
+            if (_activeSteppingArmIndex != -1)
+            {
+                ProceduralArm activeArm = GetArmByIndex(_activeSteppingArmIndex);
+                float baseStepDuration = Mathf.Max(0.08f, _crawlCycleDuration * 0.45f);
+                float prog = activeArm != null ? Mathf.Clamp01(activeArm.CrawlStepTimer / baseStepDuration) : 0.5f;
+                pullSurgeMultiplier = 0.88f + 0.24f * Mathf.Sin(prog * Mathf.PI);
+            }
+
+            return true;
         }
 
         private void UpdateArmTarget(ProceduralArm arm, Vector3 targetPos, Quaternion targetRot, float targetCurl, float dt)
@@ -769,7 +1307,7 @@ namespace Game.Gameplay.Player.Torso
             arm.ApplyFingerCurl(currentCurl, _distalCurlMultiplier);
         }
 
-        private void SolveArmSpline(ProceduralArm arm)
+        private void SolveArmSpline(ProceduralArm arm, bool isCrawling)
         {
             if (arm == null || arm.Shoulder == null || arm.Bones == null || arm.Bones.Length < 8) return;
 
@@ -777,23 +1315,43 @@ namespace Game.Gameplay.Player.Torso
             Vector3 p3 = arm.CurrentHandPos;
 
             Vector3 shoulderToHand = p3 - p0;
-            float dist = shoulderToHand.magnitude;
+            float distSqr = shoulderToHand.sqrMagnitude;
+            float dist = Mathf.Sqrt(distSqr);
             float maxReach = arm.TotalChainLength > 0.05f ? arm.TotalChainLength * 0.98f : 0.85f;
 
-            if (dist > maxReach && dist > 0.0001f)
+            if (distSqr > maxReach * maxReach && distSqr > 0.000001f)
             {
                 p3 = p0 + (shoulderToHand / dist) * maxReach;
                 shoulderToHand = p3 - p0;
+                dist = maxReach;
             }
 
             bool isLeft = arm.Side == ArmSide.Left;
             Vector3 sideDir = isLeft ? -transform.right : transform.right;
 
-            Vector3 p1 = p0 + (sideDir * _hoseArchOutward) - (transform.up * _hoseArchDown) + (shoulderToHand * 0.22f);
-            Vector3 handForward = arm.CurrentHandRot * Vector3.forward;
-            Vector3 p2 = p3 - (handForward * _wristApproachDistance) + (Vector3.up * _wristApproachHeight);
+            Vector3 p1;
+            Vector3 p2;
+            float minFloorY = float.NegativeInfinity;
 
-            arm.SolveSpline(p0, p1, p2, p3, transform);
+            if (isCrawling)
+            {
+                float slack = Mathf.Max(0f, maxReach - dist);
+                float naturalBow = Mathf.Clamp(Mathf.Sqrt(slack * maxReach * 0.45f) + 0.10f, 0.12f, _hoseArchOutward + 0.14f);
+                Vector3 groundUp = arm.GroundNormal.sqrMagnitude > 0.01f ? arm.GroundNormal : Vector3.up;
+                Vector3 horizShoulderToHand = Vector3.ProjectOnPlane(shoulderToHand, groundUp);
+
+                p1 = p0 + (sideDir * naturalBow) + (horizShoulderToHand * 0.25f) + (groundUp * 0.24f);
+                p2 = p3 + (groundUp * Mathf.Max(0.28f, _wristApproachHeight));
+                minFloorY = (arm.PlantedGroundPos.y - _palmGroundOffset) + 0.14f;
+            }
+            else
+            {
+                p1 = p0 + (sideDir * _hoseArchOutward) - (transform.up * _hoseArchDown) + (shoulderToHand * 0.22f);
+                Vector3 handPointingDir = arm.CurrentHandRot * Vector3.up;
+                p2 = p3 - (handPointingDir * _wristApproachDistance) + (Vector3.up * _wristApproachHeight);
+            }
+
+            arm.SolveSpline(p0, p1, p2, p3, transform, minFloorY);
         }
 
         [Button("Auto-Find Armature Bones")]

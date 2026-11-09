@@ -238,6 +238,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5919079085895425184}
   - component: {fileID: 7804193394519054315}
+  - component: {fileID: 6109846413435052720}
   - component: {fileID: 5389172001226514948}
   - component: {fileID: 5963039777318224361}
   m_Layer: 0
@@ -316,6 +317,40 @@ MonoBehaviour:
     _ownerOnly: 0
     _sendIntervalInSeconds: 0
     _initialValue: 0
+--- !u!114 &6109846413435052720
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3009994831632739501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 848bbf7bdba43e346815956ccc4c5699, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Interactables.CatapultTrajectoryVisualizer
+  _catapult: {fileID: 7804193394519054315}
+  _forwardSource: 0
+  _previewTension: 1
+  _fallMultiplier: 2.5
+  _collisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _showMaxTensionArc: 1
+  _showMinTensionArc: 1
+  _showPreviewTensionArc: 1
+  _maxArcColor: {r: 0, g: 1, b: 0.4, a: 0.9}
+  _minArcColor: {r: 1, g: 0.6, b: 0, a: 0.75}
+  _previewArcColor: {r: 0, g: 0.85, b: 1, a: 1}
+  _impactDiscRadius: 0.8
+  _showSceneLabels: 1
+  _horizontalDistance: 0
+  _maxApexHeight: 0
+  _flightTime: 0
+  _hitSurfaceName: Ninguno (Al infinito)
+  _landingPosition: {x: 0, y: 0, z: 0}
+  _targetObjective: {fileID: 0}
+  _calculatedRequiredSpeed: 0
 --- !u!114 &5389172001226514948
 MonoBehaviour:
   m_ObjectHideFlags: 0

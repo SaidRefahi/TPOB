@@ -84,3 +84,25 @@ Guidelines for structural design, lifetime management, and component interaction
   - **Temporary Runtime / Play Mode Changes**: In-memory modifications during Play Mode or standalone execution are strictly transient; they exist only in memory during the active session and do not automatically persist to asset files on disk.
   - **Explicit Editor Tool Persistence**: Authoring or custom editor tools that intentionally modify asset data must explicitly mark assets dirty (`EditorUtility.SetDirty`) and serialize changes (`AssetDatabase.SaveAssets` / `AssetDatabase.SaveAssetIfDirty`) outside of normal gameplay runtime.
 - Do not use ScriptableObjects as scene-bound state containers; scene-specific references and state belong in scene components.
+
+---
+
+## 6. Editor Lifecycle & Inspector Sanitization
+
+### Rule 6.1: Safe Object Destruction in Editor Tools [GUIDED] [Architecture, Runtime]
+- Any custom level builder, procedural generator, or automated tool that creates, modifies, or destroys GameObjects must implement safe destruction via `SafeDestroyObject` (deselecting the target from `Selection.objects` and `Selection.activeGameObject` before destroying with `Undo.DestroyObjectImmediate`).
+- Never invoke `DestroyImmediate` on objects that are currently selected in the Inspector without clearing the selection and rebuilding the tracker.
+
+### Rule 6.2: Play Mode & Domain Reload Sanitization [GUIDED] [Architecture, Runtime]
+- Play Mode transitions and Domain Reload events in Unity 6 must leverage `IPlayModeTransitionObserver` and `SelectionMementoService` to:
+  - Purge open `InspectorWindow` / `PropertyEditor.tracker` instances and destroy orphaned `Editor` ScriptableObjects prior to scene unload and assembly reload.
+  - Preserve user selection non-destructively across domain reloads using native `UnityEditor.SessionState` and restore it post-reload.
+
+---
+
+## 7. Workspace Security Boundaries
+
+### Rule 7.1: File System & Workspace Boundary Security [ENFORCEABLE] [Architecture]
+- All file creation, modification, cleanup, and deletion commands must strictly target paths located inside the project repository root (`c:\Users\SaidR\Documents\GitHub\TPOB`).
+- Never delete, move, or modify files in external user directories, personal folders, or root paths outside the project boundary under any circumstance.
+
