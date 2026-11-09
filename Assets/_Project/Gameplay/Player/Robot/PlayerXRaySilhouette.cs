@@ -12,13 +12,14 @@ namespace Game.Gameplay.Player.Robot
         [SerializeField] private float _fadeSpeed = 8f;
         [SerializeField] private float _heightOffset = 0.85f;
 
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
         private Material _instancedMaterial;
         private readonly List<Renderer> _overlayRenderers = new(8);
         private readonly RaycastHit[] _hitBuffer = new RaycastHit[8];
         private UnityEngine.Camera _cachedCamera;
         private bool _isOccluded;
         private float _currentAlpha;
-        private int _baseColorId;
 
         public void SetColor(Color color)
         {
@@ -27,13 +28,12 @@ namespace Game.Gameplay.Player.Robot
             {
                 Color c = _silhouetteColor;
                 c.a = _currentAlpha;
-                _instancedMaterial.SetColor(_baseColorId, c);
+                _instancedMaterial.SetColor(BaseColorId, c);
             }
         }
 
         private void Awake()
         {
-            _baseColorId = Shader.PropertyToID("_BaseColor");
             SetupSilhouette();
         }
 
@@ -55,7 +55,7 @@ namespace Game.Gameplay.Player.Robot
 
             Color initialColor = _silhouetteColor;
             initialColor.a = 0f;
-            _instancedMaterial.SetColor(_baseColorId, initialColor);
+            _instancedMaterial.SetColor(BaseColorId, initialColor);
 
             var meshRenderers = GetComponentsInChildren<MeshRenderer>(true);
             for (int i = 0; i < meshRenderers.Length; i++)
@@ -116,7 +116,7 @@ namespace Game.Gameplay.Player.Robot
             }
 
             Vector3 start = _cachedCamera.transform.position;
-            Vector3 target = transform.position + Vector3.up * _heightOffset;
+            Vector3 target = transform.position + transform.up * _heightOffset;
             Vector3 dir = target - start;
             float dist = dir.magnitude;
 
@@ -157,7 +157,7 @@ namespace Game.Gameplay.Player.Robot
             {
                 Color c = _silhouetteColor;
                 c.a = _currentAlpha;
-                _instancedMaterial.SetColor(_baseColorId, c);
+                _instancedMaterial.SetColor(BaseColorId, c);
             }
         }
 

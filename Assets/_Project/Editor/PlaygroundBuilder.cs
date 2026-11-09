@@ -347,9 +347,11 @@ namespace Game.Editor
             MaterialSet set = new MaterialSet();
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
+            Shader seeThroughShader = Shader.Find("TPOB/Environment/SeeThroughWall");
+            if (seeThroughShader == null) seeThroughShader = shader;
 
             set.Floor = GetOrCreateMaterial("Mat_Floor", new Color(0.18f, 0.2f, 0.25f), shader);
-            set.Wall = GetOrCreateMaterial("Mat_Wall", new Color(0.38f, 0.4f, 0.45f), shader);
+            set.Wall = GetOrCreateMaterial("Mat_Wall", new Color(0.38f, 0.4f, 0.45f), seeThroughShader);
             set.Ramp = GetOrCreateMaterial("Mat_Ramp", new Color(0.28f, 0.32f, 0.38f), shader);
             set.Legs = GetOrCreateMaterial("Mat_Legs", new Color(0f, 0.75f, 0.95f), shader);
             set.Torso = GetOrCreateMaterial("Mat_Torso", new Color(1f, 0.48f, 0.05f), shader);
@@ -369,7 +371,8 @@ namespace Game.Editor
             set.CheckpointBase = GetOrCreateMaterial("Mat_CheckpointBase", new Color(0.2f, 0.22f, 0.28f), shader, 0.5f, 0.6f);
             set.CheckpointIndicator = GetOrCreateMaterial("Mat_CheckpointIndicator", new Color(0.85f, 0.45f, 0.1f), shader, 0.8f, 0.8f);
             set.KillVolume = GetOrCreateMaterial("Mat_KillVolume", new Color(0.85f, 0.15f, 0.15f, 0.3f), shader);
-            set.MagneticWall = GetOrCreateMaterial("Mat_MagneticWall", new Color(0.12f, 0.16f, 0.22f), shader, 0.9f, 0.85f);
+            set.MagneticWall = GetOrCreateMaterial("Mat_MagneticWall", new Color(0.12f, 0.16f, 0.22f), seeThroughShader, 0.9f, 0.85f);
+            set.MagneticWall.shader = seeThroughShader;
             set.MagneticWall.EnableKeyword("_EMISSION");
             set.MagneticWall.SetColor("_EmissionColor", new Color(0.1f, 0.75f, 1f));
 
