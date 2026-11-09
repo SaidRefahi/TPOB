@@ -1,4 +1,5 @@
 using Game.Core.Enums;
+using Game.Core.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -148,7 +149,9 @@ namespace Game.Gameplay.UI
 
             if (_readyButtonText != null)
             {
-                _readyButtonText.text = isLocalReady ? "CANCELAR LISTO" : "CONFIRMAR (LISTO)";
+                _readyButtonText.text = isLocalReady 
+                    ? LocalizationService.Get("CancelReady") 
+                    : LocalizationService.Get("Ready");
             }
         }
 

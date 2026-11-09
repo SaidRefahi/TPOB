@@ -115,6 +115,9 @@ namespace Game.Gameplay.Player.Torso
         public Transform AimPivot => _aimPivot;
         public Transform HoldSocket => _holdSocket;
         public Transform MagnetOrigin => _magnetOrigin;
+        public Vector3 InitialScale => _initialScale;
+
+        private Vector3 _initialScale = Vector3.one;
 
         public event Action<IGrabbable> OnObjectGrabbed;
         public event Action<IGrabbable> OnObjectReleased;
@@ -153,6 +156,8 @@ namespace Game.Gameplay.Player.Torso
 
         private void Awake()
         {
+            _initialScale = transform.localScale.sqrMagnitude > 0.01f ? transform.localScale : Vector3.one;
+
             if (_rigidbody == null)
             {
                 _rigidbody = GetComponent<Rigidbody>();
@@ -739,6 +744,13 @@ namespace Game.Gameplay.Player.Torso
         public bool IsFused => _isFused;
         public RobotCoordinator Coordinator => _coordinator != null ? _coordinator : (_coordinator = FindFirstObjectByType<RobotCoordinator>());
         public bool CanFuse => (Coordinator != null) && _coordinator.CanFuse();
+        public void ClearPendingFuseTrigger()
+        {
+            if (_inputReader != null)
+            {
+                _inputReader.ConsumeFuseTrigger();
+            }
+        }
 
         public void SetCoordinator(RobotCoordinator coordinator)
         {

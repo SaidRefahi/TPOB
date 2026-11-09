@@ -32,6 +32,9 @@ namespace Game.Gameplay.Player.Robot
         [Group("Configuración")]
         [SerializeField] private float _maxFusionDistance = 4.5f;
 
+        [Group("Configuración")]
+        [SerializeField] private float _transitionCooldown = 0.5f;
+
         [Group("Estado Sincronizado")]
         [SerializeField] private SyncVar<bool> _isFused = new(false);
 
@@ -44,8 +47,9 @@ namespace Game.Gameplay.Player.Robot
 
         private ICatapultMechanism _activeCatapult;
         private float _dragSpeedMultiplier = 1f;
+        private float _lastTransitionTime = -999f;
 
-        public bool IsFused => _isFused.value;
+        public bool IsFused => !isSpawned ? (_currentStrategy != null && _currentStrategy.IsFused) : _isFused.value;
         public LegsController Legs => _legs;
         public TorsoController Torso => _torso;
         public FusionSocket Socket => _socket;
@@ -288,6 +292,11 @@ namespace Game.Gameplay.Player.Robot
 
         public void RequestFusion()
         {
+            if (Time.time < _lastTransitionTime + _transitionCooldown)
+            {
+                return;
+            }
+
             bool hasAuthority = !isSpawned || isServer;
             if (hasAuthority)
             {
@@ -340,6 +349,10 @@ namespace Game.Gameplay.Player.Robot
 
         private void PerformFusionLocally()
         {
+            _lastTransitionTime = Time.time;
+            if (_legs != null) _legs.ClearPendingFuseTrigger();
+            if (_torso != null) _torso.ClearPendingFuseTrigger();
+
             RebuildContext();
             ApplyStrategy(_fusionStrategy);
 
@@ -349,6 +362,11 @@ namespace Game.Gameplay.Player.Robot
 
         public void RequestSeparation()
         {
+            if (Time.time < _lastTransitionTime + _transitionCooldown)
+            {
+                return;
+            }
+
             bool hasAuthority = !isSpawned || isServer;
             if (hasAuthority)
             {
@@ -399,6 +417,10 @@ namespace Game.Gameplay.Player.Robot
 
         private void PerformSeparationLocally(Vector3 separationPosition)
         {
+            _lastTransitionTime = Time.time;
+            if (_legs != null) _legs.ClearPendingFuseTrigger();
+            if (_torso != null) _torso.ClearPendingFuseTrigger();
+
             RebuildContext();
             ApplyStrategy(_separationStrategy);
 

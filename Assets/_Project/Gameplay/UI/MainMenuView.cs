@@ -8,6 +8,7 @@ namespace Game.Gameplay.UI
     public sealed class MainMenuView : MonoBehaviour
     {
         [Header("Botones Principales")]
+        [SerializeField] private Button _localPlayButton;
         [SerializeField] private Button _hostButton;
         [SerializeField] private Button _openJoinModalButton;
         [SerializeField] private Button _optionsButton;
@@ -28,9 +29,25 @@ namespace Game.Gameplay.UI
         [Header("Diálogo de Opciones")]
         [SerializeField] private SettingsView _settingsDialog;
 
+        [Header("Selector de Idioma")]
+        [SerializeField] private Button _languageToggleButton;
+        [SerializeField] private TextMeshProUGUI _languageButtonText;
+
         [Header("Estado y Feedback")]
         [SerializeField] private TextMeshProUGUI _statusFeedbackText;
 
+        public Button LocalPlayButton
+        {
+            get
+            {
+                if (_localPlayButton == null)
+                {
+                    var t = transform.Find("Background/MenuContainer/ButtonsColumn/Btn_LocalPlay");
+                    if (t != null) _localPlayButton = t.GetComponent<Button>();
+                }
+                return _localPlayButton;
+            }
+        }
         public Button HostButton => _hostButton;
         public Button OpenJoinModalButton => _openJoinModalButton;
         public Button OptionsButton => _optionsButton;
@@ -45,6 +62,9 @@ namespace Game.Gameplay.UI
 
         public TextMeshProUGUI LocalIpText => _localIpText;
         public Button CopyIpButton => _copyIpButton;
+
+        public Button LanguageToggleButton => _languageToggleButton;
+        public TextMeshProUGUI LanguageButtonText => _languageButtonText;
 
         public SettingsView SettingsDialog => _settingsDialog;
         public TextMeshProUGUI StatusFeedbackText => _statusFeedbackText;

@@ -14,7 +14,7 @@ namespace Game.Network.UI
     [DisallowMultipleComponent]
     public sealed class ConnectionHUD : MonoBehaviour
     {
-        [SerializeField] private bool _showGUI = true;
+        [SerializeField] private bool _showGUI = false;
         [SerializeField] private Vector2 _guiPosition = new Vector2(20, 20);
         [SerializeField] private string _serverAddress = "127.0.0.1";
         [SerializeField] private string _serverPort = "5000";
@@ -73,6 +73,15 @@ namespace Game.Network.UI
             if (FindFirstObjectByType<PerformanceMonitor>() == null)
             {
                 gameObject.AddComponent<PerformanceMonitor>();
+            }
+        }
+
+        private void Update()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null && keyboard.f10Key.wasPressedThisFrame)
+            {
+                _showGUI = !_showGUI;
             }
         }
 

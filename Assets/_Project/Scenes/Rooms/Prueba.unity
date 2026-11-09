@@ -51863,7 +51863,8 @@ MonoBehaviour:
   _subterraneanKillVolume: {fileID: 0}
   _legsSpawnPoint: {fileID: 1046332818}
   _torsoSpawnPoint: {fileID: 1178942261}
-  _checkpoints: []
+  _checkpoints:
+  - {fileID: 1573985104}
   _exitTrigger: {fileID: 0}
   _showMetricGizmos: 1
   _walkJumpDistance: 4
@@ -70872,6 +70873,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 486665651718954616, guid: edc7d8630c655f64093d4c1ba4728cef, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.75000006
+      objectReference: {fileID: 0}
+    - target: {fileID: 486665651718954616, guid: edc7d8630c655f64093d4c1ba4728cef, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.11999977
+      objectReference: {fileID: 0}
     - target: {fileID: 1956477746040926637, guid: edc7d8630c655f64093d4c1ba4728cef, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.5815205
@@ -70916,11 +70925,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: Checkpoint
       objectReference: {fileID: 0}
+    - target: {fileID: 8629928315729425343, guid: edc7d8630c655f64093d4c1ba4728cef, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.11999977
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: edc7d8630c655f64093d4c1ba4728cef, type: 3}
+--- !u!114 &1573985104 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3199686629073319956, guid: edc7d8630c655f64093d4c1ba4728cef, type: 3}
+  m_PrefabInstance: {fileID: 1573985103}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89ff9bb239f80e8408ad8b3ee1f17450, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Checkpoints.Checkpoint
 --- !u!1001 &1574282370
 PrefabInstance:
   m_ObjectHideFlags: 0

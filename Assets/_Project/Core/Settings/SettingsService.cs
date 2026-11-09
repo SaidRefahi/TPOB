@@ -6,15 +6,21 @@ namespace Game.Core.Settings
 {
     public sealed class SettingsService : ISettingsService
     {
-        private const string KeyMasterVol = "TPOB_MasterVol";
-        private const string KeySfxVol = "TPOB_SfxVol";
-        private const string KeyMusicVol = "TPOB_MusicVol";
-        private const string KeyAimSens = "TPOB_AimSens";
-        private const string KeyFullscreen = "TPOB_Fullscreen";
-        private const string KeyVSync = "TPOB_VSync";
-        private const string KeyResWidth = "TPOB_ResWidth";
-        private const string KeyResHeight = "TPOB_ResHeight";
-        private const string KeyRefreshRate = "TPOB_RefreshRate";
+        public const string KeyMasterVol = "TPOB_MasterVol";
+        public const string KeySfxVol = "TPOB_SfxVol";
+        public const string KeyMusicVol = "TPOB_MusicVol";
+        public const string KeyAimSens = "TPOB_AimSens";
+        public const string KeyFullscreen = "TPOB_Fullscreen";
+        public const string KeyVSync = "TPOB_VSync";
+        public const string KeyResWidth = "TPOB_ResWidth";
+        public const string KeyResHeight = "TPOB_ResHeight";
+        public const string KeyRefreshRate = "TPOB_RefreshRate";
+        public const string KeyQualityLevel = "TPOB_QualityLevel";
+        public const string KeyTargetFps = "TPOB_TargetFps";
+        public const string KeyInvertY = "TPOB_InvertY";
+        public const string KeyMuteBg = "TPOB_MuteBg";
+        public const string KeyInputOverrides = "TPOB_InputOverrides";
+        public const string KeyLanguage = "TPOB_Language";
 
         private readonly IAudioService _audioService;
 
@@ -22,10 +28,29 @@ namespace Game.Core.Settings
         public float SfxVolume { get; private set; } = 1f;
         public float MusicVolume { get; private set; } = 1f;
         public float AimSensitivity { get; private set; } = 1f;
-        public int FullscreenModeIndex { get; private set; } = 1; // Default Borderless/FullScreenWindow
+        public int FullscreenModeIndex { get; private set; } = 1;
         public bool VSyncEnabled { get; private set; } = true;
+        public int QualityLevelIndex { get; private set; } = 2;
+        public int TargetFrameRate { get; private set; } = -1;
+        public bool InvertYAxis { get; private set; }
+        public bool MuteInBackground { get; private set; }
+        public string InputBindingOverridesJson { get; private set; } = string.Empty;
+        public string Language { get; private set; } = "es";
 
         public event Action OnSettingsChanged;
+        public static event Action OnGlobalSettingsChanged;
+
+        private void NotifySettingsChanged()
+        {
+            if (OnSettingsChanged != null)
+            {
+                OnSettingsChanged.Invoke();
+            }
+            if (OnGlobalSettingsChanged != null)
+            {
+                OnGlobalSettingsChanged.Invoke();
+            }
+        }
 
         public SettingsService(IAudioService audioService = null)
         {
@@ -42,8 +67,21 @@ namespace Game.Core.Settings
             FullscreenModeIndex = PlayerPrefs.GetInt(KeyFullscreen, 1);
             VSyncEnabled = PlayerPrefs.GetInt(KeyVSync, 1) == 1;
 
+            int defaultQuality = Mathf.Max(0, QualitySettings.GetQualityLevel());
+            QualityLevelIndex = PlayerPrefs.GetInt(KeyQualityLevel, defaultQuality);
+            TargetFrameRate = PlayerPrefs.GetInt(KeyTargetFps, -1);
+            InvertYAxis = PlayerPrefs.GetInt(KeyInvertY, 0) == 1;
+            MuteInBackground = PlayerPrefs.GetInt(KeyMuteBg, 0) == 1;
+            InputBindingOverridesJson = PlayerPrefs.GetString(KeyInputOverrides, string.Empty);
+            int langIdx = PlayerPrefs.GetInt(KeyLanguage, 0);
+            Language = langIdx == 1 ? "en" : "es";
+            Game.Core.Localization.LocalizationService.SetLanguage(langIdx == 1 ? Game.Core.Localization.AppLanguage.English : Game.Core.Localization.AppLanguage.Spanish);
+
             ApplyAudio();
             ApplyVSync();
+            ApplyQualityLevel();
+            ApplyTargetFrameRate();
+            ApplyBackgroundBehavior();
 
             int savedW = PlayerPrefs.GetInt(KeyResWidth, -1);
             int savedH = PlayerPrefs.GetInt(KeyResHeight, -1);
@@ -58,28 +96,38 @@ namespace Game.Core.Settings
         public void SetMasterVolume(float volume)
         {
             MasterVolume = Mathf.Clamp01(volume);
-            _audioService?.SetMasterVolume(MasterVolume);
-            OnSettingsChanged?.Invoke();
+            if (_audioService != null)
+            {
+                _audioService.SetMasterVolume(MasterVolume);
+            }
+            NotifySettingsChanged();
         }
 
         public void SetSfxVolume(float volume)
         {
             SfxVolume = Mathf.Clamp01(volume);
-            _audioService?.SetSfxVolume(SfxVolume);
-            OnSettingsChanged?.Invoke();
+            if (_audioService != null)
+            {
+                _audioService.SetSfxVolume(SfxVolume);
+            }
+            NotifySettingsChanged();
         }
 
         public void SetMusicVolume(float volume)
         {
             MusicVolume = Mathf.Clamp01(volume);
-            _audioService?.SetMusicVolume(MusicVolume);
-            OnSettingsChanged?.Invoke();
+            if (_audioService != null)
+            {
+                _audioService.SetMusicVolume(MusicVolume);
+            }
+            NotifySettingsChanged();
         }
 
         public void SetAimSensitivity(float sensitivity)
         {
             AimSensitivity = Mathf.Clamp(sensitivity, 0.1f, 5f);
-            OnSettingsChanged?.Invoke();
+            PlayerPrefs.SetFloat(KeyAimSens, AimSensitivity);
+            NotifySettingsChanged();
         }
 
         public void SetFullscreenMode(int modeIndex)
@@ -94,14 +142,14 @@ namespace Game.Core.Settings
             };
 
             Screen.fullScreenMode = mode;
-            OnSettingsChanged?.Invoke();
+            NotifySettingsChanged();
         }
 
         public void SetVSync(bool enabled)
         {
             VSyncEnabled = enabled;
             ApplyVSync();
-            OnSettingsChanged?.Invoke();
+            NotifySettingsChanged();
         }
 
         public void SetResolution(int width, int height, int refreshRate)
@@ -120,7 +168,81 @@ namespace Game.Core.Settings
             PlayerPrefs.SetInt(KeyResWidth, width);
             PlayerPrefs.SetInt(KeyResHeight, height);
             PlayerPrefs.SetInt(KeyRefreshRate, refreshRate);
-            OnSettingsChanged?.Invoke();
+            NotifySettingsChanged();
+        }
+
+        public void SetQualityLevel(int qualityIndex)
+        {
+            int count = QualitySettings.names != null ? QualitySettings.names.Length : 1;
+            QualityLevelIndex = Mathf.Clamp(qualityIndex, 0, Mathf.Max(0, count - 1));
+            ApplyQualityLevel();
+            NotifySettingsChanged();
+        }
+
+        public void SetTargetFrameRate(int fps)
+        {
+            TargetFrameRate = fps <= 0 ? -1 : Mathf.Clamp(fps, 30, 360);
+            ApplyTargetFrameRate();
+            NotifySettingsChanged();
+        }
+
+        public void SetInvertYAxis(bool invert)
+        {
+            InvertYAxis = invert;
+            PlayerPrefs.SetInt(KeyInvertY, InvertYAxis ? 1 : 0);
+            NotifySettingsChanged();
+        }
+
+        public void SetMuteInBackground(bool mute)
+        {
+            MuteInBackground = mute;
+            ApplyBackgroundBehavior();
+            NotifySettingsChanged();
+        }
+
+        public void SetInputBindingOverrides(string json)
+        {
+            InputBindingOverridesJson = json ?? string.Empty;
+            PlayerPrefs.SetString(KeyInputOverrides, InputBindingOverridesJson);
+            PlayerPrefs.Save();
+            NotifySettingsChanged();
+        }
+
+        public void SetLanguage(string lang)
+        {
+            Language = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "es";
+            PlayerPrefs.SetInt(KeyLanguage, Language == "en" ? 1 : 0);
+            PlayerPrefs.Save();
+            Game.Core.Localization.LocalizationService.SetLanguage(Language == "en" ? Game.Core.Localization.AppLanguage.English : Game.Core.Localization.AppLanguage.Spanish);
+            NotifySettingsChanged();
+        }
+
+        public void ResetDefaults()
+        {
+            MasterVolume = 1f;
+            SfxVolume = 1f;
+            MusicVolume = 1f;
+            AimSensitivity = 1f;
+            FullscreenModeIndex = 1;
+            VSyncEnabled = true;
+            int maxQuality = QualitySettings.names != null && QualitySettings.names.Length > 0
+                ? QualitySettings.names.Length - 1
+                : 0;
+            QualityLevelIndex = maxQuality;
+            TargetFrameRate = -1;
+            InvertYAxis = false;
+            MuteInBackground = false;
+            InputBindingOverridesJson = string.Empty;
+
+            ApplyAudio();
+            SetFullscreenMode(FullscreenModeIndex);
+            ApplyVSync();
+            ApplyQualityLevel();
+            ApplyTargetFrameRate();
+            ApplyBackgroundBehavior();
+            SaveSettings();
+
+            NotifySettingsChanged();
         }
 
         public void SaveSettings()
@@ -128,21 +250,50 @@ namespace Game.Core.Settings
             PlayerPrefs.SetFloat(KeyMasterVol, MasterVolume);
             PlayerPrefs.SetFloat(KeySfxVol, SfxVolume);
             PlayerPrefs.SetFloat(KeyMusicVol, MusicVolume);
+            PlayerPrefs.SetFloat(KeyAimSens, AimSensitivity);
             PlayerPrefs.SetInt(KeyFullscreen, FullscreenModeIndex);
             PlayerPrefs.SetInt(KeyVSync, VSyncEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(KeyQualityLevel, QualityLevelIndex);
+            PlayerPrefs.SetInt(KeyTargetFps, TargetFrameRate);
+            PlayerPrefs.SetInt(KeyInvertY, InvertYAxis ? 1 : 0);
+            PlayerPrefs.SetInt(KeyMuteBg, MuteInBackground ? 1 : 0);
+            PlayerPrefs.SetInt(KeyLanguage, Language == "en" ? 1 : 0);
+            PlayerPrefs.SetString(KeyInputOverrides, InputBindingOverridesJson ?? string.Empty);
             PlayerPrefs.Save();
         }
 
         private void ApplyAudio()
         {
-            _audioService?.SetMasterVolume(MasterVolume);
-            _audioService?.SetSfxVolume(SfxVolume);
-            _audioService?.SetMusicVolume(MusicVolume);
+            if (_audioService != null)
+            {
+                _audioService.SetMasterVolume(MasterVolume);
+                _audioService.SetSfxVolume(SfxVolume);
+                _audioService.SetMusicVolume(MusicVolume);
+            }
         }
 
         private void ApplyVSync()
         {
             QualitySettings.vSyncCount = VSyncEnabled ? 1 : 0;
+        }
+
+        private void ApplyQualityLevel()
+        {
+            int count = QualitySettings.names != null ? QualitySettings.names.Length : 0;
+            if (count > 0 && QualityLevelIndex >= 0 && QualityLevelIndex < count)
+            {
+                QualitySettings.SetQualityLevel(QualityLevelIndex, true);
+            }
+        }
+
+        private void ApplyTargetFrameRate()
+        {
+            Application.targetFrameRate = TargetFrameRate;
+        }
+
+        private void ApplyBackgroundBehavior()
+        {
+            Application.runInBackground = !MuteInBackground;
         }
     }
 }

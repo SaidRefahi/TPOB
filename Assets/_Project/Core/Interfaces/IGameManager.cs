@@ -6,6 +6,7 @@ namespace Game.Core.Interfaces
     public interface IGameManager
     {
         GameState CurrentState { get; }
+        bool IsLocalMode { get; set; }
 
         event Action<GameState, GameState> OnGameStateChanged;
 

@@ -1,4 +1,5 @@
 using System;
+using Game.Core.Settings;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -73,6 +74,11 @@ namespace Game.Gameplay.Player.Legs
 
         private void Update()
         {
+            if (_fuseAction != null)
+            {
+                return;
+            }
+
             var keyboard = Keyboard.current;
             if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
             {
@@ -88,10 +94,30 @@ namespace Game.Gameplay.Player.Legs
 
         private void OnEnable()
         {
+            SettingsService.OnGlobalSettingsChanged += HandleGlobalSettingsChanged;
+            BindActions();
+        }
+
+        private void OnDisable()
+        {
+            SettingsService.OnGlobalSettingsChanged -= HandleGlobalSettingsChanged;
+            UnbindActions();
+        }
+
+        private void HandleGlobalSettingsChanged()
+        {
+            UnbindActions();
+            BindActions();
+        }
+
+        private void BindActions()
+        {
             if (_inputActions == null)
             {
                 return;
             }
+
+            EnsureFuseActionAndLoadOverrides(_inputActions);
 
             var legsMap = _inputActions.FindActionMap("Legs", false);
             if (legsMap != null)
@@ -146,7 +172,7 @@ namespace Game.Gameplay.Player.Legs
             }
         }
 
-        private void OnDisable()
+        private void UnbindActions()
         {
             if (_moveAction != null)
             {
@@ -189,6 +215,24 @@ namespace Game.Gameplay.Player.Legs
             _kickReleased = false;
             _sprintHeld = false;
             _fuseTriggered = false;
+        }
+
+        public static void EnsureFuseActionAndLoadOverrides(InputActionAsset asset)
+        {
+            if (asset == null)
+            {
+                return;
+            }
+
+            string json = PlayerPrefs.GetString(SettingsService.KeyInputOverrides, string.Empty);
+            if (!string.IsNullOrEmpty(json))
+            {
+                asset.LoadBindingOverridesFromJson(json);
+            }
+            else
+            {
+                asset.RemoveAllBindingOverrides();
+            }
         }
 
         private void HandleMovePerformed(InputAction.CallbackContext context)

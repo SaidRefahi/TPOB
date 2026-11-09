@@ -40,6 +40,7 @@ namespace Game.Gameplay.Player.Robot
                 context.Torso.transform.SetParent(attachPoint, false);
                 context.Torso.transform.localPosition = Vector3.zero;
                 context.Torso.transform.localRotation = Quaternion.identity;
+                context.Torso.transform.localScale = context.Torso.InitialScale;
             }
 
             context.Torso.SetFused(true, context.Legs.transform.rotation);

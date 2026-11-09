@@ -36,13 +36,15 @@ namespace Game.Gameplay.Spawning
         [SerializeField] private bool _spawnTorsoInEditor = true;
 
         private IPlayerRegistry _playerRegistry;
+        private IGameManager _gameManager;
         private readonly HashSet<int> _spawnedPlayers = new(4);
         private SceneID _cachedSceneId;
 
         [Inject]
-        public void Construct(IPlayerRegistry playerRegistry = null)
+        public void Construct(IPlayerRegistry playerRegistry = null, IGameManager gameManager = null)
         {
             _playerRegistry = playerRegistry;
+            _gameManager = gameManager;
         }
 
         private void Awake()
@@ -61,20 +63,38 @@ namespace Game.Gameplay.Spawning
             }
 
             var nm = networkManager != null ? networkManager : NetworkManager.main;
-            bool isNetworkPresent = nm != null;
+            bool isOfflineOrLocal = (_gameManager != null && _gameManager.IsLocalMode) ||
+                                    nm == null ||
+                                    nm.isOffline ||
+                                    (!nm.isServer && !nm.isClient);
 
-            // In networked scenes, spawning is handled strictly on the server in OnSpawned().
-            // Never instantiate local un-networked players if NetworkManager is present.
-            if (!isNetworkPresent)
+            // In local/offline mode, instantiate both players and immediately register them to the RobotCoordinator
+            if (isOfflineOrLocal)
             {
+                GameObject legsObj = null;
+                GameObject torsoObj = null;
+
                 if (_spawnLegsInEditor && Object.FindFirstObjectByType<LegsController>() == null)
                 {
-                    SpawnPlayerForRole(-1, PlayerRole.Legs);
+                    legsObj = SpawnPlayerForRole(-1, PlayerRole.Legs);
                 }
 
                 if (_spawnTorsoInEditor && Object.FindFirstObjectByType<TorsoController>() == null)
                 {
-                    SpawnPlayerForRole(-2, PlayerRole.Torso);
+                    torsoObj = SpawnPlayerForRole(-2, PlayerRole.Torso);
+                }
+
+                var coordinator = Object.FindFirstObjectByType<Player.Robot.RobotCoordinator>();
+                if (coordinator != null)
+                {
+                    if (legsObj != null && legsObj.TryGetComponent<LegsController>(out var legs))
+                    {
+                        coordinator.RegisterLegs(legs);
+                    }
+                    if (torsoObj != null && torsoObj.TryGetComponent<TorsoController>(out var torso))
+                    {
+                        coordinator.RegisterTorso(torso);
+                    }
                 }
             }
         }

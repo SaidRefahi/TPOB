@@ -11,6 +11,7 @@ namespace Game.Network.Services
         private readonly IGameEventBus _eventBus;
 
         public GameState CurrentState { get; private set; } = GameState.Booting;
+        public bool IsLocalMode { get; set; }
 
         public event Action<GameState, GameState> OnGameStateChanged;
 

@@ -24,6 +24,7 @@ namespace Game.Gameplay.Player.Robot
             }
 
             context.Torso.transform.SetParent(null, true);
+            context.Torso.transform.localScale = context.Torso.InitialScale;
 
             Vector3 offset = context.Socket != null ? context.Socket.SeparationOffset : new Vector3(0f, 0.25f, 1.5f);
             Vector3 targetPosition = context.Legs.transform.position

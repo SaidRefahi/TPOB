@@ -242,6 +242,11 @@ namespace Game.Gameplay.UI
             // Disconnect network session cleanly
             _networkService?.Disconnect();
 
+            if (_gameManager != null)
+            {
+                _gameManager.IsLocalMode = false;
+            }
+
             // Load Boot scene
             SceneManager.LoadScene("Boot");
         }

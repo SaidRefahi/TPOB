@@ -38,20 +38,41 @@ namespace Game.Gameplay.Player.Robot
         [SerializeField] private float _dockImpulseForce = 0.8f;
 
         private Tween _punchTween;
+        private Vector3 _initialVisualJointScale = Vector3.one;
 
         public Transform AttachPoint => _attachPoint != null ? _attachPoint : transform;
         public Vector3 SeparationOffset => _separationOffset;
 
         private void Awake()
         {
+            if (_visualJoint == null)
+            {
+                _visualJoint = transform;
+            }
+            _initialVisualJointScale = _visualJoint.localScale;
+
             if (_attachPoint == null)
             {
                 _attachPoint = transform;
             }
 
-            if (_visualJoint == null)
+            // Isolation guard: AttachPoint must not be deformed by visual joint juice
+            if (_attachPoint == _visualJoint)
             {
-                _visualJoint = transform;
+                var apChild = transform.Find("AttachPoint");
+                if (apChild == null)
+                {
+                    var go = new GameObject("AttachPoint");
+                    go.transform.SetParent(transform, false);
+                    go.transform.localPosition = Vector3.zero;
+                    go.transform.localRotation = Quaternion.identity;
+                    go.transform.localScale = Vector3.one;
+                    _attachPoint = go.transform;
+                }
+                else
+                {
+                    _attachPoint = apChild;
+                }
             }
 
             if (_dockImpulseSource == null)
@@ -62,7 +83,11 @@ namespace Game.Gameplay.Player.Robot
 
         private void OnDestroy()
         {
-            _punchTween?.Kill();
+            if (_punchTween != null && _punchTween.IsActive())
+            {
+                _punchTween.Kill();
+            }
+            ResetVisualJointScale();
         }
 
         public void PlayDockJuice()
@@ -77,11 +102,26 @@ namespace Game.Gameplay.Player.Robot
                 _dockImpulseSource.GenerateImpulse(Vector3.down * _dockImpulseForce);
             }
 
-            _punchTween?.Kill();
+            if (_punchTween != null && _punchTween.IsActive())
+            {
+                _punchTween.Kill();
+                ResetVisualJointScale();
+            }
 
             if (_visualJoint != null)
             {
-                _punchTween = _visualJoint.DOPunchScale(_punchScale, _punchDuration, _punchVibrato, _punchElasticity);
+                _visualJoint.localScale = _initialVisualJointScale;
+                _punchTween = _visualJoint.DOPunchScale(_punchScale, _punchDuration, _punchVibrato, _punchElasticity)
+                    .OnKill(ResetVisualJointScale)
+                    .OnComplete(ResetVisualJointScale);
+            }
+        }
+
+        private void ResetVisualJointScale()
+        {
+            if (_visualJoint != null)
+            {
+                _visualJoint.localScale = _initialVisualJointScale;
             }
         }
     }

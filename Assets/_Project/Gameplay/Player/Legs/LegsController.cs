@@ -1540,6 +1540,13 @@ namespace Game.Gameplay.Player.Legs
         public FusionSocket FusionSocket => _fusionSocket;
         public bool IsFused => _isFused;
         public bool CanFuse => (_coordinator != null || (_coordinator = FindFirstObjectByType<RobotCoordinator>()) != null) && _coordinator.CanFuse();
+        public void ClearPendingFuseTrigger()
+        {
+            if (_inputReader != null)
+            {
+                _inputReader.ConsumeFuseTrigger();
+            }
+        }
 
         public void SetCoordinator(RobotCoordinator coordinator)
         {

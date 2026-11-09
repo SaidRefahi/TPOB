@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using Game.Core.Interfaces;
+using Game.Core.Settings;
+using Game.Gameplay.Player.Legs;
 using Game.Network.Scopes;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using VContainer;
-using VContainer.Unity;
 
 namespace Game.Gameplay.UI
 {
@@ -12,9 +14,13 @@ namespace Game.Gameplay.UI
     [RequireComponent(typeof(SettingsView))]
     public sealed class SettingsPresenter : MonoBehaviour
     {
+        private static readonly int[] FpsValues = { 30, 60, 120, 144, -1 };
+        private static readonly Color ActiveTabColor = new Color(0f, 0.94f, 1f, 1f);
+        private static readonly Color InactiveTabColor = new Color(0.18f, 0.25f, 0.34f, 0.55f);
+
         private SettingsView _view;
         private ISettingsService _settingsService;
-        private readonly List<Resolution> _filteredResolutions = new(16);
+        private readonly List<Resolution> _filteredResolutions = new List<Resolution>(16);
 
         [Inject]
         public void Construct(ISettingsService settingsService = null)
@@ -31,8 +37,19 @@ namespace Game.Gameplay.UI
         {
             ResolveSettingsService();
             InitializeDisplayOptions();
+            InitializeRebindRows();
             ApplyCurrentValuesToUI();
+            ShowTab(0);
             SubscribeEvents();
+        }
+
+        private void OnEnable()
+        {
+            if (_view != null && _settingsService != null)
+            {
+                ApplyCurrentValuesToUI();
+                RefreshAllRebindRows();
+            }
         }
 
         private void OnDestroy()
@@ -42,16 +59,27 @@ namespace Game.Gameplay.UI
 
         private void ResolveSettingsService()
         {
-            if (_settingsService != null) return;
+            if (_settingsService != null)
+            {
+                return;
+            }
 
-            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
-            if (container != null)
+            var scope = GameLifetimeScope.Instance;
+            if (scope != null && scope.Container != null)
             {
                 try
                 {
-                    _settingsService = container.Resolve<ISettingsService>();
+                    _settingsService = scope.Container.Resolve<ISettingsService>();
                 }
-                catch { }
+                catch
+                {
+                    // Fallback to standalone instance if container does not have it registered yet
+                }
+            }
+
+            if (_settingsService == null)
+            {
+                _settingsService = new SettingsService();
             }
         }
 
@@ -68,6 +96,40 @@ namespace Game.Gameplay.UI
                 });
             }
 
+            if (_view.QualityDropdown != null)
+            {
+                _view.QualityDropdown.ClearOptions();
+                string[] qualityNames = QualitySettings.names;
+                var qList = new List<string>(qualityNames != null ? qualityNames.Length : 3);
+                if (qualityNames != null && qualityNames.Length > 0)
+                {
+                    for (int i = 0; i < qualityNames.Length; i++)
+                    {
+                        qList.Add(FormatQualityName(qualityNames[i]));
+                    }
+                }
+                else
+                {
+                    qList.Add("Baja (Performant)");
+                    qList.Add("Media (Balanced)");
+                    qList.Add("Ultra (High Fidelity)");
+                }
+                _view.QualityDropdown.AddOptions(qList);
+            }
+
+            if (_view.FpsLimitDropdown != null)
+            {
+                _view.FpsLimitDropdown.ClearOptions();
+                _view.FpsLimitDropdown.AddOptions(new List<string>
+                {
+                    "30 FPS",
+                    "60 FPS",
+                    "120 FPS",
+                    "144 FPS",
+                    "Ilimitado (Sin Límite)"
+                });
+            }
+
             if (_view.ResolutionDropdown != null)
             {
                 _view.ResolutionDropdown.ClearOptions();
@@ -79,8 +141,7 @@ namespace Game.Gameplay.UI
 
                 for (int i = 0; i < allResolutions.Length; i++)
                 {
-                    var res = allResolutions[i];
-                    // Filter duplicates with identical width & height
+                    Resolution res = allResolutions[i];
                     bool duplicate = false;
                     for (int j = 0; j < _filteredResolutions.Count; j++)
                     {
@@ -103,54 +164,161 @@ namespace Game.Gameplay.UI
                     }
                 }
 
+                if (options.Count == 0)
+                {
+                    options.Add($"{Screen.width} x {Screen.height}");
+                }
+
                 _view.ResolutionDropdown.AddOptions(options);
-                _view.ResolutionDropdown.value = currentResIndex;
+                _view.ResolutionDropdown.SetValueWithoutNotify(currentResIndex);
                 _view.ResolutionDropdown.RefreshShownValue();
+            }
+        }
+
+        private static string FormatQualityName(string rawName)
+        {
+            if (string.IsNullOrEmpty(rawName)) return "Estándar";
+            string lower = rawName.ToLowerInvariant();
+            if (lower.Contains("performant") || lower.Contains("low")) return "Baja — Rendimiento (" + rawName + ")";
+            if (lower.Contains("balanced") || lower.Contains("medium")) return "Media — Equilibrada (" + rawName + ")";
+            if (lower.Contains("high") || lower.Contains("ultra")) return "Alta — Fidelidad URP (" + rawName + ")";
+            return rawName;
+        }
+
+        private void InitializeRebindRows()
+        {
+            InputActionAsset asset = _view.InputActionsAsset;
+            if (asset != null)
+            {
+                LegsInputReader.EnsureFuseActionAndLoadOverrides(asset);
+            }
+
+            InputRebindRowUI[] rows = _view.RebindRows;
+            if (rows == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < rows.Length; i++)
+            {
+                InputRebindRowUI row = rows[i];
+                if (row != null)
+                {
+                    if (asset != null)
+                    {
+                        row.BindToAsset(asset);
+                    }
+                    row.OnBindingUpdated += HandleRowBindingUpdated;
+                }
+            }
+        }
+
+        private void RefreshAllRebindRows()
+        {
+            InputRebindRowUI[] rows = _view.RebindRows;
+            if (rows == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < rows.Length; i++)
+            {
+                if (rows[i] != null)
+                {
+                    rows[i].RefreshDisplay();
+                }
             }
         }
 
         private void ApplyCurrentValuesToUI()
         {
-            if (_settingsService == null) return;
+            if (_settingsService == null)
+            {
+                return;
+            }
 
             if (_view.MasterVolumeSlider != null)
             {
-                _view.MasterVolumeSlider.value = _settingsService.MasterVolume;
+                _view.MasterVolumeSlider.SetValueWithoutNotify(_settingsService.MasterVolume);
                 UpdateMasterVolumeLabel(_settingsService.MasterVolume);
             }
 
             if (_view.SfxVolumeSlider != null)
             {
-                _view.SfxVolumeSlider.value = _settingsService.SfxVolume;
+                _view.SfxVolumeSlider.SetValueWithoutNotify(_settingsService.SfxVolume);
                 UpdateSfxVolumeLabel(_settingsService.SfxVolume);
             }
 
             if (_view.MusicVolumeSlider != null)
             {
-                _view.MusicVolumeSlider.value = _settingsService.MusicVolume;
+                _view.MusicVolumeSlider.SetValueWithoutNotify(_settingsService.MusicVolume);
                 UpdateMusicVolumeLabel(_settingsService.MusicVolume);
+            }
+
+            if (_view.MuteInBackgroundToggle != null)
+            {
+                _view.MuteInBackgroundToggle.SetIsOnWithoutNotify(_settingsService.MuteInBackground);
             }
 
             if (_view.SensitivitySlider != null)
             {
-                _view.SensitivitySlider.value = _settingsService.AimSensitivity;
+                _view.SensitivitySlider.SetValueWithoutNotify(_settingsService.AimSensitivity);
                 UpdateSensitivityLabel(_settingsService.AimSensitivity);
+            }
+
+            if (_view.InvertYToggle != null)
+            {
+                _view.InvertYToggle.SetIsOnWithoutNotify(_settingsService.InvertYAxis);
             }
 
             if (_view.FullscreenModeDropdown != null)
             {
-                _view.FullscreenModeDropdown.value = _settingsService.FullscreenModeIndex;
+                _view.FullscreenModeDropdown.SetValueWithoutNotify(_settingsService.FullscreenModeIndex);
                 _view.FullscreenModeDropdown.RefreshShownValue();
+            }
+
+            if (_view.QualityDropdown != null)
+            {
+                _view.QualityDropdown.SetValueWithoutNotify(_settingsService.QualityLevelIndex);
+                _view.QualityDropdown.RefreshShownValue();
+            }
+
+            if (_view.FpsLimitDropdown != null)
+            {
+                int fpsIndex = MapFpsToDropdownIndex(_settingsService.TargetFrameRate);
+                _view.FpsLimitDropdown.SetValueWithoutNotify(fpsIndex);
+                _view.FpsLimitDropdown.RefreshShownValue();
             }
 
             if (_view.VSyncToggle != null)
             {
-                _view.VSyncToggle.isOn = _settingsService.VSyncEnabled;
+                _view.VSyncToggle.SetIsOnWithoutNotify(_settingsService.VSyncEnabled);
             }
+        }
+
+        private static int MapFpsToDropdownIndex(int targetFps)
+        {
+            for (int i = 0; i < FpsValues.Length; i++)
+            {
+                if (FpsValues[i] == targetFps)
+                {
+                    return i;
+                }
+            }
+            return FpsValues.Length - 1;
         }
 
         private void SubscribeEvents()
         {
+            if (_view.GraphicsTabButton != null)
+                _view.GraphicsTabButton.onClick.AddListener(HandleGraphicsTabClicked);
+
+            if (_view.AudioTabButton != null)
+                _view.AudioTabButton.onClick.AddListener(HandleAudioTabClicked);
+
+            if (_view.ControlsTabButton != null)
+                _view.ControlsTabButton.onClick.AddListener(HandleControlsTabClicked);
+
             if (_view.MasterVolumeSlider != null)
                 _view.MasterVolumeSlider.onValueChanged.AddListener(HandleMasterVolumeChanged);
 
@@ -160,8 +328,14 @@ namespace Game.Gameplay.UI
             if (_view.MusicVolumeSlider != null)
                 _view.MusicVolumeSlider.onValueChanged.AddListener(HandleMusicVolumeChanged);
 
+            if (_view.MuteInBackgroundToggle != null)
+                _view.MuteInBackgroundToggle.onValueChanged.AddListener(HandleMuteInBackgroundChanged);
+
             if (_view.SensitivitySlider != null)
                 _view.SensitivitySlider.onValueChanged.AddListener(HandleSensitivityChanged);
+
+            if (_view.InvertYToggle != null)
+                _view.InvertYToggle.onValueChanged.AddListener(HandleInvertYChanged);
 
             if (_view.FullscreenModeDropdown != null)
                 _view.FullscreenModeDropdown.onValueChanged.AddListener(HandleFullscreenModeChanged);
@@ -169,8 +343,17 @@ namespace Game.Gameplay.UI
             if (_view.ResolutionDropdown != null)
                 _view.ResolutionDropdown.onValueChanged.AddListener(HandleResolutionChanged);
 
+            if (_view.QualityDropdown != null)
+                _view.QualityDropdown.onValueChanged.AddListener(HandleQualityChanged);
+
+            if (_view.FpsLimitDropdown != null)
+                _view.FpsLimitDropdown.onValueChanged.AddListener(HandleFpsLimitChanged);
+
             if (_view.VSyncToggle != null)
                 _view.VSyncToggle.onValueChanged.AddListener(HandleVSyncChanged);
+
+            if (_view.ResetDefaultsButton != null)
+                _view.ResetDefaultsButton.onClick.AddListener(HandleResetDefaultsClicked);
 
             if (_view.CloseButton != null)
                 _view.CloseButton.onClick.AddListener(HandleCloseClicked);
@@ -178,6 +361,20 @@ namespace Game.Gameplay.UI
 
         private void UnsubscribeEvents()
         {
+            if (_view == null)
+            {
+                return;
+            }
+
+            if (_view.GraphicsTabButton != null)
+                _view.GraphicsTabButton.onClick.RemoveListener(HandleGraphicsTabClicked);
+
+            if (_view.AudioTabButton != null)
+                _view.AudioTabButton.onClick.RemoveListener(HandleAudioTabClicked);
+
+            if (_view.ControlsTabButton != null)
+                _view.ControlsTabButton.onClick.RemoveListener(HandleControlsTabClicked);
+
             if (_view.MasterVolumeSlider != null)
                 _view.MasterVolumeSlider.onValueChanged.RemoveListener(HandleMasterVolumeChanged);
 
@@ -187,8 +384,14 @@ namespace Game.Gameplay.UI
             if (_view.MusicVolumeSlider != null)
                 _view.MusicVolumeSlider.onValueChanged.RemoveListener(HandleMusicVolumeChanged);
 
+            if (_view.MuteInBackgroundToggle != null)
+                _view.MuteInBackgroundToggle.onValueChanged.RemoveListener(HandleMuteInBackgroundChanged);
+
             if (_view.SensitivitySlider != null)
                 _view.SensitivitySlider.onValueChanged.RemoveListener(HandleSensitivityChanged);
+
+            if (_view.InvertYToggle != null)
+                _view.InvertYToggle.onValueChanged.RemoveListener(HandleInvertYChanged);
 
             if (_view.FullscreenModeDropdown != null)
                 _view.FullscreenModeDropdown.onValueChanged.RemoveListener(HandleFullscreenModeChanged);
@@ -196,59 +399,154 @@ namespace Game.Gameplay.UI
             if (_view.ResolutionDropdown != null)
                 _view.ResolutionDropdown.onValueChanged.RemoveListener(HandleResolutionChanged);
 
+            if (_view.QualityDropdown != null)
+                _view.QualityDropdown.onValueChanged.RemoveListener(HandleQualityChanged);
+
+            if (_view.FpsLimitDropdown != null)
+                _view.FpsLimitDropdown.onValueChanged.RemoveListener(HandleFpsLimitChanged);
+
             if (_view.VSyncToggle != null)
                 _view.VSyncToggle.onValueChanged.RemoveListener(HandleVSyncChanged);
 
+            if (_view.ResetDefaultsButton != null)
+                _view.ResetDefaultsButton.onClick.RemoveListener(HandleResetDefaultsClicked);
+
             if (_view.CloseButton != null)
                 _view.CloseButton.onClick.RemoveListener(HandleCloseClicked);
+
+            InputRebindRowUI[] rows = _view.RebindRows;
+            if (rows != null)
+            {
+                for (int i = 0; i < rows.Length; i++)
+                {
+                    if (rows[i] != null)
+                    {
+                        rows[i].OnBindingUpdated -= HandleRowBindingUpdated;
+                    }
+                }
+            }
+        }
+
+        private void HandleGraphicsTabClicked() => ShowTab(0);
+        private void HandleAudioTabClicked() => ShowTab(1);
+        private void HandleControlsTabClicked() => ShowTab(2);
+
+        private void ShowTab(int tabIndex)
+        {
+            if (_view.GraphicsPanel != null) _view.GraphicsPanel.SetActive(tabIndex == 0);
+            if (_view.AudioPanel != null) _view.AudioPanel.SetActive(tabIndex == 1);
+            if (_view.ControlsPanel != null) _view.ControlsPanel.SetActive(tabIndex == 2);
+
+            if (_view.GraphicsTabIndicator != null)
+                _view.GraphicsTabIndicator.color = tabIndex == 0 ? ActiveTabColor : InactiveTabColor;
+
+            if (_view.AudioTabIndicator != null)
+                _view.AudioTabIndicator.color = tabIndex == 1 ? ActiveTabColor : InactiveTabColor;
+
+            if (_view.ControlsTabIndicator != null)
+                _view.ControlsTabIndicator.color = tabIndex == 2 ? ActiveTabColor : InactiveTabColor;
+        }
+
+        private void HandleRowBindingUpdated()
+        {
+            InputActionAsset asset = _view.InputActionsAsset;
+            if (asset != null && _settingsService != null)
+            {
+                string json = asset.SaveBindingOverridesAsJson();
+                _settingsService.SetInputBindingOverrides(json);
+            }
+            RefreshAllRebindRows();
         }
 
         private void HandleMasterVolumeChanged(float value)
         {
-            _settingsService?.SetMasterVolume(value);
+            if (_settingsService != null) _settingsService.SetMasterVolume(value);
             UpdateMasterVolumeLabel(value);
         }
 
         private void HandleSfxVolumeChanged(float value)
         {
-            _settingsService?.SetSfxVolume(value);
+            if (_settingsService != null) _settingsService.SetSfxVolume(value);
             UpdateSfxVolumeLabel(value);
         }
 
         private void HandleMusicVolumeChanged(float value)
         {
-            _settingsService?.SetMusicVolume(value);
+            if (_settingsService != null) _settingsService.SetMusicVolume(value);
             UpdateMusicVolumeLabel(value);
+        }
+
+        private void HandleMuteInBackgroundChanged(bool mute)
+        {
+            if (_settingsService != null) _settingsService.SetMuteInBackground(mute);
         }
 
         private void HandleSensitivityChanged(float value)
         {
-            _settingsService?.SetAimSensitivity(value);
+            if (_settingsService != null) _settingsService.SetAimSensitivity(value);
             UpdateSensitivityLabel(value);
+        }
+
+        private void HandleInvertYChanged(bool invert)
+        {
+            if (_settingsService != null) _settingsService.SetInvertYAxis(invert);
         }
 
         private void HandleFullscreenModeChanged(int modeIndex)
         {
-            _settingsService?.SetFullscreenMode(modeIndex);
+            if (_settingsService != null) _settingsService.SetFullscreenMode(modeIndex);
         }
 
         private void HandleResolutionChanged(int index)
         {
-            if (index >= 0 && index < _filteredResolutions.Count)
+            if (index >= 0 && index < _filteredResolutions.Count && _settingsService != null)
             {
-                var target = _filteredResolutions[index];
-                _settingsService?.SetResolution(target.width, target.height, (int)target.refreshRateRatio.value);
+                Resolution target = _filteredResolutions[index];
+                _settingsService.SetResolution(target.width, target.height, (int)target.refreshRateRatio.value);
+            }
+        }
+
+        private void HandleQualityChanged(int qualityIndex)
+        {
+            if (_settingsService != null) _settingsService.SetQualityLevel(qualityIndex);
+        }
+
+        private void HandleFpsLimitChanged(int dropdownIndex)
+        {
+            if (dropdownIndex >= 0 && dropdownIndex < FpsValues.Length && _settingsService != null)
+            {
+                _settingsService.SetTargetFrameRate(FpsValues[dropdownIndex]);
             }
         }
 
         private void HandleVSyncChanged(bool enabled)
         {
-            _settingsService?.SetVSync(enabled);
+            if (_settingsService != null) _settingsService.SetVSync(enabled);
+        }
+
+        private void HandleResetDefaultsClicked()
+        {
+            InputActionAsset asset = _view.InputActionsAsset;
+            if (asset != null)
+            {
+                asset.RemoveAllBindingOverrides();
+            }
+
+            if (_settingsService != null)
+            {
+                _settingsService.ResetDefaults();
+            }
+
+            ApplyCurrentValuesToUI();
+            RefreshAllRebindRows();
         }
 
         private void HandleCloseClicked()
         {
-            _settingsService?.SaveSettings();
+            if (_settingsService != null)
+            {
+                _settingsService.SaveSettings();
+            }
             _view.SetActive(false);
         }
 

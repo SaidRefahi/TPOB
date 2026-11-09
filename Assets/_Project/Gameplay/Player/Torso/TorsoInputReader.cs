@@ -1,4 +1,6 @@
 using System;
+using Game.Core.Settings;
+using Game.Gameplay.Player.Legs;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,6 +25,9 @@ namespace Game.Gameplay.Player.Torso
         private bool _magnetHeld;
         private bool _interactTriggered;
         private bool _fuseTriggered;
+
+        private float _aimSensitivity = 1f;
+        private bool _invertYAxis;
 
         public Vector2 MoveInput => _moveInput;
         public Vector2 LookInput => _lookInput;
@@ -58,6 +63,11 @@ namespace Game.Gameplay.Player.Torso
 
         private void Update()
         {
+            if (_fuseAction != null)
+            {
+                return;
+            }
+
             var keyboard = Keyboard.current;
             if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
             {
@@ -73,7 +83,35 @@ namespace Game.Gameplay.Player.Torso
 
         private void OnEnable()
         {
+            SettingsService.OnGlobalSettingsChanged += HandleGlobalSettingsChanged;
+            RefreshAimPreferences();
+            BindActions();
+        }
+
+        private void OnDisable()
+        {
+            SettingsService.OnGlobalSettingsChanged -= HandleGlobalSettingsChanged;
+            UnbindActions();
+        }
+
+        private void HandleGlobalSettingsChanged()
+        {
+            RefreshAimPreferences();
+            UnbindActions();
+            BindActions();
+        }
+
+        private void RefreshAimPreferences()
+        {
+            _aimSensitivity = Mathf.Clamp(PlayerPrefs.GetFloat(SettingsService.KeyAimSens, 1f), 0.1f, 5f);
+            _invertYAxis = PlayerPrefs.GetInt(SettingsService.KeyInvertY, 0) == 1;
+        }
+
+        private void BindActions()
+        {
             if (_inputActions == null) return;
+
+            LegsInputReader.EnsureFuseActionAndLoadOverrides(_inputActions);
 
             var torsoMap = _inputActions.FindActionMap("Torso", false);
             if (torsoMap != null)
@@ -135,7 +173,7 @@ namespace Game.Gameplay.Player.Torso
             }
         }
 
-        private void OnDisable()
+        private void UnbindActions()
         {
             if (_moveAction != null)
             {
@@ -187,13 +225,25 @@ namespace Game.Gameplay.Player.Torso
 
         private void HandleMovePerformed(InputAction.CallbackContext ctx) => _moveInput = ctx.ReadValue<Vector2>();
         private void HandleMoveCanceled(InputAction.CallbackContext ctx) => _moveInput = Vector2.zero;
-        private void HandleLookPerformed(InputAction.CallbackContext ctx) => _lookInput = ctx.ReadValue<Vector2>();
+
+        private void HandleLookPerformed(InputAction.CallbackContext ctx)
+        {
+            Vector2 raw = ctx.ReadValue<Vector2>();
+            if (_invertYAxis)
+            {
+                raw.y = -raw.y;
+            }
+            _lookInput = raw * _aimSensitivity;
+        }
+
         private void HandleLookCanceled(InputAction.CallbackContext ctx) => _lookInput = Vector2.zero;
+
         private void HandleGrabPerformed(InputAction.CallbackContext ctx)
         {
             _grabTriggered = true;
             _interactTriggered = true;
         }
+
         private void HandleThrowPerformed(InputAction.CallbackContext ctx) => _throwTriggered = true;
         private void HandleMagnetPerformed(InputAction.CallbackContext ctx) => _magnetHeld = true;
         private void HandleMagnetCanceled(InputAction.CallbackContext ctx) => _magnetHeld = false;
