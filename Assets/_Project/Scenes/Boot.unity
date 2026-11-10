@@ -1875,6 +1875,7 @@ MonoBehaviour:
   - Room_1
   - Room_2
   - Room_3
+  - Room_4
   _victoryScene: Victory
 --- !u!114 &1587920282
 MonoBehaviour:
@@ -2004,6 +2005,11 @@ PrefabInstance:
     - target: {fileID: 414717946969891826, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -26
+      objectReference: {fileID: 0}
+    - target: {fileID: 593671741245099033, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
+      propertyPath: m_text
+      value: "<color=#00F0FF>\u25A0 CHASIS: PROTOTIPO-02</color>     |     <color=#88AABB>TROB
+        SYSTEM</color>     |     <color=#FF9900>STANDBY \u25A0</color>"
       objectReference: {fileID: 0}
     - target: {fileID: 593671741245099033, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2314,6 +2320,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4573337641278778839, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
+      propertyPath: m_text
+      value: "<size=13><color=#6699BB>PROYECTO DE SINCRONIZACI\xD3N COOPERATIVA</color></size>\n<b><size=38><color=#00F0FF>TWO
+        ROBOTS</color> <color=#FFFFFF>//</color> <color=#FF9900>ONE BODY</color></size></b>\n<size=15><color=#99B4C8>DIVISI\xD3N
+        DE CONTROL: PIERNAS & TORSO</color></size>"
+      objectReference: {fileID: 0}
+    - target: {fileID: 4573337641278778839, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901
       objectReference: {fileID: 0}
@@ -2345,6 +2357,10 @@ PrefabInstance:
     - target: {fileID: 5322628301155205138, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 5448521864968182001, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5549420962180114194, guid: 0df181e9f220baa48aee6e623fbbfbcd, type: 3}
       propertyPath: m_AdditionalShaderChannelsFlag
@@ -2572,6 +2588,13 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1088335654793177177, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_text
+      value: "\u2022 <b>[WASD] / [Stick Izq]</b>: Desplazamiento omnidireccional\n\u2022
+        <b>[Espacio] / [Bot\xF3n A]</b>: Salto\n\u2022 <b>[F] / [Bot\xF3n X]</b>:
+        Patada cin\xE9tica de impacto\n\u2022 <b>[R] / [Bot\xF3n Y]</b>: Acople /
+        Desacople con Torso"
+      objectReference: {fileID: 0}
     - target: {fileID: 1111798217312082730, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901
@@ -2788,6 +2811,42 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 220
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545365307001274892, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 4706543600553807683, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4768914895081610735, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -2919,6 +2978,14 @@ PrefabInstance:
     - target: {fileID: 6255265122172218368, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 6495562535827824790, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
+      propertyPath: m_text
+      value: "\u2022 <b>[Mouse] / [Stick Der]</b>: Apuntar ret\xEDcula en 360\xB0\n\u2022
+        <b>[L] / [Bot\xF3n Y]</b>: Agarrar / Soltar / Interactuar\n\u2022 <b>[Click
+        Izq] / [Bot\xF3n X]</b>: Lanzar con impulso bal\xEDstico\n\u2022 <b>[Click
+        Der] / [Bot\xF3n B]</b>: Activar Rayo Magn\xE9tico tractor\n\u2022 <b>[R]
+        / [Bot\xF3n Y]</b>: Acople / Desacople con Piernas"
       objectReference: {fileID: 0}
     - target: {fileID: 6545158835333454538, guid: 8b98c5d0636f73042a5de86eb63b70c1, type: 3}
       propertyPath: m_Pivot.x

@@ -36779,16 +36779,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Network::Game.Network.Services.LevelManager
   _roomScenes:
-  - Room_01
-  - Room_02
-  - Room_03
-  - Room_04
-  - Room_05
-  - Room_06
-  - Room_07
-  - Room_08
-  - Room_09
-  - Room_10
+  - Room_1
+  - Room_2
+  - Room_3
+  - Room_4
   _victoryScene: Victory
 --- !u!114 &795780421
 MonoBehaviour:
@@ -38673,8 +38667,8 @@ MonoBehaviour:
   _directChildren: []
   _networkRules: {fileID: 0}
   _visitiblityRules: {fileID: 0}
-  _roomIndex: 1
-  _roomName: Level_01
+  _roomIndex: 2
+  _roomName: Level_02
   _roomState:
     _value: 0
     _ownerAuth: 0
