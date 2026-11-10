@@ -10,7 +10,6 @@ namespace Game.Gameplay.UI
         [Header("Botones Principales")]
         [SerializeField] private Button _localPlayButton;
         [SerializeField] private Button _hostButton;
-        [SerializeField] private Button _lanHostButton;
         [SerializeField] private Button _openJoinModalButton;
         [SerializeField] private Button _optionsButton;
         [SerializeField] private Button _exitButton;
@@ -21,10 +20,6 @@ namespace Game.Gameplay.UI
         [SerializeField] private TMP_InputField _portInputField;
         [SerializeField] private Button _connectConfirmButton;
         [SerializeField] private Button _connectCancelButton;
-
-        [Header("Descubrimiento Automático LAN")]
-        [SerializeField] private Button _lanGameItemButton;
-        [SerializeField] private TextMeshProUGUI _lanGameItemText;
 
         [Header("Información de Red e IP Local")]
         [SerializeField] private TextMeshProUGUI _localIpText;
@@ -67,19 +62,6 @@ namespace Game.Gameplay.UI
                     if (t != null) _hostButton = t.GetComponent<Button>();
                 }
                 return _hostButton;
-            }
-        }
-
-        public Button LanHostButton
-        {
-            get
-            {
-                if (_lanHostButton == null)
-                {
-                    var t = transform.Find("Background/MenuContainer/ButtonsColumn/Btn_LanHost");
-                    if (t != null) _lanHostButton = t.GetComponent<Button>();
-                }
-                return _lanHostButton;
             }
         }
 
@@ -200,9 +182,6 @@ namespace Game.Gameplay.UI
             }
         }
 
-        public Button LanGameItemButton => _lanGameItemButton;
-        public TextMeshProUGUI LanGameItemText => _lanGameItemText;
-
         public TextMeshProUGUI LocalIpText
         {
             get
@@ -312,19 +291,6 @@ namespace Game.Gameplay.UI
             {
                 _statusFeedbackText.text = message;
                 _statusFeedbackText.color = color;
-            }
-        }
-
-        public void SetLanGameBanner(bool visible, string text = "")
-        {
-            if (_lanGameItemButton != null)
-            {
-                _lanGameItemButton.gameObject.SetActive(visible);
-            }
-
-            if (_lanGameItemText != null && visible)
-            {
-                _lanGameItemText.text = text;
             }
         }
     }

@@ -18,7 +18,6 @@ namespace Game.Gameplay.UI
         private IGameManager _gameManager;
         private IGameEventBus _eventBus;
         private string _generatedRoomCode;
-        private LanGameInfo _lastFoundLanGame;
 
         [Inject]
         public void Construct(INetworkService networkService, IGameManager gameManager, IGameEventBus eventBus)
@@ -37,7 +36,6 @@ namespace Game.Gameplay.UI
 
         private void OnDestroy()
         {
-            StopLanDiscovery();
             UnsubscribeEvents();
         }
 
@@ -139,7 +137,6 @@ namespace Game.Gameplay.UI
                 _view.PortInputField.text = "5000";
             }
 
-            _view.SetLanGameBanner(false);
             _view.SetStatusFeedback(string.Empty, Color.white);
         }
 
@@ -151,14 +148,8 @@ namespace Game.Gameplay.UI
             if (_view.HostButton != null)
                 _view.HostButton.onClick.AddListener(HandleHostClicked);
 
-            if (_view.LanHostButton != null)
-                _view.LanHostButton.onClick.AddListener(HandleLanHostClicked);
-
             if (_view.OpenJoinModalButton != null)
                 _view.OpenJoinModalButton.onClick.AddListener(HandleOpenJoinModalClicked);
-
-            if (_view.LanGameItemButton != null)
-                _view.LanGameItemButton.onClick.AddListener(HandleJoinLanGameClicked);
 
             if (_view.CopyIpButton != null)
                 _view.CopyIpButton.onClick.AddListener(HandleCopyCodeClicked);
@@ -191,14 +182,8 @@ namespace Game.Gameplay.UI
             if (_view.HostButton != null)
                 _view.HostButton.onClick.RemoveListener(HandleHostClicked);
 
-            if (_view.LanHostButton != null)
-                _view.LanHostButton.onClick.RemoveListener(HandleLanHostClicked);
-
             if (_view.OpenJoinModalButton != null)
                 _view.OpenJoinModalButton.onClick.RemoveListener(HandleOpenJoinModalClicked);
-
-            if (_view.LanGameItemButton != null)
-                _view.LanGameItemButton.onClick.RemoveListener(HandleJoinLanGameClicked);
 
             if (_view.CopyIpButton != null)
                 _view.CopyIpButton.onClick.RemoveListener(HandleCopyCodeClicked);
@@ -330,99 +315,17 @@ namespace Game.Gameplay.UI
             }
         }
 
-        private void HandleLanHostClicked()
-        {
-            ResolveDependencies();
-            string localIp = GetLocalIPv4();
-            _view.SetStatusFeedback($"Creando servidor en Red Local (LAN)... Tu IP: {localIp}", new Color(0.3f, 1f, 0.5f));
-
-            if (_networkService != null)
-            {
-                _networkService.StartLanHost(5000);
-            }
-            else
-            {
-                _view.SetStatusFeedback("Error: Servicio de red no inicializado.", Color.red);
-            }
-        }
-
-        private string GetLocalIPv4()
-        {
-            try
-            {
-                var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
-                foreach (var ip in host.AddressList)
-                {
-                    if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(ip))
-                    {
-                        return ip.ToString();
-                    }
-                }
-            }
-            catch { }
-            return "127.0.0.1";
-        }
-
         private void HandleOpenJoinModalClicked()
         {
             if (_view.ConnectModalRoot != null)
             {
                 _view.ConnectModalRoot.SetActive(true);
             }
-
-            _view.SetLanGameBanner(false);
-
-            if (_networkService?.LanDiscovery != null)
-            {
-                _networkService.LanDiscovery.OnGameDiscovered -= HandleLanGameDiscovered;
-                _networkService.LanDiscovery.OnGameDiscovered += HandleLanGameDiscovered;
-                _networkService.LanDiscovery.OnGameLost -= HandleLanGameLost;
-                _networkService.LanDiscovery.OnGameLost += HandleLanGameLost;
-                _networkService.LanDiscovery.StartListening();
-            }
-        }
-
-        private void HandleLanGameDiscovered(LanGameInfo info)
-        {
-            _lastFoundLanGame = info;
-            _view.SetLanGameBanner(true, $"🟢 Partida en WiFi: {info.HostName} ({info.IpAddress}) [Entrar]");
-        }
-
-        private void HandleLanGameLost(LanGameInfo info)
-        {
-            if (_lastFoundLanGame.IpAddress == info.IpAddress && _lastFoundLanGame.Port == info.Port)
-            {
-                _view.SetLanGameBanner(false);
-            }
-        }
-
-        private void HandleJoinLanGameClicked()
-        {
-            if (_view.ConnectModalRoot != null)
-            {
-                _view.ConnectModalRoot.SetActive(false);
-            }
-
-            StopLanDiscovery();
-
-            _view.SetStatusFeedback($"Conectando por WiFi a {_lastFoundLanGame.HostName} ({_lastFoundLanGame.IpAddress})...", new Color(0.3f, 1f, 0.5f));
-            _networkService?.StartLanClient(_lastFoundLanGame.IpAddress, _lastFoundLanGame.Port);
-        }
-
-        private void StopLanDiscovery()
-        {
-            if (_networkService?.LanDiscovery != null)
-            {
-                _networkService.LanDiscovery.OnGameDiscovered -= HandleLanGameDiscovered;
-                _networkService.LanDiscovery.OnGameLost -= HandleLanGameLost;
-                _networkService.LanDiscovery.StopListening();
-            }
         }
 
         private void HandleConnectConfirmClicked()
         {
             ResolveDependencies();
-            StopLanDiscovery();
 
             string roomCode = _view.IpInputField != null && !string.IsNullOrWhiteSpace(_view.IpInputField.text)
                 ? _view.IpInputField.text.Trim()
@@ -435,16 +338,8 @@ namespace Game.Gameplay.UI
 
             if (_networkService != null)
             {
-                if (System.Net.IPAddress.TryParse(roomCode, out _) || roomCode.Equals("localhost", StringComparison.OrdinalIgnoreCase))
-                {
-                    _view.SetStatusFeedback($"Conectando por LAN a IP '{roomCode}'...", new Color(0.3f, 1f, 0.5f));
-                    _networkService.StartLanClient(roomCode, GetPortFromInput());
-                }
-                else
-                {
-                    _view.SetStatusFeedback($"Conectando a sala '{roomCode}' en servidores de PurrNet...", new Color(1f, 0.8f, 0.2f));
-                    _networkService.StartClientWithRoom(roomCode);
-                }
+                _view.SetStatusFeedback($"Conectando a sala '{roomCode}' en servidores de PurrNet...", new Color(1f, 0.8f, 0.2f));
+                _networkService.StartClientWithRoom(roomCode);
             }
             else
             {
@@ -454,7 +349,6 @@ namespace Game.Gameplay.UI
 
         private void HandleConnectCancelClicked()
         {
-            StopLanDiscovery();
             if (_view.ConnectModalRoot != null)
             {
                 _view.ConnectModalRoot.SetActive(false);
@@ -499,7 +393,6 @@ namespace Game.Gameplay.UI
 
             SetButtonText(_view.LocalPlayButton, LocalizationService.Get("LocalPlay"));
             SetButtonText(_view.HostButton, LocalizationService.Get("HostGame"));
-            SetButtonText(_view.LanHostButton, LocalizationService.Get("HostLan"));
             SetButtonText(_view.OpenJoinModalButton, LocalizationService.Get("JoinGame"));
             SetButtonText(_view.OptionsButton, LocalizationService.Get("Options"));
             SetButtonText(_view.ExitButton, LocalizationService.Get("ExitGame"));

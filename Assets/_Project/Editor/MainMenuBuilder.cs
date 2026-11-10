@@ -239,7 +239,6 @@ namespace Game.Editor
 
             var localBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_LocalPlay", "LOCAL PLAY", 52, UIAssetGenerator.BtnAmber, AmberAccent);
             var hostBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Host", "HOST GAME", 52, UIAssetGenerator.BtnGreen, GreenAccent);
-            var lanHostBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_LanHost", "HOST LAN (WIFI)", 52, UIAssetGenerator.BtnGreen, GreenAccent);
             var joinBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Join", "JOIN GAME", 52, UIAssetGenerator.BtnCyan, CyanAccent);
             var optBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Options", "OPTIONS", 52, UIAssetGenerator.BtnNeutral, SteelAccent);
             var exitBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Exit", "EXIT GAME", 52, UIAssetGenerator.BtnRed, RedAccent);
@@ -272,19 +271,12 @@ namespace Game.Editor
             modalTitleText.alignment = TextAlignmentOptions.Center;
             modalTitleText.raycastTarget = false;
 
-            var lanGameFoundBtn = CreateSciFiButton(modalRootGo.transform, "Btn_LanGameFound", "🟢 PARTIDA ENCONTRADA EN WIFI (CLIC PARA ENTRAR)", 44, UIAssetGenerator.BtnGreen, GreenAccent);
-            var lanGameFoundText = lanGameFoundBtn.GetComponentInChildren<TextMeshProUGUI>();
-            var lanGameFoundRect = lanGameFoundBtn.GetComponent<RectTransform>();
-            lanGameFoundRect.anchoredPosition = new Vector2(0, 115);
-            lanGameFoundRect.sizeDelta = new Vector2(420, 44);
-            lanGameFoundBtn.gameObject.SetActive(false);
-
-            var ipInput = CreateInputField(modalRootGo.transform, "Input_IP", "Ingresa Código de Sala (ej. TPOB-7821) o IP", string.Empty, new Vector2(0, 58), new Vector2(420, 48));
+            var ipInput = CreateInputField(modalRootGo.transform, "Input_IP", "Ingresa Código de Sala (ej. TPOB-7821)", string.Empty, new Vector2(0, 58), new Vector2(420, 48));
             var portInput = CreateInputField(modalRootGo.transform, "Input_Port", "Puerto (opcional)", "5000", new Vector2(0, 0), new Vector2(420, 46));
 
             var helpTextGo = CreateUIElement("Modal_HelpText", modalRootGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(440, 48), new Vector2(0, 102));
             var helpTmp = helpTextGo.AddComponent<TextMeshProUGUI>();
-            helpTmp.text = "<size=13><color=#88B4D0>Ingresa código de sala online o IP local (ej. 192.168.1.15).</color></size>";
+            helpTmp.text = "<size=13><color=#88B4D0>Ingresa el código de la sala cooperativa para conectarte.</color></size>";
             helpTmp.alignment = TextAlignmentOptions.Center;
             helpTmp.raycastTarget = false;
 
@@ -305,7 +297,6 @@ namespace Game.Editor
             var so = new SerializedObject(mainView);
             so.FindProperty("_localPlayButton").objectReferenceValue = localBtn;
             so.FindProperty("_hostButton").objectReferenceValue = hostBtn;
-            so.FindProperty("_lanHostButton").objectReferenceValue = lanHostBtn;
             so.FindProperty("_openJoinModalButton").objectReferenceValue = joinBtn;
             so.FindProperty("_optionsButton").objectReferenceValue = optBtn;
             so.FindProperty("_exitButton").objectReferenceValue = exitBtn;
@@ -313,15 +304,6 @@ namespace Game.Editor
             so.FindProperty("_copyIpButton").objectReferenceValue = copyBtn;
             so.FindProperty("_languageToggleButton").objectReferenceValue = langBtn;
             so.FindProperty("_languageButtonText").objectReferenceValue = langTmp;
-            so.FindProperty("_connectHelpText").objectReferenceValue = helpTmp;
-            so.FindProperty("_connectModalRoot").objectReferenceValue = modalRootGo;
-            so.FindProperty("_ipInputField").objectReferenceValue = ipInput;
-            so.FindProperty("_portInputField").objectReferenceValue = portInput;
-            so.FindProperty("_connectConfirmButton").objectReferenceValue = confirmBtn;
-            so.FindProperty("_connectCancelButton").objectReferenceValue = cancelBtn;
-            so.FindProperty("_statusFeedbackText").objectReferenceValue = statusText;
-            so.FindProperty("_lanGameItemButton").objectReferenceValue = lanGameFoundBtn;
-            so.FindProperty("_lanGameItemText").objectReferenceValue = lanGameFoundText;
             so.FindProperty("_connectHelpText").objectReferenceValue = helpTmp;
             so.FindProperty("_connectModalRoot").objectReferenceValue = modalRootGo;
             so.FindProperty("_ipInputField").objectReferenceValue = ipInput;

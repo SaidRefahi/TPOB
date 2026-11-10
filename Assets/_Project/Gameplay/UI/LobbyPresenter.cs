@@ -308,10 +308,8 @@ namespace Game.Gameplay.UI
         private void UpdateNetworkStatusBadge()
         {
             if (_networkService == null || _view == null) return;
-            string quality = _networkService.ConnectionQualityText;
-            Color color = (quality.StartsWith("P2P") || quality.StartsWith("Red Local"))
-                ? new Color(0.2f, 1f, 0.4f)
-                : new Color(1f, 0.85f, 0.2f);
+            string quality = _networkService.IsConnected ? "Conectado" : "Desconectado";
+            Color color = _networkService.IsConnected ? new Color(0.2f, 1f, 0.4f) : new Color(1f, 0.4f, 0.4f);
             _view.SetNetworkStatus($"<size=14><color=#88AACC>Enlace de Red: </color><b>{quality}</b></size>", color);
         }
 

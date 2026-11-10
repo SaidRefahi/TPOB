@@ -13,10 +13,6 @@ namespace Game.Core.Interfaces
         ushort ServerPort { get; set; }
         string RoomName { get; set; }
 
-        ILanDiscoveryService LanDiscovery { get; }
-        string ConnectionQualityText { get; }
-        int CurrentPing { get; }
-
         event Action OnConnected;
         event Action OnDisconnected;
         event Action<int, bool> OnPlayerConnected;
@@ -28,8 +24,6 @@ namespace Game.Core.Interfaces
         void StartClient();
         void StartClient(string address, ushort port);
         void StartClientWithRoom(string roomName);
-        void StartLanHost(ushort port = 5000);
-        void StartLanClient(string ip, ushort port = 5000);
         void Disconnect();
     }
 }
