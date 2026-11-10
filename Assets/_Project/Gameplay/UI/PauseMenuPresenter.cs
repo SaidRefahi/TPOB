@@ -61,6 +61,15 @@ namespace Game.Gameplay.UI
             ResolveDependencies();
             InitializeView();
             SubscribeEvents();
+
+            var activeScene = SceneManager.GetActiveScene().name;
+            if (activeScene == "Boot" || activeScene == "MainMenu")
+            {
+                _isPaused = false;
+                Time.timeScale = 1f;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
         }
 
         private void OnDestroy()
@@ -79,9 +88,17 @@ namespace Game.Gameplay.UI
             ResolveDependencies();
             BindCoordinator();
 
-            if (scene.name == "Boot")
+            if (scene.name == "Boot" || scene.name == "MainMenu")
             {
-                ApplyPauseLocally(false);
+                _isPaused = false;
+                Time.timeScale = 1f;
+                if (_view != null)
+                {
+                    _view.SetPauseActive(false);
+                    _view.SetSettingsActive(false);
+                }
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
             }
         }
 
@@ -216,6 +233,12 @@ namespace Game.Gameplay.UI
 
         private void Update()
         {
+            var activeScene = SceneManager.GetActiveScene().name;
+            if (activeScene == "Boot" || activeScene == "MainMenu")
+            {
+                return;
+            }
+
             // Listen for Escape key or Gamepad Start
             var keyboard = Keyboard.current;
             var gamepad = Gamepad.current;
@@ -229,9 +252,8 @@ namespace Game.Gameplay.UI
             }
 
             // Only permit pausing during InGame or Paused state
-            if (_gameManager != null && 
-                _gameManager.CurrentState != GameState.InGame && 
-                _gameManager.CurrentState != GameState.Paused)
+            if (_gameManager == null || 
+                (_gameManager.CurrentState != GameState.InGame && _gameManager.CurrentState != GameState.Paused))
             {
                 return;
             }
@@ -297,8 +319,17 @@ namespace Game.Gameplay.UI
                     _view.SetSettingsActive(false);
                 }
 
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
+                var activeScene = SceneManager.GetActiveScene().name;
+                if (activeScene != "Boot" && activeScene != "MainMenu")
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                }
+                else
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                }
 
                 var eventSystem = UnityEngine.EventSystems.EventSystem.current;
                 if (eventSystem != null)

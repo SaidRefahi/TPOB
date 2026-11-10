@@ -81,6 +81,16 @@ namespace Game.Gameplay.Player.Death
                     _visualModel = mesh.gameObject;
                 }
             }
+
+            if (_respawnCoordinator == null)
+            {
+                _respawnCoordinator = FindFirstObjectByType<RespawnCoordinator>();
+            }
+
+            if (_robotCoordinator == null)
+            {
+                _robotCoordinator = FindFirstObjectByType<Game.Gameplay.Player.Robot.RobotCoordinator>();
+            }
         }
 
         protected override void OnDestroy()

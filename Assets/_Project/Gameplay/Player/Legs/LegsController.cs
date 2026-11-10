@@ -494,6 +494,13 @@ namespace Game.Gameplay.Player.Legs
             if (isSpawned && !isServer)
             {
                 SendInputServerRpc(inputData);
+
+                if (isOwner && _inputReader.MoveInput.sqrMagnitude > 0.001f)
+                {
+                    Vector3 moveDir = new Vector3(_inputReader.MoveInput.x, 0f, _inputReader.MoveInput.y);
+                    Quaternion targetRot = Quaternion.LookRotation(moveDir.normalized, Vector3.up);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, _rotationSpeed * Time.deltaTime);
+                }
             }
         }
 

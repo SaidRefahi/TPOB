@@ -103,6 +103,13 @@ namespace Game.Gameplay.Rooms
             {
                 builder.RegisterComponent(robotCoordinator).As<IRobotCoordinator>();
             }
+            else
+            {
+                builder.Register<NullRobotCoordinator>(Lifetime.Scoped).As<IRobotCoordinator>();
+            }
+
+            // Network Prefab Injector scoped to this room container
+            builder.Register<Game.Network.Injection.NetworkPrefabInjector>(Lifetime.Scoped).As<Game.Network.Injection.INetworkPrefabInjector>();
 
             var cameraController = _cameraController != null ? _cameraController : FindFirstObjectByType<Game.Gameplay.Camera.CameraController>();
             if (cameraController != null)
@@ -148,11 +155,19 @@ namespace Game.Gameplay.Rooms
             {
                 builder.RegisterComponent(checkpointSystem).As<ICheckpointSystem>();
             }
+            else
+            {
+                builder.Register<NullCheckpointSystem>(Lifetime.Scoped).As<ICheckpointSystem>();
+            }
 
             var respawnCoordinator = FindFirstObjectByType<Game.Gameplay.Player.Death.RespawnCoordinator>();
             if (respawnCoordinator != null)
             {
                 builder.RegisterComponent(respawnCoordinator).As<IRespawnCoordinator>();
+            }
+            else
+            {
+                builder.Register<NullRespawnCoordinator>(Lifetime.Scoped).As<IRespawnCoordinator>();
             }
 
             var exitTrigger = FindFirstObjectByType<RoomExitTrigger>();

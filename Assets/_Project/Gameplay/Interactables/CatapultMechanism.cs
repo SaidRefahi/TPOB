@@ -210,7 +210,10 @@ namespace Game.Gameplay.Interactables
             enabled = true;
             _heldSocket = holdSocket;
             _heldTorso = holdSocket != null ? holdSocket.GetComponentInParent<Game.Gameplay.Player.Torso.TorsoController>() : null;
-            _isGrabbed.value = true;
+            if (!isSpawned || isServer)
+            {
+                _isGrabbed.value = true;
+            }
 
             var coordinator = _heldTorso != null ? _heldTorso.Coordinator : UnityEngine.Object.FindFirstObjectByType<RobotCoordinator>();
             if (coordinator != null && coordinator.IsFused)
@@ -229,8 +232,11 @@ namespace Game.Gameplay.Interactables
                 _attachedCoordinator = null;
             }
 
-            _isGrabbed.value = false;
-            _currentTensionRatio.value = 0f;
+            if (!isSpawned || isServer)
+            {
+                _isGrabbed.value = false;
+                _currentTensionRatio.value = 0f;
+            }
             _heldSocket = null;
             _heldTorso = null;
 

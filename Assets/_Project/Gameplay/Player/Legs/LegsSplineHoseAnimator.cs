@@ -787,6 +787,8 @@ namespace Game.Gameplay.Player.Legs
         private bool _lastKickWasLeft;
 
         private bool _restPoseCached;
+        private Vector3 _previousPosition;
+        private bool _hasPreviousPosition;
 
         // Simulation flags
         private bool _isSimulatingWalk;
@@ -1028,15 +1030,40 @@ namespace Game.Gameplay.Player.Legs
 
         private void LateUpdate()
         {
-            // If remote proxy on network, let NetworkBones drive the bones without local solver conflict
-            if (_controller != null && _controller.isSpawned && !_controller.isOwner)
+            float dt = Time.deltaTime * _animationTimeScale;
+            Vector3 currentPos = transform.position;
+            Vector3 estimatedVelocity = Vector3.zero;
+            if (_hasPreviousPosition && dt > 0.0001f)
             {
-                return;
+                estimatedVelocity = (currentPos - _previousPosition) / dt;
+            }
+            _previousPosition = currentPos;
+            _hasPreviousPosition = true;
+
+            bool isGrounded = (_controller == null || _controller.IsGrounded || CheckGroundedFallback()) && !_isSimulatingAirborne;
+            Vector3 linearVelocity = Vector3.zero;
+
+            if (_rigidbody != null && !_rigidbody.isKinematic && _rigidbody.linearVelocity.sqrMagnitude > 0.001f)
+            {
+                linearVelocity = _rigidbody.linearVelocity;
+            }
+            else if (estimatedVelocity.sqrMagnitude > 0.001f)
+            {
+                linearVelocity = estimatedVelocity;
             }
 
-            float dt = Time.deltaTime * _animationTimeScale;
-            bool isGrounded = (_controller == null || _controller.IsGrounded || CheckGroundedFallback()) && !_isSimulatingAirborne;
-            Vector3 linearVelocity = _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
+            // Zero-latency stepping feedback for local owner client
+            if (_controller != null && _controller.isOwner)
+            {
+                Vector2 moveInput = _controller.MoveInput;
+                if (moveInput.sqrMagnitude > 0.01f && linearVelocity.sqrMagnitude < 0.1f)
+                {
+                    float speed = _controller.IsSprinting ? _controller.SprintSpeed : _controller.WalkSpeed;
+                    Vector3 inputDir = new Vector3(moveInput.x, 0f, moveInput.y);
+                    linearVelocity = inputDir.normalized * speed;
+                }
+            }
+
             Vector3 horizontalVelocity = Vector3.ProjectOnPlane(linearVelocity, transform.up);
 
             if (_isSimulatingWalk && horizontalVelocity.sqrMagnitude < 0.01f)

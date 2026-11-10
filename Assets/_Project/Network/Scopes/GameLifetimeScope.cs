@@ -107,6 +107,11 @@ namespace Game.Network.Scopes
             // Network Prefab Injector
             builder.Register<Game.Network.Injection.NetworkPrefabInjector>(Lifetime.Singleton).As<Game.Network.Injection.INetworkPrefabInjector>();
 
+            // Domain coordination fallbacks to guarantee root-level dynamic resolution safety
+            builder.Register<NullRespawnCoordinator>(Lifetime.Singleton).As<IRespawnCoordinator>();
+            builder.Register<NullRobotCoordinator>(Lifetime.Singleton).As<IRobotCoordinator>();
+            builder.Register<NullCheckpointSystem>(Lifetime.Singleton).As<ICheckpointSystem>();
+
             // Lobby Service (Domain Service, Pure Dependency Inversion)
             builder.Register<LobbyService>(Lifetime.Singleton).As<ILobbyService>();
         }

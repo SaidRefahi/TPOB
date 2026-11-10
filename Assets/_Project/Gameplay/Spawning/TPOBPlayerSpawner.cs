@@ -513,7 +513,14 @@ namespace Game.Gameplay.Spawning
                 return null;
             }
 
-            _prefabInjector?.InjectExisting(instance);
+            try
+            {
+                _prefabInjector?.InjectExisting(instance);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogException(ex);
+            }
 
             if (instance.TryGetComponent<NetworkIdentity>(out var identity))
             {

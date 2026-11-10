@@ -7,4 +7,12 @@ namespace Game.Core.Interfaces
         void RequestFusion();
         void RequestSeparation();
     }
+
+    public sealed class NullRobotCoordinator : IRobotCoordinator
+    {
+        public bool IsFused => false;
+        public bool CanFuse() => false;
+        public void RequestFusion() { }
+        public void RequestSeparation() { }
+    }
 }
