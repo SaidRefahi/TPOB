@@ -1874,6 +1874,7 @@ MonoBehaviour:
   _roomScenes:
   - Room_1
   - Room_2
+  - Room_3
   _victoryScene: Victory
 --- !u!114 &1587920282
 MonoBehaviour:

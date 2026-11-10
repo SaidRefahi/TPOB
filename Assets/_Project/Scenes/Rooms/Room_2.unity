@@ -51024,12 +51024,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d74d1c9b91c58a4fa9e1acb175818dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Level.LevelDefinition
-  _levelName: Level_01
-  _levelIndex: 1
+  _levelName: Level_02
+  _levelIndex: 2
   _groundY: 0
   _subterraneanDeadzoneY: -3
   _deadzonePadding: 15
-  _subterraneanKillVolume: {fileID: 0}
+  _subterraneanKillVolume: {fileID: 2109756464}
   _legsSpawnPoint: {fileID: 1046332818}
   _torsoSpawnPoint: {fileID: 1178942261}
   _checkpoints:
@@ -51108,6 +51108,7 @@ Transform:
   - {fileID: 1658717632}
   - {fileID: 864140683}
   - {fileID: 1507009461}
+  - {fileID: 2109756465}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1122027937
@@ -92369,6 +92370,91 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 4062019156834824070, guid: 99a412b138b2cff4e868d7f78e40fd83, type: 3}
   m_PrefabInstance: {fileID: 2107456824}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &2109756463
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1121695891}
+    m_Modifications:
+    - target: {fileID: 2137486751668873251, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_Size.x
+      value: 58.393875
+      objectReference: {fileID: 0}
+    - target: {fileID: 2137486751668873251, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_Size.y
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2137486751668873251, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_Size.z
+      value: 58.296936
+      objectReference: {fileID: 0}
+    - target: {fileID: 4980146739663717867, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_Name
+      value: KillVolume_Subterranean
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -6.0484686
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+--- !u!114 &2109756464 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5067084288698115963, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+  m_PrefabInstance: {fileID: 2109756463}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d62b5192f12cdc45b307c0085a15537, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Hazards.KillVolume
+--- !u!4 &2109756465 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7162584035415370353, guid: 8d0edafbc26743d48a2be180245ba6cc, type: 3}
+  m_PrefabInstance: {fileID: 2109756463}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2110952805
 PrefabInstance:
