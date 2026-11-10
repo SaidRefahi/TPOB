@@ -42,15 +42,6 @@ namespace Game.Gameplay.UI
         [SerializeField] private InputActionAsset _inputActionsAsset;
         [SerializeField] private InputRebindRowUI[] _rebindRows;
 
-        [Header("Player Sub-Tabs (Controls)")]
-        [SerializeField] private Button _player1ControlsTabButton;
-        [SerializeField] private Button _player2ControlsTabButton;
-        [SerializeField] private Graphic _player1ControlsIndicator;
-        [SerializeField] private Graphic _player2ControlsIndicator;
-        [SerializeField] private GameObject _player1ControlsContainer;
-        [SerializeField] private GameObject _player2ControlsContainer;
-        [SerializeField] private InputRebindRowUI[] _player2RebindRows;
-
         [Header("Footer Actions")]
         [SerializeField] private Button _resetDefaultsButton;
         [SerializeField] private Button _closeButton;
@@ -84,87 +75,6 @@ namespace Game.Gameplay.UI
         public Toggle InvertYToggle => _invertYToggle;
         public InputActionAsset InputActionsAsset => _inputActionsAsset;
         public InputRebindRowUI[] RebindRows => _rebindRows;
-
-        public Button Player1ControlsTabButton
-        {
-            get
-            {
-                if (_player1ControlsTabButton == null)
-                {
-                    var t = transform.Find("Dialog_Frame/BodyRoot/Panel_Controls/SubTabsRow/Btn_ControlsP1");
-                    if (t != null) _player1ControlsTabButton = t.GetComponent<Button>();
-                }
-                return _player1ControlsTabButton;
-            }
-        }
-
-        public Button Player2ControlsTabButton
-        {
-            get
-            {
-                if (_player2ControlsTabButton == null)
-                {
-                    var t = transform.Find("Dialog_Frame/BodyRoot/Panel_Controls/SubTabsRow/Btn_ControlsP2");
-                    if (t != null) _player2ControlsTabButton = t.GetComponent<Button>();
-                }
-                return _player2ControlsTabButton;
-            }
-        }
-
-        public Graphic Player1ControlsIndicator
-        {
-            get
-            {
-                if (_player1ControlsIndicator == null && Player1ControlsTabButton != null)
-                {
-                    var t = Player1ControlsTabButton.transform.Find("ActiveIndicator");
-                    if (t != null) _player1ControlsIndicator = t.GetComponent<Graphic>();
-                }
-                return _player1ControlsIndicator;
-            }
-        }
-
-        public Graphic Player2ControlsIndicator
-        {
-            get
-            {
-                if (_player2ControlsIndicator == null && Player2ControlsTabButton != null)
-                {
-                    var t = Player2ControlsTabButton.transform.Find("ActiveIndicator");
-                    if (t != null) _player2ControlsIndicator = t.GetComponent<Graphic>();
-                }
-                return _player2ControlsIndicator;
-            }
-        }
-
-        public GameObject Player1ControlsContainer
-        {
-            get
-            {
-                if (_player1ControlsContainer == null)
-                {
-                    var t = transform.Find("Dialog_Frame/BodyRoot/Panel_Controls/RebindGrid_P1");
-                    if (t == null) t = transform.Find("Dialog_Frame/BodyRoot/Panel_Controls/RebindGrid");
-                    if (t != null) _player1ControlsContainer = t.gameObject;
-                }
-                return _player1ControlsContainer;
-            }
-        }
-
-        public GameObject Player2ControlsContainer
-        {
-            get
-            {
-                if (_player2ControlsContainer == null)
-                {
-                    var t = transform.Find("Dialog_Frame/BodyRoot/Panel_Controls/RebindGrid_P2");
-                    if (t != null) _player2ControlsContainer = t.gameObject;
-                }
-                return _player2ControlsContainer;
-            }
-        }
-
-        public InputRebindRowUI[] Player2RebindRows => _player2RebindRows;
 
         public Button ResetDefaultsButton => _resetDefaultsButton;
         public Button CloseButton => _closeButton;

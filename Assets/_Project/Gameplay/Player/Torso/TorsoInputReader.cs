@@ -1,10 +1,8 @@
 using System;
-using Game.Core.Interfaces;
 using Game.Core.Settings;
 using Game.Gameplay.Player.Legs;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using VContainer;
 
 namespace Game.Gameplay.Player.Torso
 {
@@ -12,8 +10,6 @@ namespace Game.Gameplay.Player.Torso
     public sealed class TorsoInputReader : MonoBehaviour
     {
         [SerializeField] private InputActionAsset _inputActions;
-
-        private IGameManager _gameManager;
 
         private InputAction _moveAction;
         private InputAction _lookAction;
@@ -32,12 +28,6 @@ namespace Game.Gameplay.Player.Torso
 
         private float _aimSensitivity = 1f;
         private bool _invertYAxis;
-
-        [Inject]
-        public void Construct(IGameManager gameManager)
-        {
-            _gameManager = gameManager;
-        }
 
         public Vector2 MoveInput => _moveInput;
         public Vector2 LookInput => _lookInput;
@@ -73,19 +63,13 @@ namespace Game.Gameplay.Player.Torso
 
         private void Update()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard != null && (keyboard.eKey.wasPressedThisFrame || keyboard.qKey.wasPressedThisFrame))
-            {
-                _grabTriggered = true;
-                _interactTriggered = true;
-            }
-
             if (_fuseAction != null)
             {
                 return;
             }
 
-            if (keyboard != null && (keyboard.rKey.wasPressedThisFrame || keyboard.uKey.wasPressedThisFrame || keyboard.numpad0Key.wasPressedThisFrame))
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
             {
                 _fuseTriggered = true;
             }
@@ -123,62 +107,15 @@ namespace Game.Gameplay.Player.Torso
             _invertYAxis = PlayerPrefs.GetInt(SettingsService.KeyInvertY, 0) == 1;
         }
 
-        private bool ShouldUseLocalScheme()
-        {
-            if (_gameManager != null)
-            {
-                return _gameManager.IsLocalMode;
-            }
-
-            if (Game.Network.Scopes.GameLifetimeScope.Instance != null &&
-                Game.Network.Scopes.GameLifetimeScope.Instance.Container != null)
-            {
-                try
-                {
-                    _gameManager = Game.Network.Scopes.GameLifetimeScope.Instance.Container.Resolve<IGameManager>();
-                    if (_gameManager != null)
-                    {
-                        return _gameManager.IsLocalMode;
-                    }
-                }
-                catch
-                {
-                    // LifetimeScope resolving fallback
-                }
-            }
-
-            var lifetimeScope = UnityEngine.Object.FindFirstObjectByType<VContainer.Unity.LifetimeScope>();
-            if (lifetimeScope != null && lifetimeScope.Container != null)
-            {
-                try
-                {
-                    _gameManager = lifetimeScope.Container.Resolve<IGameManager>();
-                    if (_gameManager != null)
-                    {
-                        return _gameManager.IsLocalMode;
-                    }
-                }
-                catch
-                {
-                    // Fallback
-                }
-            }
-
-            return false;
-        }
-
         private void BindActions()
         {
             if (_inputActions == null) return;
 
             LegsInputReader.EnsureFuseActionAndLoadOverrides(_inputActions);
 
-            bool isLocalCoop = ShouldUseLocalScheme();
-            var torsoMap = isLocalCoop ? _inputActions.FindActionMap("Torso", false) : null;
-
+            var torsoMap = _inputActions.FindActionMap("Torso", false);
             if (torsoMap != null)
             {
-                // Modo Local compartido: Torso (Jugador 2) usa mapa dedicado 'Torso' (Flechas / IJKL)
                 _moveAction = torsoMap.FindAction("Move", false);
                 _lookAction = torsoMap.FindAction("Look", false);
                 _grabAction = torsoMap.FindAction("Interact", false);
@@ -188,7 +125,6 @@ namespace Game.Gameplay.Player.Torso
             }
             else
             {
-                // Modo Online (Host o Join en distintas PCs): Torso usa WASD y controles estándar ('Player' map)
                 _moveAction = _inputActions.FindAction("Player/Move", false);
                 _lookAction = _inputActions.FindAction("Player/Look", false);
                 _grabAction = _inputActions.FindAction("Player/Interact", false);
@@ -213,7 +149,6 @@ namespace Game.Gameplay.Player.Torso
 
             if (_grabAction != null)
             {
-                _grabAction.started += HandleGrabPerformed;
                 _grabAction.performed += HandleGrabPerformed;
                 _grabAction.Enable();
             }
@@ -256,7 +191,6 @@ namespace Game.Gameplay.Player.Torso
 
             if (_grabAction != null)
             {
-                _grabAction.started -= HandleGrabPerformed;
                 _grabAction.performed -= HandleGrabPerformed;
                 _grabAction.Disable();
             }
