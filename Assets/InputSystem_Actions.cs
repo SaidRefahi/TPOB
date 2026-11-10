@@ -1252,17 +1252,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""7f5e22c2-d7f2-49fb-866a-f3228b9b42a7"",
-                    ""path"": ""<Mouse>/leftButton"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""Kick"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""0dac27d8-a4cb-4e74-a521-994e41b2ee36"",
                     ""path"": ""<Gamepad>/buttonWest"",
                     ""interactions"": """",

@@ -407,6 +407,11 @@ namespace Game.Gameplay.UI
                 _gameManager.IsLocalMode = false;
             }
 
+            if (UIInputModuleFixer.Instance != null)
+            {
+                Destroy(UIInputModuleFixer.Instance.gameObject);
+            }
+
             SceneManager.LoadScene("Boot");
         }
 

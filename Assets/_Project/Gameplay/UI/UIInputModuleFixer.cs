@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 
 namespace Game.Gameplay.UI
 {
@@ -13,6 +14,8 @@ namespace Game.Gameplay.UI
     public sealed class UIInputModuleFixer : MonoBehaviour
     {
         private static UIInputModuleFixer _instance;
+
+        public static UIInputModuleFixer Instance => _instance;
 
         private void Awake()
         {
@@ -43,6 +46,7 @@ namespace Game.Gameplay.UI
             transform.SetParent(null);
             DontDestroyOnLoad(gameObject);
 
+            CleanupDuplicateEventSystems();
             EnsureValidUIInput();
             EnsureCursorVisible();
         }
@@ -59,8 +63,46 @@ namespace Game.Gameplay.UI
                 return;
             }
 
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+
             EnsureValidUIInput();
             EnsureCursorVisible();
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            CleanupDuplicateEventSystems();
+        }
+
+        public void CleanupDuplicateEventSystems()
+        {
+            var allSystems = Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
+            for (int i = 0; i < allSystems.Length; i++)
+            {
+                var sys = allSystems[i];
+                if (sys != null && sys.gameObject != gameObject)
+                {
+                    sys.enabled = false;
+                    Destroy(sys.gameObject);
+                }
+            }
         }
 
         public void EnsureValidUIInput()

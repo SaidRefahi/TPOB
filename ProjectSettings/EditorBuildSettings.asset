@@ -12,8 +12,11 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/Rooms/Room_1.unity
     guid: 1add4345c6ba9e044bf58e6c7e365a0f
   - enabled: 1
+    path: Assets/_Project/Scenes/Rooms/Room_2.unity
+    guid: 541cc7298ea0d8647b4716d121628903
+  - enabled: 1
     path: Assets/_Project/Scenes/Victory.unity
-    guid: d8f53a9e42104c86b9f2913e54b67a10
+    guid: 1bfe1fb155d55754185d297ede6771a0
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -231,6 +231,10 @@ namespace Game.Network.Services
                 {
                     return 0;
                 }
+                if (nm.isClient)
+                {
+                    return 1;
+                }
             }
 
             return -1;
@@ -337,6 +341,26 @@ namespace Game.Network.Services
             if (clientReportedId > 0)
             {
                 return clientReportedId;
+            }
+
+            // If caller explicitly reported 0, it was initiated locally by Host
+            if (clientReportedId == 0)
+            {
+                return 0;
+            }
+
+            // Fallback for remote client if clientReportedId was unresolved/negative
+            var nm = networkManager != null ? networkManager : NetworkManager.main;
+            if (nm != null && nm.isServer)
+            {
+                var players = nm.players;
+                for (int i = 0; i < players.Count; i++)
+                {
+                    if (!players[i].isServer && players[i].id.value > 0)
+                    {
+                        return (int)players[i].id.value;
+                    }
+                }
             }
 
             if (isServer)

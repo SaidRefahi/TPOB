@@ -41,12 +41,7 @@ namespace Game.Editor
             light.intensity = 1f;
             lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
-            // 2. Event System
-            var esGo = new GameObject("EventSystem");
-            esGo.AddComponent<EventSystem>();
-            esGo.AddComponent<InputSystemUIInputModule>();
-
-            // 3. UI Canvas
+            // 2. UI Canvas (EventSystem is provided persistently by Boot.unity)
             var canvasGo = new GameObject("Canvas_Victory");
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;

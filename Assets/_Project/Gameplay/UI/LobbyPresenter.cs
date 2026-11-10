@@ -343,6 +343,10 @@ namespace Game.Gameplay.UI
                     {
                         localId = 0;
                     }
+                    else if (nm.isClient)
+                    {
+                        localId = 1;
+                    }
                 }
             }
 

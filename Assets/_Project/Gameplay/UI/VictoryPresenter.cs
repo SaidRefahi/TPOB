@@ -55,6 +55,11 @@ namespace Game.Gameplay.UI
                 }
             }
 
+            if (UIInputModuleFixer.Instance != null)
+            {
+                Destroy(UIInputModuleFixer.Instance.gameObject);
+            }
+
             SceneManager.LoadScene("Boot");
         }
 
@@ -67,6 +72,11 @@ namespace Game.Gameplay.UI
             }
             else
             {
+                if (UIInputModuleFixer.Instance != null)
+                {
+                    Destroy(UIInputModuleFixer.Instance.gameObject);
+                }
+
                 SceneManager.LoadScene("Boot");
             }
         }
