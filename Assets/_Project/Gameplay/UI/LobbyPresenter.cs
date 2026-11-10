@@ -89,6 +89,9 @@ namespace Game.Gameplay.UI
 
             _lobbyService.OnBothPlayersReadyStatusChanged -= HandleBothPlayersReadyStatusChanged;
             _lobbyService.OnBothPlayersReadyStatusChanged += HandleBothPlayersReadyStatusChanged;
+
+            _lobbyService.OnSelectedRoomChanged -= HandleSelectedRoomChanged;
+            _lobbyService.OnSelectedRoomChanged += HandleSelectedRoomChanged;
         }
 
         private void HookNetworkEvents()
@@ -124,6 +127,9 @@ namespace Game.Gameplay.UI
             if (_view.LeaveLobbyButton != null)
                 _view.LeaveLobbyButton.onClick.AddListener(HandleLeaveLobbyClicked);
 
+            if (_view.SelectRoomButton != null)
+                _view.SelectRoomButton.onClick.AddListener(HandleSelectRoomClicked);
+
             HookLobbyEvents();
             HookNetworkEvents();
             HookGameManagerEvents();
@@ -146,10 +152,14 @@ namespace Game.Gameplay.UI
             if (_view.LeaveLobbyButton != null)
                 _view.LeaveLobbyButton.onClick.RemoveListener(HandleLeaveLobbyClicked);
 
+            if (_view.SelectRoomButton != null)
+                _view.SelectRoomButton.onClick.RemoveListener(HandleSelectRoomClicked);
+
             if (_lobbyService != null)
             {
                 _lobbyService.OnPlayerLobbyStateChanged -= HandlePlayerLobbyStateChanged;
                 _lobbyService.OnBothPlayersReadyStatusChanged -= HandleBothPlayersReadyStatusChanged;
+                _lobbyService.OnSelectedRoomChanged -= HandleSelectedRoomChanged;
             }
 
             if (_networkService != null)
@@ -224,6 +234,36 @@ namespace Game.Gameplay.UI
             RefreshUI();
         }
 
+        private void HandleSelectRoomClicked()
+        {
+            var levelManager = Object.FindFirstObjectByType<Game.Network.Services.LevelManager>();
+            int totalRooms = levelManager != null ? levelManager.TotalRooms : 1;
+
+            if (_view.LevelSelectModal != null)
+            {
+                _view.LevelSelectModal.OnRoomSelected -= HandleRoomSelectedFromModal;
+                _view.LevelSelectModal.OnRoomSelected += HandleRoomSelectedFromModal;
+                _view.LevelSelectModal.Populate(totalRooms, _lobbyService != null ? _lobbyService.SelectedRoomIndex : 0);
+                _view.LevelSelectModal.Show();
+            }
+        }
+
+        private void HandleRoomSelectedFromModal(int roomIndex)
+        {
+            if (_view.LevelSelectModal != null)
+            {
+                _view.LevelSelectModal.OnRoomSelected -= HandleRoomSelectedFromModal;
+                _view.LevelSelectModal.Hide();
+            }
+
+            _lobbyService?.SetSelectedRoom(roomIndex);
+        }
+
+        private void HandleSelectedRoomChanged(int roomIndex)
+        {
+            RefreshUI();
+        }
+
         private void HandleBothPlayersReadyStatusChanged(bool bothReady)
         {
             RefreshUI();
@@ -249,6 +289,30 @@ namespace Game.Gameplay.UI
                 }
                 UIInputModuleFixer.EnsureUIFocusAndInput();
             }
+        }
+
+        private float _pingUpdateTimer;
+
+        private void Update()
+        {
+            if (_view == null || !_view.gameObject.activeInHierarchy) return;
+
+            _pingUpdateTimer -= Time.deltaTime;
+            if (_pingUpdateTimer <= 0f)
+            {
+                _pingUpdateTimer = 1.5f;
+                UpdateNetworkStatusBadge();
+            }
+        }
+
+        private void UpdateNetworkStatusBadge()
+        {
+            if (_networkService == null || _view == null) return;
+            string quality = _networkService.ConnectionQualityText;
+            Color color = (quality.StartsWith("P2P") || quality.StartsWith("Red Local"))
+                ? new Color(0.2f, 1f, 0.4f)
+                : new Color(1f, 0.85f, 0.2f);
+            _view.SetNetworkStatus($"<size=14><color=#88AACC>Enlace de Red: </color><b>{quality}</b></size>", color);
         }
 
         public void RefreshUI()
@@ -314,6 +378,9 @@ namespace Game.Gameplay.UI
                 _view.RoomCodeText.text = $"<b><size=34><color=#00FFFF>SALA DE PREPARACIÓN</color></size></b>\n<size=18><color=#FFFFFF>CÓDIGO DE SALA: </color><color=#00FFFF><b>{roomCode}</b></color> <color=#8899AA>(Compártelo con tu compañero)</color></size>";
             }
 
+            // Update Network Connection Quality Badge
+            UpdateNetworkStatusBadge();
+
             // Update Cards
             _view.UpdateCard(PlayerRole.Legs, legsId != -1, legsReady, isLocalLegs);
             _view.UpdateCard(PlayerRole.Torso, torsoId != -1, torsoReady, isLocalTorso);
@@ -325,6 +392,10 @@ namespace Game.Gameplay.UI
 
             // Update Start Game Button (Host only)
             _view.SetStartButtonInteractable(bothReady, isHost);
+
+            // Update Selected Room (Host only can modify, both see it)
+            int selectedRoom = _lobbyService != null ? _lobbyService.SelectedRoomIndex : 0;
+            _view.UpdateSelectedRoom(selectedRoom, isHost);
 
             // Update Match Status Text
             if (bothReady)

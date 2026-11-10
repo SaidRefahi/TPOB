@@ -19,17 +19,11 @@ namespace Game.Network.Services
         [Group("Configuración de Salas")]
         [SerializeField] private string[] _roomScenes = new string[]
         {
-            "Room_01",
-            "Room_02",
-            "Room_03",
-            "Room_04",
-            "Room_05",
-            "Room_06",
-            "Room_07",
-            "Room_08",
-            "Room_09",
-            "Room_10"
+            "Room_1"
         };
+
+        [Group("Configuración de Salas")]
+        [SerializeField] private string _victoryScene = "Victory";
 
         [Group("Estado Actual")]
         [ShowInInspector, ReadOnly]
@@ -174,8 +168,51 @@ namespace Game.Network.Services
             }
             else
             {
-                Debug.Log("[LevelManager] All rooms completed! Setting GameOver state.");
+                Debug.Log("[LevelManager] All rooms completed! Transitioning to Victory Scene...");
+                await LoadVictorySceneAsync(ct);
+            }
+        }
+
+        public async UniTask LoadVictorySceneAsync(CancellationToken ct = default)
+        {
+            if (IsLoading)
+            {
+                Debug.LogWarning("[LevelManager] Scene load already in progress.");
+                return;
+            }
+
+            IsLoading = true;
+            try
+            {
+                var cancelToken = this.GetCancellationTokenOnDestroy();
+
+                if (_networkService != null && _networkService.IsServer)
+                {
+                    await LoadRoomServerAuthoritativeAsync(_victoryScene, cancelToken);
+                }
+                else
+                {
+                    AsyncOperation op = SceneManager.LoadSceneAsync(_victoryScene, LoadSceneMode.Single);
+                    if (op != null)
+                    {
+                        await op.ToUniTask(cancellationToken: cancelToken);
+                    }
+                }
+
+                CurrentRoomIndex = -1;
                 _gameManager?.ChangeState(GameState.GameOver);
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.Log($"[LevelManager] LoadVictorySceneAsync for '{_victoryScene}' was cancelled.");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LevelManager] Error loading victory scene '{_victoryScene}': {ex}");
+            }
+            finally
+            {
+                IsLoading = false;
             }
         }
 

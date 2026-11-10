@@ -1,37 +1,49 @@
-using System;
 using Game.Core.Enums;
+using Game.Core.Events;
 using Game.Core.Interfaces;
 using Game.Gameplay.Player.Legs;
+using Game.Gameplay.Player.Robot;
 using Game.Gameplay.Player.Torso;
-using Game.Network.Scopes;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using VContainer;
-using VContainer.Unity;
 
 namespace Game.Gameplay.UI
 {
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(PauseMenuView))]
     public sealed class PauseMenuPresenter : MonoBehaviour
     {
-        private PauseMenuView _view;
-        private IGameManager _gameManager;
+        [SerializeField] private PauseMenuView _view;
+
+        private static PauseMenuPresenter _instance;
+
         private INetworkService _networkService;
+        private IGameManager _gameManager;
+        private IGameEventBus _eventBus;
+        private RobotCoordinator _cachedCoordinator;
 
         private bool _isPaused;
 
         [Inject]
-        public void Construct(IGameManager gameManager, INetworkService networkService)
+        public void Construct(INetworkService networkService, IGameManager gameManager, IGameEventBus eventBus)
         {
-            _gameManager = gameManager;
             _networkService = networkService;
+            _gameManager = gameManager;
+            _eventBus = eventBus;
         }
 
         private void Awake()
         {
-            _view = GetComponent<PauseMenuView>();
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            _instance = this;
+            transform.SetParent(null);
+            DontDestroyOnLoad(gameObject);
         }
 
         private void Start()
@@ -43,37 +55,89 @@ namespace Game.Gameplay.UI
 
         private void OnDestroy()
         {
-            UnsubscribeEvents();
-        }
+            if (_instance == this)
+            {
+                _instance = null;
+            }
 
-        private void Update()
-        {
-            CheckPauseInput();
+            UnsubscribeEvents();
+            UnbindCoordinator();
         }
 
         private void ResolveDependencies()
         {
-            if (_networkService != null && _gameManager != null) return;
-
-            var container = GameLifetimeScope.Instance != null ? GameLifetimeScope.Instance.Container : null;
-            if (container != null)
+            if (_networkService == null || _gameManager == null)
             {
-                try
+                var container = Game.Network.Scopes.GameLifetimeScope.Instance != null 
+                    ? Game.Network.Scopes.GameLifetimeScope.Instance.Container 
+                    : null;
+
+                if (container == null)
                 {
-                    if (_networkService == null) _networkService = container.Resolve<INetworkService>();
-                    if (_gameManager == null) _gameManager = container.Resolve<IGameManager>();
+                    var lifetimeScope = UnityEngine.Object.FindFirstObjectByType<VContainer.Unity.LifetimeScope>();
+                    if (lifetimeScope != null)
+                    {
+                        container = lifetimeScope.Container;
+                    }
                 }
-                catch { }
+
+                if (container != null)
+                {
+                    try
+                    {
+                        _networkService ??= container.Resolve<INetworkService>();
+                        _gameManager ??= container.Resolve<IGameManager>();
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[PauseMenuPresenter] Container resolve notice: {ex.Message}");
+                    }
+                }
+            }
+
+            if (_view == null)
+            {
+                _view = GetComponent<PauseMenuView>();
+            }
+
+            BindCoordinator();
+        }
+
+        private void BindCoordinator()
+        {
+            if (_cachedCoordinator != null)
+            {
+                UnbindCoordinator();
+            }
+
+            _cachedCoordinator = Object.FindFirstObjectByType<RobotCoordinator>();
+            if (_cachedCoordinator != null)
+            {
+                _cachedCoordinator.OnPauseStateChanged -= HandleNetworkPauseStateChanged;
+                _cachedCoordinator.OnPauseStateChanged += HandleNetworkPauseStateChanged;
+            }
+        }
+
+        private void UnbindCoordinator()
+        {
+            if (_cachedCoordinator != null)
+            {
+                _cachedCoordinator.OnPauseStateChanged -= HandleNetworkPauseStateChanged;
+                _cachedCoordinator = null;
             }
         }
 
         private void InitializeView()
         {
-            _isPaused = false;
-            if (_view != null)
+            if (_view == null) return;
+
+            _view.SetPauseActive(false);
+            _view.SetSettingsActive(false);
+
+            if (_view.SettingsView != null && _view.SettingsView.CloseButton != null)
             {
-                _view.SetPauseActive(false);
-                _view.SetSettingsActive(false);
+                _view.SettingsView.CloseButton.onClick.RemoveListener(HandleCloseSettingsClicked);
+                _view.SettingsView.CloseButton.onClick.AddListener(HandleCloseSettingsClicked);
             }
         }
 
@@ -82,24 +146,16 @@ namespace Game.Gameplay.UI
             if (_view != null)
             {
                 if (_view.ResumeButton != null)
-                {
                     _view.ResumeButton.onClick.AddListener(HandleResumeClicked);
-                }
 
                 if (_view.OptionsButton != null)
-                {
                     _view.OptionsButton.onClick.AddListener(HandleOptionsClicked);
-                }
 
                 if (_view.ExitToMenuButton != null)
-                {
                     _view.ExitToMenuButton.onClick.AddListener(HandleExitToMenuClicked);
-                }
 
                 if (_view.ExitToDesktopButton != null)
-                {
                     _view.ExitToDesktopButton.onClick.AddListener(HandleExitToDesktopClicked);
-                }
             }
 
             if (_gameManager != null)
@@ -114,23 +170,20 @@ namespace Game.Gameplay.UI
             if (_view != null)
             {
                 if (_view.ResumeButton != null)
-                {
                     _view.ResumeButton.onClick.RemoveListener(HandleResumeClicked);
-                }
 
                 if (_view.OptionsButton != null)
-                {
                     _view.OptionsButton.onClick.RemoveListener(HandleOptionsClicked);
-                }
 
                 if (_view.ExitToMenuButton != null)
-                {
                     _view.ExitToMenuButton.onClick.RemoveListener(HandleExitToMenuClicked);
-                }
 
                 if (_view.ExitToDesktopButton != null)
-                {
                     _view.ExitToDesktopButton.onClick.RemoveListener(HandleExitToDesktopClicked);
+
+                if (_view.SettingsView != null && _view.SettingsView.CloseButton != null)
+                {
+                    _view.SettingsView.CloseButton.onClick.RemoveListener(HandleCloseSettingsClicked);
                 }
             }
 
@@ -140,8 +193,9 @@ namespace Game.Gameplay.UI
             }
         }
 
-        private void CheckPauseInput()
+        private void Update()
         {
+            // Listen for Escape key or Gamepad Start
             var keyboard = Keyboard.current;
             var gamepad = Gamepad.current;
 
@@ -161,7 +215,7 @@ namespace Game.Gameplay.UI
                 return;
             }
 
-            // If settings modal is open inside pause menu, close settings first
+            // If settings modal is open inside pause menu, close settings first and return to pause menu
             if (_view != null && _view.IsSettingsActive)
             {
                 _view.SetSettingsActive(false);
@@ -173,26 +227,81 @@ namespace Game.Gameplay.UI
 
         public void TogglePause()
         {
-            _isPaused = !_isPaused;
+            if (_cachedCoordinator == null)
+            {
+                BindCoordinator();
+            }
+
+            if (_cachedCoordinator != null && _cachedCoordinator.isSpawned)
+            {
+                _cachedCoordinator.RequestTogglePause();
+            }
+            else
+            {
+                ApplyPauseLocally(!_isPaused);
+            }
+        }
+
+        private void HandleNetworkPauseStateChanged(bool paused)
+        {
+            ApplyPauseLocally(paused);
+        }
+
+        private void ApplyPauseLocally(bool paused)
+        {
+            _isPaused = paused;
+            Time.timeScale = paused ? 0f : 1f;
 
             if (_view != null)
             {
-                _view.SetPauseActive(_isPaused);
-                if (!_isPaused)
+                _view.SetPauseActive(paused);
+                if (!paused)
                 {
                     _view.SetSettingsActive(false);
                 }
+                else
+                {
+                    UpdateNetworkStatusBadge();
+                }
             }
 
-            // 1. Soft-Pause: Suspend local player inputs without altering Time.timeScale
-            SetPlayerInputEnabled(!_isPaused);
+            SetPlayerInputEnabled(!paused);
 
-            // 2. Cursor management
-            Cursor.lockState = _isPaused ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = _isPaused;
+            if (paused)
+            {
+                UIInputModuleFixer.EnsureUIFocusAndInput();
 
-            // 3. Game state update
-            _gameManager?.ChangeState(_isPaused ? GameState.Paused : GameState.InGame);
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                if (eventSystem != null && _view != null && _view.ResumeButton != null)
+                {
+                    eventSystem.SetSelectedGameObject(_view.ResumeButton.gameObject);
+                }
+            }
+            else
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+
+                var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+                if (eventSystem != null)
+                {
+                    eventSystem.SetSelectedGameObject(null);
+                }
+            }
+
+            _gameManager?.ChangeState(paused ? GameState.Paused : GameState.InGame);
+        }
+
+        private void UpdateNetworkStatusBadge()
+        {
+            if (_networkService != null && _view != null)
+            {
+                string quality = _networkService.ConnectionQualityText;
+                Color color = (quality.StartsWith("P2P") || quality.StartsWith("Red Local"))
+                    ? new Color(0.2f, 1f, 0.4f)
+                    : new Color(1f, 0.85f, 0.2f);
+                _view.SetConnectionQuality($"<size=14><color=#88AACC>Enlace de Red: </color><b>{quality}</b></size>", color);
+            }
         }
 
         private void SetPlayerInputEnabled(bool isEnabled)
@@ -212,10 +321,7 @@ namespace Game.Gameplay.UI
 
         private void HandleResumeClicked()
         {
-            if (_isPaused)
-            {
-                TogglePause();
-            }
+            TogglePause();
         }
 
         private void HandleOptionsClicked()
@@ -226,20 +332,26 @@ namespace Game.Gameplay.UI
             }
         }
 
-        private void HandleExitToMenuClicked()
+        private void HandleCloseSettingsClicked()
         {
-            _isPaused = false;
             if (_view != null)
             {
-                _view.SetPauseActive(false);
                 _view.SetSettingsActive(false);
             }
+        }
 
-            // Restore cursor
+        private void HandleExitToMenuClicked()
+        {
+            if (_cachedCoordinator != null && _cachedCoordinator.isSpawned && _isPaused)
+            {
+                _cachedCoordinator.RequestTogglePause();
+            }
+
+            ApplyPauseLocally(false);
+
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            // Disconnect network session cleanly
             _networkService?.Disconnect();
 
             if (_gameManager != null)
@@ -247,16 +359,23 @@ namespace Game.Gameplay.UI
                 _gameManager.IsLocalMode = false;
             }
 
-            // Load Boot scene
             SceneManager.LoadScene("Boot");
         }
 
         private void HandleExitToDesktopClicked()
         {
+            Time.timeScale = 1f;
+            _networkService?.Disconnect();
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
             Application.Quit();
+            try
+            {
+                System.Diagnostics.Process.GetCurrentProcess().Kill();
+            }
+            catch { }
 #endif
         }
 
@@ -266,13 +385,7 @@ namespace Game.Gameplay.UI
             {
                 if (_isPaused)
                 {
-                    _isPaused = false;
-                    if (_view != null)
-                    {
-                        _view.SetPauseActive(false);
-                        _view.SetSettingsActive(false);
-                    }
-                    SetPlayerInputEnabled(true);
+                    ApplyPauseLocally(false);
                 }
             }
         }

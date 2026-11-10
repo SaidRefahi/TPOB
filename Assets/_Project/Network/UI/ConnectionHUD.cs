@@ -11,6 +11,12 @@ using VContainer.Unity;
 
 namespace Game.Network.UI
 {
+    public enum NetworkTransportMode
+    {
+        LocalUDP,
+        PurrRelay
+    }
+
     [DisallowMultipleComponent]
     public sealed class ConnectionHUD : MonoBehaviour
     {
@@ -18,6 +24,8 @@ namespace Game.Network.UI
         [SerializeField] private Vector2 _guiPosition = new Vector2(20, 20);
         [SerializeField] private string _serverAddress = "127.0.0.1";
         [SerializeField] private string _serverPort = "5000";
+        [SerializeField] private string _roomName = "TPOB-ROOM";
+        [SerializeField] private NetworkTransportMode _selectedTransportMode = NetworkTransportMode.LocalUDP;
 
         private INetworkService _networkService;
         private IPlayerRegistry _playerRegistry;
@@ -140,24 +148,51 @@ namespace Game.Network.UI
         private void DrawConnectionControls()
         {
             GUILayout.Space(6);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(_selectedTransportMode == NetworkTransportMode.LocalUDP, "Red Local (LAN UDP)", "Button", GUILayout.Height(28)))
+            {
+                _selectedTransportMode = NetworkTransportMode.LocalUDP;
+            }
+            if (GUILayout.Toggle(_selectedTransportMode == NetworkTransportMode.PurrRelay, "Online (PurrNet Relay)", "Button", GUILayout.Height(28)))
+            {
+                _selectedTransportMode = NetworkTransportMode.PurrRelay;
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("<b>1. Crear Servidor (Host)</b>");
             GUILayout.Label("<size=11>Inicia el juego como Servidor y toma el rol de Piernas.</size>");
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Puerto:", GUILayout.Width(60));
-            _serverPort = GUILayout.TextField(_serverPort, GUILayout.Width(80));
-            GUILayout.EndHorizontal();
-
-            if (GUILayout.Button("▶ Iniciar como Host", GUILayout.Height(35)))
+            if (_selectedTransportMode == NetworkTransportMode.LocalUDP)
             {
-                if (ushort.TryParse(_serverPort, out ushort port))
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Puerto:", GUILayout.Width(60));
+                _serverPort = GUILayout.TextField(_serverPort, GUILayout.Width(80));
+                GUILayout.EndHorizontal();
+
+                if (GUILayout.Button("▶ Iniciar como Host LAN", GUILayout.Height(35)))
                 {
-                    _networkService?.StartHost(port);
+                    if (ushort.TryParse(_serverPort, out ushort port))
+                    {
+                        _networkService?.StartLanHost(port);
+                    }
+                    else
+                    {
+                        _networkService?.StartLanHost();
+                    }
                 }
-                else
+            }
+            else
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Sala:", GUILayout.Width(60));
+                _roomName = GUILayout.TextField(_roomName, GUILayout.Width(140));
+                GUILayout.EndHorizontal();
+
+                if (GUILayout.Button("▶ Iniciar como Host Online", GUILayout.Height(35)))
                 {
-                    _networkService?.StartHost();
+                    _networkService?.StartHostWithRoom(_roomName);
                 }
             }
             GUILayout.EndVertical();
@@ -167,22 +202,37 @@ namespace Game.Network.UI
             GUILayout.Label("<b>2. Unirse a Partida (Join Client)</b>");
             GUILayout.Label("<size=11>Únete al Host existente y toma el rol de Torso.</size>");
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("IP:", GUILayout.Width(60));
-            _serverAddress = GUILayout.TextField(_serverAddress, GUILayout.Width(130));
-            GUILayout.Label("Puerto:", GUILayout.Width(50));
-            _serverPort = GUILayout.TextField(_serverPort, GUILayout.Width(60));
-            GUILayout.EndHorizontal();
-
-            if (GUILayout.Button("⚡ Unirse como Cliente", GUILayout.Height(35)))
+            if (_selectedTransportMode == NetworkTransportMode.LocalUDP)
             {
-                if (ushort.TryParse(_serverPort, out ushort port))
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("IP:", GUILayout.Width(60));
+                _serverAddress = GUILayout.TextField(_serverAddress, GUILayout.Width(130));
+                GUILayout.Label("Puerto:", GUILayout.Width(50));
+                _serverPort = GUILayout.TextField(_serverPort, GUILayout.Width(60));
+                GUILayout.EndHorizontal();
+
+                if (GUILayout.Button("⚡ Unirse como Cliente LAN", GUILayout.Height(35)))
                 {
-                    _networkService?.StartClient(_serverAddress, port);
+                    if (ushort.TryParse(_serverPort, out ushort port))
+                    {
+                        _networkService?.StartLanClient(_serverAddress, port);
+                    }
+                    else
+                    {
+                        _networkService?.StartLanClient(_serverAddress);
+                    }
                 }
-                else
+            }
+            else
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Sala:", GUILayout.Width(60));
+                _roomName = GUILayout.TextField(_roomName, GUILayout.Width(140));
+                GUILayout.EndHorizontal();
+
+                if (GUILayout.Button("⚡ Unirse como Cliente Online", GUILayout.Height(35)))
                 {
-                    _networkService?.StartClient();
+                    _networkService?.StartClientWithRoom(_roomName);
                 }
             }
             GUILayout.EndVertical();

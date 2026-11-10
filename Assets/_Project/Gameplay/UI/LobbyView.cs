@@ -9,14 +9,13 @@ namespace Game.Gameplay.UI
     [DisallowMultipleComponent]
     public sealed class LobbyView : MonoBehaviour
     {
-        [Header("Tarjeta Piernas (Legs)")]
+        [Header("Tarjetas de Roles")]
         [SerializeField] private Button _selectLegsButton;
         [SerializeField] private TextMeshProUGUI _legsStatusText;
         [SerializeField] private CanvasGroup _legsCanvasGroup;
         [SerializeField] private TextMeshProUGUI _legsAbilitiesText;
         [SerializeField] private TextMeshProUGUI _legsControlsText;
 
-        [Header("Tarjeta Torso (Torso)")]
         [SerializeField] private Button _selectTorsoButton;
         [SerializeField] private TextMeshProUGUI _torsoStatusText;
         [SerializeField] private CanvasGroup _torsoCanvasGroup;
@@ -30,8 +29,14 @@ namespace Game.Gameplay.UI
         [SerializeField] private TextMeshProUGUI _matchStatusText;
         [SerializeField] private Button _leaveLobbyButton;
 
-        [Header("Información de Sala")]
+        [Header("Selector de Sala")]
+        [SerializeField] private Button _selectRoomButton;
+        [SerializeField] private TextMeshProUGUI _selectedRoomText;
+        [SerializeField] private LevelSelectModalUI _levelSelectModal;
+
+        [Header("Información de Sala y Red")]
         [SerializeField] private TextMeshProUGUI _roomCodeText;
+        [SerializeField] private TextMeshProUGUI _networkStatusText;
 
         private Canvas _canvas;
         private GraphicRaycaster _raycaster;
@@ -53,6 +58,25 @@ namespace Game.Gameplay.UI
         public Button StartGameButton => _startGameButton;
         public TextMeshProUGUI MatchStatusText => _matchStatusText;
         public Button LeaveLobbyButton => _leaveLobbyButton;
+        public Button SelectRoomButton => _selectRoomButton;
+        public TextMeshProUGUI SelectedRoomText => _selectedRoomText;
+        public LevelSelectModalUI LevelSelectModal => _levelSelectModal;
+        public TextMeshProUGUI NetworkStatusText => _networkStatusText;
+
+        public void UpdateSelectedRoom(int roomIndex, bool isHost)
+        {
+            if (_selectedRoomText != null)
+            {
+                _selectedRoomText.text = isHost
+                    ? $"<b><color=#00FFFF>SALA SELECCIONADA: {roomIndex + 1}</color></b> <size=12><color=#88AACC>(Clic para cambiar)</color></size>"
+                    : $"<b><color=#00FFFF>SALA SELECCIONADA: {roomIndex + 1}</color></b> <size=12><color=#88AACC>(Elegida por Host)</color></size>";
+            }
+
+            if (_selectRoomButton != null)
+            {
+                _selectRoomButton.interactable = isHost;
+            }
+        }
 
         public TextMeshProUGUI RoomCodeText
         {
@@ -132,11 +156,11 @@ namespace Game.Gameplay.UI
             else
             {
                 // Occupied by teammate
-                cg.alpha = isReady ? 0.45f : 0.8f;
-                btn.interactable = false;
+                cg.alpha = isReady ? 0.45f : 0.85f;
+                btn.interactable = !isReady;
                 text.text = isReady
-                    ? "<color=#FF5555><b>[OCUPADO] CONFIRMADO POR COMPAÑERO</b></color>"
-                    : "<color=#FFAA00><b>COMPAÑERO ELIGIENDO...</b></color>";
+                    ? "<color=#FF5555><b>[CONFIRMADO POR COMPAÑERO]</b></color>"
+                    : "<color=#FFAA00><b>[COMPAÑERO ELIGIENDO]\n<size=12>CLIC PARA RECLAMAR</size></b></color>";
             }
         }
 
@@ -161,6 +185,15 @@ namespace Game.Gameplay.UI
             {
                 _matchStatusText.text = message;
                 _matchStatusText.color = color;
+            }
+        }
+
+        public void SetNetworkStatus(string status, Color color)
+        {
+            if (_networkStatusText != null)
+            {
+                _networkStatusText.text = status;
+                _networkStatusText.color = color;
             }
         }
 

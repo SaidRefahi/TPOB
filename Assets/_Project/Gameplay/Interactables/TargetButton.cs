@@ -39,6 +39,15 @@ namespace Game.Gameplay.Interactables
         [Group("Configuración del Pulsador")]
         [SerializeField] private Color _inactiveColor = Color.red;
 
+        [Group("Configuración del Pulsador")]
+        [SerializeField] private bool _requireKickForPlayer = true;
+
+        [Group("Configuración del Pulsador")]
+        [SerializeField] private bool _allowThrownObjects = true;
+
+        [Group("Configuración del Pulsador")]
+        [SerializeField] private float _minThrownVelocitySqr = 4f;
+
         [Group("Estado")]
         [ShowInInspector]
         private bool _isActivated;
@@ -88,20 +97,43 @@ namespace Game.Gameplay.Interactables
 
         public void Toggle(GameObject user)
         {
+            if (isSpawned && !isServer)
+            {
+                RequestToggleServerRpc();
+                return;
+            }
             TriggerActivation();
         }
 
         public void OnKicked(Vector3 hitPoint, Vector3 direction, float kickForce)
         {
+            if (isSpawned && !isServer)
+            {
+                RequestToggleServerRpc();
+                return;
+            }
             TriggerActivation();
         }
 
         public void OnPushed(Vector3 direction, float force)
         {
+            if (_requireKickForPlayer) return;
+
             if (force > 0.5f)
             {
+                if (isSpawned && !isServer)
+                {
+                    RequestToggleServerRpc();
+                    return;
+                }
                 TriggerActivation();
             }
+        }
+
+        [ServerRpc(requireOwnership: false)]
+        private void RequestToggleServerRpc()
+        {
+            TriggerActivation();
         }
 
         private void OnCollisionEnter(Collision collision)
@@ -109,9 +141,27 @@ namespace Game.Gameplay.Interactables
             bool canSimulate = !isSpawned || isServer;
             if (!canSimulate) return;
 
-            if (collision.collider.TryGetComponent<IGrabbable>(out _) ||
-                collision.collider.attachedRigidbody != null ||
-                collision.relativeVelocity.sqrMagnitude > 0.1f)
+            Collider col = collision.collider;
+            if (IsPlayer(col))
+            {
+                // El cuerpo físico del jugador (caminar, caer o saltar) no activa el pulsador si requiere patada
+                if (_requireKickForPlayer) return;
+            }
+
+            if (_allowThrownObjects)
+            {
+                if (col.TryGetComponent<IGrabbable>(out _) ||
+                    (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<IGrabbable>(out _)))
+                {
+                    if (collision.relativeVelocity.sqrMagnitude >= _minThrownVelocitySqr)
+                    {
+                        TriggerActivation();
+                    }
+                    return;
+                }
+            }
+
+            if (!_requireKickForPlayer && (col.attachedRigidbody != null || collision.relativeVelocity.sqrMagnitude > 0.1f))
             {
                 TriggerActivation();
             }
@@ -122,12 +172,47 @@ namespace Game.Gameplay.Interactables
             bool canSimulate = !isSpawned || isServer;
             if (!canSimulate) return;
 
-            if (other.isTrigger && !other.CompareTag("Player")) return;
+            if (IsPlayer(other))
+            {
+                // Triggers del jugador no activan el pulsador si requiere patada
+                if (_requireKickForPlayer) return;
+            }
 
-            if (other.TryGetComponent<IGrabbable>(out _) || other.attachedRigidbody != null)
+            if (_allowThrownObjects)
+            {
+                if (other.TryGetComponent<IGrabbable>(out _) ||
+                    (other.attachedRigidbody != null && other.attachedRigidbody.TryGetComponent<IGrabbable>(out _)))
+                {
+                    if (other.attachedRigidbody != null && other.attachedRigidbody.linearVelocity.sqrMagnitude >= _minThrownVelocitySqr)
+                    {
+                        TriggerActivation();
+                    }
+                    return;
+                }
+            }
+
+            if (!_requireKickForPlayer && other.attachedRigidbody != null)
             {
                 TriggerActivation();
             }
+        }
+
+        private static bool IsPlayer(Collider col)
+        {
+            if (col == null) return false;
+            if (col.CompareTag("Player")) return true;
+            if (col.attachedRigidbody != null && col.attachedRigidbody.CompareTag("Player")) return true;
+            if (col.GetComponentInParent<Game.Gameplay.Player.Legs.LegsController>() != null ||
+                col.GetComponentInParent<Game.Gameplay.Player.Torso.TorsoController>() != null)
+            {
+                return true;
+            }
+            if (col.TryGetComponent<Game.Gameplay.Player.Death.PlayerDeathHandler>(out _) ||
+                (col.attachedRigidbody != null && col.attachedRigidbody.TryGetComponent<Game.Gameplay.Player.Death.PlayerDeathHandler>(out _)))
+            {
+                return true;
+            }
+            return false;
         }
 
         private void TriggerActivation()

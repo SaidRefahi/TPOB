@@ -128,6 +128,8 @@ namespace Game.Gameplay.Player.Death
 
             _isAlive = false;
 
+            transform.SetParent(null, true);
+
             bool wasFused = _robotCoordinator != null && _robotCoordinator.IsFused;
 
             // 1. Separate if fused
@@ -192,12 +194,16 @@ namespace Game.Gameplay.Player.Death
 
             _isAlive = true;
 
+            transform.SetParent(null, true);
             transform.position = position;
             transform.rotation = rotation;
 
             if (_rigidbody != null)
             {
-                _rigidbody.isKinematic = !isServer;
+                _rigidbody.isKinematic = isSpawned && !isServer;
+                _rigidbody.constraints = _role == PlayerRole.Torso
+                    ? RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ
+                    : RigidbodyConstraints.FreezeRotation;
                 if (!_rigidbody.isKinematic)
                 {
                     _rigidbody.linearVelocity = Vector3.zero;
@@ -205,6 +211,11 @@ namespace Game.Gameplay.Player.Death
                 }
                 _rigidbody.position = position;
                 _rigidbody.rotation = rotation;
+            }
+
+            if (TryGetComponent<Game.Gameplay.Player.Juice.TumbleController>(out var tumble))
+            {
+                tumble.ResetTumble();
             }
 
             int pId = isSpawned && owner.HasValue ? (int)owner.Value.id.value : (_role == PlayerRole.Legs ? 1 : 2);
@@ -242,8 +253,29 @@ namespace Game.Gameplay.Player.Death
         {
             _isAlive = true;
 
+            transform.SetParent(null, true);
             transform.position = position;
             transform.rotation = rotation;
+
+            if (_rigidbody != null)
+            {
+                _rigidbody.isKinematic = isSpawned && !isServer;
+                _rigidbody.constraints = _role == PlayerRole.Torso
+                    ? RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ
+                    : RigidbodyConstraints.FreezeRotation;
+                if (!_rigidbody.isKinematic)
+                {
+                    _rigidbody.linearVelocity = Vector3.zero;
+                    _rigidbody.angularVelocity = Vector3.zero;
+                }
+                _rigidbody.position = position;
+                _rigidbody.rotation = rotation;
+            }
+
+            if (TryGetComponent<Game.Gameplay.Player.Juice.TumbleController>(out var tumble))
+            {
+                tumble.ResetTumble();
+            }
 
             if (_visualModel != null)
             {

@@ -104,12 +104,8 @@ namespace Game.Network.Scopes
                 builder.RegisterComponent(networkManager);
             }
 
-            // Connection HUD
-            var hud = FindFirstObjectByType<Game.Network.UI.ConnectionHUD>();
-            if (hud != null)
-            {
-                builder.RegisterComponent(hud);
-            }
+            // Network Prefab Injector
+            builder.Register<Game.Network.Injection.NetworkPrefabInjector>(Lifetime.Singleton).As<Game.Network.Injection.INetworkPrefabInjector>();
 
             // Lobby Service (Domain Service, Pure Dependency Inversion)
             builder.Register<LobbyService>(Lifetime.Singleton).As<ILobbyService>();

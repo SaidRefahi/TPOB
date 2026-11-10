@@ -30,14 +30,20 @@ namespace Game.Network.Services
         [ShowInInspector, ReadOnly]
         private bool _torsoReady;
 
+        [Group("Estado del Lobby")]
+        [ShowInInspector, ReadOnly]
+        private int _selectedRoomIndex;
+
         public bool AreBothPlayersReady => _legsPlayerId != -1 && _torsoPlayerId != -1 && _legsReady && _torsoReady;
         public int LegsPlayerId => _legsPlayerId;
         public int TorsoPlayerId => _torsoPlayerId;
         public bool LegsReady => _legsReady;
         public bool TorsoReady => _torsoReady;
+        public int SelectedRoomIndex => _selectedRoomIndex;
 
         public event Action<int, PlayerRole, bool> OnPlayerLobbyStateChanged;
         public event Action<bool> OnBothPlayersReadyStatusChanged;
+        public event Action<int> OnSelectedRoomChanged;
 
         private IPlayerRegistry _playerRegistry;
         private ILevelManager _levelManager;
@@ -347,6 +353,19 @@ namespace Game.Network.Services
             return -1;
         }
 
+        public void SetSelectedRoom(int roomIndex)
+        {
+            RequestSetSelectedRoomServerRpc(roomIndex);
+        }
+
+        [ServerRpc(requireOwnership: false)]
+        public void RequestSetSelectedRoomServerRpc(int roomIndex)
+        {
+            if (!isServer) return;
+            _selectedRoomIndex = roomIndex;
+            BroadcastLobbyState();
+        }
+
         [ServerRpc(requireOwnership: false)]
         public void RequestStartGameServerRpc()
         {
@@ -356,7 +375,7 @@ namespace Game.Network.Services
 
             if (_levelManager != null)
             {
-                _levelManager.LoadRoomAsync(0).Forget();
+                _levelManager.LoadRoomAsync(_selectedRoomIndex).Forget();
             }
             else
             {
@@ -366,7 +385,7 @@ namespace Game.Network.Services
 
         private void BroadcastLobbyState()
         {
-            SyncLobbyStateObserversRpc(_legsPlayerId, _legsReady, _torsoPlayerId, _torsoReady);
+            SyncLobbyStateObserversRpc(_legsPlayerId, _legsReady, _torsoPlayerId, _torsoReady, _selectedRoomIndex);
         }
 
         #endregion
@@ -374,12 +393,13 @@ namespace Game.Network.Services
         #region ObserversRpc
 
         [ObserversRpc(runLocally: true, bufferLast: true)]
-        private void SyncLobbyStateObserversRpc(int legsId, bool legsReady, int torsoId, bool torsoReady)
+        private void SyncLobbyStateObserversRpc(int legsId, bool legsReady, int torsoId, bool torsoReady, int selectedRoomIndex)
         {
             _legsPlayerId = legsId;
             _legsReady = legsReady;
             _torsoPlayerId = torsoId;
             _torsoReady = torsoReady;
+            _selectedRoomIndex = selectedRoomIndex;
 
             ResolveDependenciesIfNeeded();
 
@@ -401,8 +421,9 @@ namespace Game.Network.Services
             OnPlayerLobbyStateChanged?.Invoke(legsId, PlayerRole.Legs, legsReady);
             OnPlayerLobbyStateChanged?.Invoke(torsoId, PlayerRole.Torso, torsoReady);
             OnBothPlayersReadyStatusChanged?.Invoke(AreBothPlayersReady);
+            OnSelectedRoomChanged?.Invoke(selectedRoomIndex);
 
-            _lobbyService?.UpdateLobbyState(legsId, legsReady, torsoId, torsoReady);
+            _lobbyService?.UpdateLobbyState(legsId, legsReady, torsoId, torsoReady, selectedRoomIndex);
         }
 
         #endregion

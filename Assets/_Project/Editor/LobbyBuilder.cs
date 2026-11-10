@@ -17,6 +17,45 @@ namespace Game.Editor
         private static readonly Color GreenAccent = new Color(0f, 0.95f, 0.58f, 1f);
         private static readonly Color RedAccent = new Color(1f, 0.24f, 0.35f, 1f);
 
+        [MenuItem("TPOB/UI/★ Reconstruir e Instanciar UI Completa (Recomendado)", priority = -10)]
+        public static void RebuildAndInstantiateAllUI()
+        {
+            MainMenuBuilder.GenerateUIPrefabs();
+            GenerateLobbyPrefab();
+            InstantiateFullUIInScene();
+
+            EnsureNetworkManagerTransports();
+
+            Debug.Log("<color=green><b>[TPOB] UI Completa (Menú Principal, Opciones, Lobby) generada, conectada e instanciada con éxito.</b></color>");
+        }
+
+        private static void EnsureNetworkManagerTransports()
+        {
+            var netManager = Object.FindFirstObjectByType<PurrNet.NetworkManager>();
+            if (netManager != null)
+            {
+                var purr = netManager.GetComponent<PurrNet.Transports.PurrTransport>();
+                if (purr == null)
+                {
+                    purr = Undo.AddComponent<PurrNet.Transports.PurrTransport>(netManager.gameObject);
+                }
+
+                var udp = netManager.GetComponent<PurrNet.Transports.UDPTransport>();
+                if (udp == null)
+                {
+                    udp = Undo.AddComponent<PurrNet.Transports.UDPTransport>(netManager.gameObject);
+                    udp.serverPort = 5000;
+                    udp.address = "127.0.0.1";
+                }
+
+                if (netManager.transport == null && purr != null)
+                {
+                    netManager.transport = purr;
+                    EditorUtility.SetDirty(netManager);
+                }
+            }
+        }
+
         [MenuItem("TPOB/UI/3. Generar Prefab de Lobby")]
         public static void GenerateLobbyPrefab()
         {
@@ -63,7 +102,23 @@ namespace Game.Editor
                 Undo.RegisterCreatedObjectUndo(lobbyInstance, "Instantiate Canvas_Lobby");
             }
 
-            Debug.Log("<color=cyan>[TPOB] Jerarquía completa de UI instanciada (MainMenu, Settings, Lobby) bajo '--- UI ---'.</color>");
+            var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_PauseMenu.prefab");
+            if (pausePrefab == null)
+            {
+                PauseMenuBuilder.GeneratePauseMenuPrefab();
+                pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_PauseMenu.prefab");
+            }
+
+            if (Object.FindFirstObjectByType<PauseMenuView>(FindObjectsInactive.Include) == null && pausePrefab != null)
+            {
+                var pauseInstance = (GameObject)PrefabUtility.InstantiatePrefab(pausePrefab, uiRoot.transform);
+                pauseInstance.SetActive(true);
+                var pauseView = pauseInstance.GetComponent<PauseMenuView>();
+                if (pauseView != null) pauseView.SetPauseActive(false);
+                Undo.RegisterCreatedObjectUndo(pauseInstance, "Instantiate Canvas_PauseMenu");
+            }
+
+            Debug.Log("<color=cyan>[TPOB] Jerarquía completa de UI instanciada (MainMenu, Settings, Lobby, PauseMenu) bajo '--- UI ---'.</color>");
         }
 
         private static GameObject BuildLobbyHierarchy()
@@ -190,7 +245,11 @@ namespace Game.Editor
             var leaveBtn = MainMenuBuilder.CreateSciFiButton(btnRowGo.transform, "Btn_LeaveLobby", "LEAVE LOBBY", 50, UIAssetGenerator.BtnRed, RedAccent);
             var readyBtn = MainMenuBuilder.CreateSciFiButton(btnRowGo.transform, "Btn_ToggleReady", "READY", 50, UIAssetGenerator.BtnAmber, AmberAccent);
             var readyTmp = readyBtn.GetComponentInChildren<TextMeshProUGUI>();
+            var selectRoomBtn = MainMenuBuilder.CreateSciFiButton(btnRowGo.transform, "Btn_SelectRoom", "SALA: 1", 50, UIAssetGenerator.BtnCyan, CyanAccent, 240);
+            var selectRoomTmp = selectRoomBtn.GetComponentInChildren<TextMeshProUGUI>();
             var startBtn = MainMenuBuilder.CreateSciFiButton(btnRowGo.transform, "Btn_StartGame", "START GAME", 50, UIAssetGenerator.BtnGreen, GreenAccent);
+
+            var levelSelectModal = MainMenuBuilder.BuildLevelSelectModal(canvasGo.transform);
 
             // Wire LobbyView SerializedObject
             var so = new SerializedObject(lobbyView);
@@ -212,6 +271,9 @@ namespace Game.Editor
             so.FindProperty("_matchStatusText").objectReferenceValue = statusTmp;
             so.FindProperty("_leaveLobbyButton").objectReferenceValue = leaveBtn;
             so.FindProperty("_roomCodeText").objectReferenceValue = headerTmp;
+            so.FindProperty("_selectRoomButton").objectReferenceValue = selectRoomBtn;
+            so.FindProperty("_selectedRoomText").objectReferenceValue = selectRoomTmp;
+            so.FindProperty("_levelSelectModal").objectReferenceValue = levelSelectModal;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             return canvasGo;

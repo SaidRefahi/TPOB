@@ -80,7 +80,7 @@ namespace Game.Gameplay.Player.Legs
 
         [Group("Locomoción Anclada a Patas")]
         [Tooltip("Paradigma de locomoción: VelocityDriven (clásico) o FootAnchoredCentering (nuevo)")]
-        [SerializeField] private LocomotionParadigm _locomotionMode = LocomotionParadigm.FootAnchoredCentering;
+        [SerializeField] private LocomotionParadigm _locomotionMode = LocomotionParadigm.VelocityDriven;
 
         [Group("Locomoción Anclada a Patas")]
         [Tooltip("Rigidez del servoing elástico hacia el centroide de apoyo de las patas")]
@@ -377,12 +377,44 @@ namespace Game.Gameplay.Player.Legs
             base.OnDestroy();
         }
 
+        private void OnEnable()
+        {
+            if (_deathHandler == null)
+            {
+                _deathHandler = GetComponent<PlayerDeathHandler>();
+            }
+
+            if (_deathHandler != null)
+            {
+                _deathHandler.OnRespawned += HandleRespawned;
+            }
+        }
+
         private void OnDisable()
+        {
+            if (_deathHandler != null)
+            {
+                _deathHandler.OnRespawned -= HandleRespawned;
+            }
+
+            CancelKickCharge();
+            if (_isOnMagneticSurface)
+            {
+                SetMagneticState(false);
+            }
+        }
+
+        private void HandleRespawned()
         {
             CancelKickCharge();
             if (_isOnMagneticSurface)
             {
                 SetMagneticState(false);
+            }
+            _catapultAirTime = 0f;
+            if (_rigidbody != null && !_rigidbody.isKinematic)
+            {
+                _rigidbody.linearVelocity = Vector3.zero;
             }
         }
 
@@ -416,26 +448,30 @@ namespace Game.Gameplay.Player.Legs
 
             UpdateKickCharge();
 
+            bool jumpTriggered = _inputReader.ConsumeJumpTrigger();
+            bool fuseTriggered = _inputReader.ConsumeFuseTrigger();
+
             if (_commandInvoker != null)
             {
-                _commandInvoker.Execute(new MoveCommand(_inputReader.MoveInput, _inputReader.IsSprintHeld));
+                if (!isSpawned || isServer)
+                {
+                    _commandInvoker.Execute(new MoveCommand(_inputReader.MoveInput, _inputReader.IsSprintHeld));
+                }
 
-                if (_inputReader.ConsumeJumpTrigger())
+                if (jumpTriggered)
                 {
                     _commandInvoker.Execute(new JumpCommand());
                 }
 
-                if (_inputReader.ConsumeFuseTrigger())
+                if (fuseTriggered)
                 {
                     if (_isFused)
                         _commandInvoker.Execute(new SeparateCommand());
                     else
                         _commandInvoker.Execute(new FuseCommand());
                 }
-                return;
             }
-
-            if (_inputReader.ConsumeFuseTrigger())
+            else if (fuseTriggered)
             {
                 if (_isFused)
                     RequestSeparation();
@@ -445,24 +481,29 @@ namespace Game.Gameplay.Player.Legs
 
             LegsInputData inputData = new LegsInputData(
                 _inputReader.MoveInput,
-                _inputReader.ConsumeJumpTrigger(),
+                jumpTriggered,
                 false,
                 _inputReader.IsSprintHeld
             );
 
-            if (!isSpawned || isServer)
+            if (!isSpawned || isServer || isOwner)
             {
                 ProcessInput(inputData);
             }
-            else
+
+            if (isSpawned && !isServer)
             {
                 SendInputServerRpc(inputData);
             }
         }
 
-        [ServerRpc(Channel.Unreliable)]
+        [ServerRpc(Channel.Unreliable, requireOwnership: false)]
         private void SendInputServerRpc(LegsInputData inputData, RPCInfo info = default)
         {
+            if (owner.HasValue && info.sender != owner.Value && !info.sender.isServer)
+            {
+                return;
+            }
             ProcessInput(inputData);
         }
 
@@ -989,7 +1030,8 @@ namespace Game.Gameplay.Player.Legs
                 targetSpeed *= _coordinator.DragSpeedMultiplier;
             }
 
-            if (_locomotionMode == LocomotionParadigm.FootAnchoredCentering && _splineAnimator != null && _isGrounded)
+            bool isRemoteServerProxy = isSpawned && isServer && !isOwner;
+            if (!isRemoteServerProxy && _locomotionMode == LocomotionParadigm.FootAnchoredCentering && _splineAnimator != null && _isGrounded)
             {
                 ApplyFootAnchoredLocomotion(input, targetSpeed);
                 return;
@@ -1431,16 +1473,17 @@ namespace Game.Gameplay.Player.Legs
             else
             {
                 Kick(chargeRatio);
-                if (isSpawned && !isServer)
-                {
-                    LegsInputData inputData = new LegsInputData(
-                        _inputReader.MoveInput,
-                        false,
-                        true,
-                        _inputReader.IsSprintHeld
-                    );
-                    SendChargedInputServerRpc(inputData, chargeRatio);
-                }
+            }
+
+            if (isSpawned && !isServer)
+            {
+                LegsInputData inputData = new LegsInputData(
+                    _inputReader != null ? _inputReader.MoveInput : Vector2.zero,
+                    false,
+                    true,
+                    _inputReader != null && _inputReader.IsSprintHeld
+                );
+                SendChargedInputServerRpc(inputData, chargeRatio);
             }
         }
 

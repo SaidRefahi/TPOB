@@ -170,6 +170,46 @@ namespace Game.Core.Localization
                 [AppLanguage.Spanish] = "GUARDAR Y CERRAR",
                 [AppLanguage.English] = "SAVE & CLOSE"
             },
+            ["HostLan"] = new()
+            {
+                [AppLanguage.Spanish] = "CREAR SERVIDOR LOCAL (LAN)",
+                [AppLanguage.English] = "HOST LAN (WIFI)"
+            },
+            ["mainmenu_connect_help"] = new()
+            {
+                [AppLanguage.Spanish] = "Ingresa el código de sala online (ej. TPOB-1234) o la IP de tu amigo en red local para unirte.",
+                [AppLanguage.English] = "Enter online room code (e.g. TPOB-1234) or local friend's IP to connect."
+            },
+            ["LanGameFound"] = new()
+            {
+                [AppLanguage.Spanish] = "🟢 PARTIDA DETECTADA EN RED LOCAL (CLIC PARA ENTRAR)",
+                [AppLanguage.English] = "🟢 LOCAL LAN GAME DETECTED (CLICK TO JOIN)"
+            },
+            ["Player1Controls"] = new()
+            {
+                [AppLanguage.Spanish] = "JUGADOR 1 (PIERNAS / ONLINE)",
+                [AppLanguage.English] = "PLAYER 1 (LEGS / ONLINE)"
+            },
+            ["Player2Controls"] = new()
+            {
+                [AppLanguage.Spanish] = "JUGADOR 2 (TORSO - MODO LOCAL)",
+                [AppLanguage.English] = "PLAYER 2 (TORSO - LOCAL CO-OP)"
+            },
+            ["P2PDirect"] = new()
+            {
+                [AppLanguage.Spanish] = "P2P Directo",
+                [AppLanguage.English] = "Direct P2P"
+            },
+            ["LocalLan"] = new()
+            {
+                [AppLanguage.Spanish] = "Red Local (LAN)",
+                [AppLanguage.English] = "Local Network (LAN)"
+            },
+            ["RelaySession"] = new()
+            {
+                [AppLanguage.Spanish] = "Relay",
+                [AppLanguage.English] = "Relay"
+            },
             ["LangToggle"] = new()
             {
                 [AppLanguage.Spanish] = "IDIOMA: ESPAÑOL",

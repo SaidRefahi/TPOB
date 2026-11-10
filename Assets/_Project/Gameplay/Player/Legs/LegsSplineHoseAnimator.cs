@@ -1802,6 +1802,11 @@ namespace Game.Gameplay.Player.Legs
             avgNormal = transform.up;
             supportRadius = 0.5f;
 
+            if (_controller != null && _controller.isSpawned && !_controller.isOwner)
+            {
+                return false;
+            }
+
             if (_legs == null || _legs.Length == 0)
             {
                 return false;

@@ -119,6 +119,26 @@ namespace Game.Gameplay.Player.Juice
             RecoverFromTumble();
         }
 
+        public void ResetTumble()
+        {
+            _isTumbling = false;
+            _recoveryTween?.Kill();
+
+            if (_visualModel != null)
+            {
+                _visualModel.localScale = _initialVisualScale;
+            }
+
+            if (_rigidbody != null)
+            {
+                if (!_rigidbody.isKinematic)
+                {
+                    _rigidbody.angularVelocity = Vector3.zero;
+                }
+                _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            }
+        }
+
         private void RecoverFromTumble()
         {
             if (!_isTumbling || _rigidbody == null) return;

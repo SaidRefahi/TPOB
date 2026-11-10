@@ -37,14 +37,19 @@ namespace Game.Gameplay.Spawning
 
         private IPlayerRegistry _playerRegistry;
         private IGameManager _gameManager;
+        private Game.Network.Injection.INetworkPrefabInjector _prefabInjector;
         private readonly HashSet<int> _spawnedPlayers = new(4);
         private SceneID _cachedSceneId;
 
         [Inject]
-        public void Construct(IPlayerRegistry playerRegistry = null, IGameManager gameManager = null)
+        public void Construct(
+            IPlayerRegistry playerRegistry = null, 
+            IGameManager gameManager = null,
+            Game.Network.Injection.INetworkPrefabInjector prefabInjector = null)
         {
             _playerRegistry = playerRegistry;
             _gameManager = gameManager;
+            _prefabInjector = prefabInjector;
         }
 
         private void Awake()
@@ -202,55 +207,41 @@ namespace Game.Gameplay.Spawning
                     legsIdentity.GiveOwnership(localPlayer);
                 }
             }
-
-#if UNITY_EDITOR
-            if (_spawnedPlayers.Count <= 1)
-            {
-                var torso = Object.FindFirstObjectByType<TorsoController>();
-                if (torso != null && torso.TryGetComponent<NetworkIdentity>(out var torsoIdentity))
-                {
-                    if (!torsoIdentity.hasOwner || torsoIdentity.owner == PlayerID.Server)
-                    {
-                        torsoIdentity.GiveOwnership(localPlayer);
-                    }
-                }
-            }
-#endif
         }
 
         private void HandleServerPlayerJoined(PlayerID player, bool isReconnect, bool asServer)
         {
             if (!asServer) return;
 
+            ResolvePlayerRegistry();
+
             var nm = networkManager != null ? networkManager : NetworkManager.main;
             bool isHost = player.isServer || (nm != null && nm.isLocalPlayerReady && nm.localPlayer == player);
+            int playerIdInt = (int)player.id.value;
 
-            if (isHost)
+            PlayerRole assignedRole = PlayerRole.None;
+            if (_playerRegistry != null)
+            {
+                assignedRole = _playerRegistry.GetRoleForPlayer(playerIdInt);
+            }
+
+            if (assignedRole == PlayerRole.Legs || (assignedRole == PlayerRole.None && isHost))
             {
                 var existingLegs = Object.FindFirstObjectByType<LegsController>();
                 if (existingLegs != null && existingLegs.TryGetComponent<NetworkIdentity>(out var legsId))
                 {
                     legsId.GiveOwnership(player);
                 }
-
-#if UNITY_EDITOR
-                if (_spawnedPlayers.Count <= 1)
-                {
-                    var existingTorso = Object.FindFirstObjectByType<TorsoController>();
-                    if (existingTorso != null && existingTorso.TryGetComponent<NetworkIdentity>(out var torsoId))
-                    {
-                        torsoId.GiveOwnership(player);
-                    }
-                }
-#endif
+                _playerRegistry?.TryAssignRole(playerIdInt, PlayerRole.Legs);
             }
-            else
+            else if (assignedRole == PlayerRole.Torso || (assignedRole == PlayerRole.None && !isHost))
             {
                 var existingTorso = Object.FindFirstObjectByType<TorsoController>();
                 if (existingTorso != null && existingTorso.TryGetComponent<NetworkIdentity>(out var torsoId))
                 {
                     torsoId.GiveOwnership(player);
                 }
+                _playerRegistry?.TryAssignRole(playerIdInt, PlayerRole.Torso);
             }
         }
 
@@ -331,21 +322,37 @@ namespace Game.Gameplay.Spawning
                 }
             }
 
-            bool hasLegs = Object.FindFirstObjectByType<LegsController>() != null;
-            bool hasTorso = Object.FindFirstObjectByType<TorsoController>() != null;
+            var nm = networkManager != null ? networkManager : NetworkManager.main;
+            bool isHost = player.isServer || (nm != null && nm.isLocalPlayerReady && nm.localPlayer == player);
+
+            var existingLegs = Object.FindFirstObjectByType<LegsController>();
+            var existingTorso = Object.FindFirstObjectByType<TorsoController>();
+
+            bool hasLegs = existingLegs != null;
+            bool hasTorso = existingTorso != null;
+
+            bool legsOwnedByOther = hasLegs && existingLegs.TryGetComponent<NetworkIdentity>(out var legsId) && legsId.hasOwner && legsId.owner.Value != player && !legsId.owner.Value.isServer;
+            bool torsoOwnedByOther = hasTorso && existingTorso.TryGetComponent<NetworkIdentity>(out var torsoId) && torsoId.hasOwner && torsoId.owner.Value != player && !torsoId.owner.Value.isServer;
 
             PlayerRole role;
-            if (!hasLegs)
+            if (isHost)
             {
-                role = PlayerRole.Legs;
-            }
-            else if (!hasTorso)
-            {
-                role = PlayerRole.Torso;
+                role = (!hasLegs || !legsOwnedByOther) ? PlayerRole.Legs : (hasTorso && torsoOwnedByOther ? PlayerRole.Observer : PlayerRole.Torso);
             }
             else
             {
-                role = PlayerRole.Observer;
+                if (!hasTorso || !torsoOwnedByOther)
+                {
+                    role = PlayerRole.Torso;
+                }
+                else if (!hasLegs || !legsOwnedByOther)
+                {
+                    role = PlayerRole.Legs;
+                }
+                else
+                {
+                    role = PlayerRole.Observer;
+                }
             }
 
             _playerRegistry?.TryAssignRole(playerIdInt, role);
@@ -378,6 +385,12 @@ namespace Game.Gameplay.Spawning
 #if UNITY_EDITOR
         private void EnsureEditorBuddySpawned()
         {
+            var nm = networkManager != null ? networkManager : NetworkManager.main;
+            if (nm != null && !nm.isOffline && (nm.isServer || nm.isClient))
+            {
+                return;
+            }
+
             if (_playerRegistry != null && _playerRegistry.ConnectedPlayers.Count > 1)
             {
                 return;
@@ -420,7 +433,7 @@ namespace Game.Gameplay.Spawning
         private GameObject SpawnPlayerForPlayer(PlayerID player, PlayerRole role)
         {
             var nm = networkManager != null ? networkManager : NetworkManager.main;
-            bool canNetworkSpawn = nm != null && nm.isServer && isSpawned;
+            bool canNetworkSpawn = nm != null && nm.isServer;
 
             // Strict single-instance guard: strictly one Legs and one Torso per room
             if (role == PlayerRole.Legs)
@@ -500,6 +513,8 @@ namespace Game.Gameplay.Spawning
                 return null;
             }
 
+            _prefabInjector?.InjectExisting(instance);
+
             if (instance.TryGetComponent<NetworkIdentity>(out var identity))
             {
                 if (canNetworkSpawn && nm != null && !identity.IsSpawned(nm.isServer))
@@ -518,9 +533,23 @@ namespace Game.Gameplay.Spawning
 
         public GameObject SpawnPlayerForRole(int playerId, PlayerRole role)
         {
-            PlayerID pid = playerId >= 0
-                ? new PlayerID((ulong)playerId, false)
-                : (networkManager != null && networkManager.isLocalPlayerReady ? networkManager.localPlayer : PlayerID.Server);
+            PlayerID pid;
+            if (playerId >= 0)
+            {
+                pid = new PlayerID((ulong)playerId, false);
+            }
+            else
+            {
+                var nm = networkManager != null ? networkManager : NetworkManager.main;
+                if (nm != null && !nm.isOffline && nm.isServer)
+                {
+                    pid = PlayerID.Server;
+                }
+                else
+                {
+                    pid = nm != null && nm.isLocalPlayerReady ? nm.localPlayer : PlayerID.Server;
+                }
+            }
             return SpawnPlayerForPlayer(pid, role);
         }
 

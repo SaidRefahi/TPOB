@@ -11,12 +11,16 @@ namespace Game.Core.Interfaces
         bool LegsReady { get; }
         bool TorsoReady { get; }
 
+        int SelectedRoomIndex { get; }
+
         event Action<int, PlayerRole, bool> OnPlayerLobbyStateChanged;
         event Action<bool> OnBothPlayersReadyStatusChanged;
+        event Action<int> OnSelectedRoomChanged;
 
         void SelectRole(PlayerRole role);
         void ToggleReady();
         void StartGame();
         void RequestSync();
+        void SetSelectedRoom(int roomIndex);
     }
 }

@@ -17,5 +17,6 @@ namespace Game.Core.Interfaces
 
         UniTask LoadRoomAsync(int roomIndex, CancellationToken ct = default);
         UniTask AdvanceToNextRoomAsync(CancellationToken ct = default);
+        UniTask LoadVictorySceneAsync(CancellationToken ct = default);
     }
 }

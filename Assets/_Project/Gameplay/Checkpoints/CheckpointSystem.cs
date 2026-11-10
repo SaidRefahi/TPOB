@@ -129,10 +129,10 @@ namespace Game.Gameplay.Checkpoints
 
                 if (targetPoint != null)
                 {
-                    return targetPoint.position;
+                    return targetPoint.position + Vector3.up * 0.2f;
                 }
 
-                Vector3 offset = role == PlayerRole.Legs ? new Vector3(-1f, 0f, 0f) : new Vector3(1f, 0f, 0f);
+                Vector3 offset = role == PlayerRole.Legs ? new Vector3(-1f, 0.2f, 0f) : new Vector3(1f, 0.2f, 0f);
                 return targetCheckpoint.transform.position + offset;
             }
 
@@ -141,11 +141,11 @@ namespace Game.Gameplay.Checkpoints
                 var sp = _spawnPointManager.GetSpawnPoint(role);
                 if (sp != null)
                 {
-                    return sp.transform.position;
+                    return sp.transform.position + Vector3.up * 0.2f;
                 }
             }
 
-            return role == PlayerRole.Legs ? new Vector3(-3f, 0f, -7f) : new Vector3(3f, 0f, -7f);
+            return role == PlayerRole.Legs ? new Vector3(-3f, 0.2f, -7f) : new Vector3(3f, 0.2f, -7f);
         }
 
         public Quaternion GetRespawnRotation(PlayerRole role)

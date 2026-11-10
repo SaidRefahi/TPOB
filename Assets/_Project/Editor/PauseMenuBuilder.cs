@@ -381,10 +381,10 @@ namespace Game.Editor
             vlayout.childForceExpandWidth = true;
             vlayout.childForceExpandHeight = false;
 
-            var resumeBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_Resume", "RESUME", 56, UIAssetGenerator.BtnGreen, new Color(0f, 0.95f, 0.58f, 1f));
-            var optionsBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_Options", "OPTIONS", 56, UIAssetGenerator.BtnCyan, new Color(0f, 0.94f, 1f, 1f));
-            var exitMenuBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_ExitToMenu", "MAIN MENU", 56, UIAssetGenerator.BtnAmber, new Color(1f, 0.58f, 0f, 1f));
-            var exitDesktopBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_ExitToDesktop", "EXIT TO DESKTOP", 56, UIAssetGenerator.BtnRed, new Color(1f, 0.24f, 0.35f, 1f));
+            var resumeBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_Resume", "REANUDAR", 56, UIAssetGenerator.BtnGreen, new Color(0f, 0.95f, 0.58f, 1f));
+            var optionsBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_Options", "CONFIGURACIÓN", 56, UIAssetGenerator.BtnCyan, new Color(0f, 0.94f, 1f, 1f));
+            var exitMenuBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_ExitToMenu", "SALIR AL MENÚ", 56, UIAssetGenerator.BtnAmber, new Color(1f, 0.58f, 0f, 1f));
+            var exitDesktopBtn = MainMenuBuilder.CreateSciFiButton(buttonsGo.transform, "Btn_ExitToDesktop", "CERRAR JUEGO", 56, UIAssetGenerator.BtnRed, new Color(1f, 0.24f, 0.35f, 1f));
 
             GameObject settingsInstance = null;
             if (settingsPrefab != null)

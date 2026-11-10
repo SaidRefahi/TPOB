@@ -38,6 +38,12 @@ namespace Game.Gameplay.Player.Robot
         [Group("Estado Sincronizado")]
         [SerializeField] private SyncVar<bool> _isFused = new(false);
 
+        [Group("Estado Sincronizado")]
+        [SerializeField] private SyncVar<bool> _isGamePaused = new(false);
+
+        public bool IsGamePaused => !isSpawned ? false : _isGamePaused.value;
+        public event System.Action<bool> OnPauseStateChanged;
+
         private readonly SeparationStrategy _separationStrategy = new();
         private readonly FusionStrategy _fusionStrategy = new();
 
@@ -164,6 +170,7 @@ namespace Game.Gameplay.Player.Robot
         {
             base.OnSpawned();
             _isFused.onChanged += HandleFusedStateChanged;
+            _isGamePaused.onChanged += HandlePauseStateChanged;
 
             if (_isFused.value)
             {
@@ -174,12 +181,14 @@ namespace Game.Gameplay.Player.Robot
         protected override void OnDespawned()
         {
             _isFused.onChanged -= HandleFusedStateChanged;
+            _isGamePaused.onChanged -= HandlePauseStateChanged;
             base.OnDespawned();
         }
 
         protected override void OnDestroy()
         {
             _isFused.onChanged -= HandleFusedStateChanged;
+            _isGamePaused.onChanged -= HandlePauseStateChanged;
             base.OnDestroy();
         }
 
@@ -441,6 +450,41 @@ namespace Game.Gameplay.Player.Robot
                     : transform.position;
                 PerformSeparationLocally(sepPos);
             }
+        }
+
+        public void RequestTogglePause()
+        {
+            if (!isSpawned || isServer)
+            {
+                SetPauseStateServer(!_isGamePaused.value);
+            }
+            else
+            {
+                RequestTogglePauseServerRpc();
+            }
+        }
+
+        [ServerRpc(Channel.ReliableOrdered, requireOwnership: false)]
+        private void RequestTogglePauseServerRpc(RPCInfo info = default)
+        {
+            SetPauseStateServer(!_isGamePaused.value);
+        }
+
+        private void SetPauseStateServer(bool paused)
+        {
+            _isGamePaused.value = paused;
+            ApplyPauseStateObserversRpc(paused);
+        }
+
+        [ObserversRpc(runLocally: true, bufferLast: true)]
+        private void ApplyPauseStateObserversRpc(bool paused)
+        {
+            OnPauseStateChanged?.Invoke(paused);
+        }
+
+        private void HandlePauseStateChanged(bool paused)
+        {
+            OnPauseStateChanged?.Invoke(paused);
         }
 
         private void ApplyStrategy(IRobotStrategy newStrategy)

@@ -103,6 +103,10 @@ namespace Game.Gameplay.Player.Torso
         private Collider _selfCollider;
         private IGameEventBus _eventBus;
         private PlayerDeathHandler _deathHandler;
+        private float _lastInputSendTime;
+        private Vector2 _lastSentMoveDirection;
+        private Vector2 _lastSentAimDirection;
+        private bool _lastSentMagnetHeld;
 
         [Group("Fusión")]
         [SerializeField] private SyncVar<Quaternion> _syncedFusedRotation = new(Quaternion.identity);
@@ -244,6 +248,11 @@ namespace Game.Gameplay.Player.Torso
 
         protected override void OnDestroy()
         {
+            if (_deathHandler != null)
+            {
+                _deathHandler.OnRespawned -= HandleRespawned;
+            }
+
             _syncedFusedRotation.onChanged -= HandleSyncedFusedRotationChanged;
 
             if (_coordinator != null)
@@ -254,6 +263,50 @@ namespace Game.Gameplay.Player.Torso
             base.OnDestroy();
         }
 
+        private void OnEnable()
+        {
+            if (_deathHandler == null)
+            {
+                _deathHandler = GetComponent<PlayerDeathHandler>();
+            }
+
+            if (_deathHandler != null)
+            {
+                _deathHandler.OnRespawned += HandleRespawned;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_deathHandler != null)
+            {
+                _deathHandler.OnRespawned -= HandleRespawned;
+            }
+        }
+
+        private void HandleRespawned()
+        {
+            transform.SetParent(null, true);
+
+            if (_rigidbody != null)
+            {
+                _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            }
+
+            if (_lockedDraggable != null)
+            {
+                _lockedDraggable.UnlockMagnet();
+                _lockedDraggable = null;
+            }
+
+            if (_currentHeldObject != null)
+            {
+                ReleaseHeldObject();
+            }
+
+            _isClimbing = false;
+        }
+
         private void Update()
         {
             if (_deathHandler != null && !_deathHandler.IsAlive)
@@ -261,7 +314,7 @@ namespace Game.Gameplay.Player.Torso
                 return;
             }
 
-            bool hasAuthority = !isSpawned || isOwner || (isServer && (!hasOwner || owner == PlayerID.Server));
+            bool hasAuthority = !isSpawned ? true : isOwner;
             if (!hasAuthority || _inputReader == null)
             {
                 return;
@@ -310,7 +363,27 @@ namespace Game.Gameplay.Player.Torso
             }
             else
             {
-                SendTorsoInputServerRpc(inputData);
+                bool actionsTriggered = inputData.GrabTriggered || inputData.ThrowTriggered || inputData.InteractTriggered;
+                if (actionsTriggered)
+                {
+                    SendTorsoActionServerRpc(inputData.GrabTriggered, inputData.ThrowTriggered, inputData.InteractTriggered);
+                }
+
+                float now = Time.time;
+                bool moveChanged = (inputData.MoveDirection - _lastSentMoveDirection).sqrMagnitude > 0.001f;
+                bool aimChanged = (inputData.AimDirection - _lastSentAimDirection).sqrMagnitude > 0.001f;
+                bool magnetChanged = inputData.MagnetHeld != _lastSentMagnetHeld;
+                bool tickElapsed = (now - _lastInputSendTime) >= 0.02f;
+
+                if (actionsTriggered || moveChanged || aimChanged || magnetChanged || tickElapsed)
+                {
+                    _lastInputSendTime = now;
+                    _lastSentMoveDirection = inputData.MoveDirection;
+                    _lastSentAimDirection = inputData.AimDirection;
+                    _lastSentMagnetHeld = inputData.MagnetHeld;
+
+                    SendTorsoInputServerRpc(inputData);
+                }
             }
         }
 
@@ -322,10 +395,26 @@ namespace Game.Gameplay.Player.Torso
             }
         }
 
-        [ServerRpc(Channel.Unreliable)]
+        [ServerRpc(Channel.Unreliable, requireOwnership: false)]
         private void SendTorsoInputServerRpc(TorsoInputData inputData, RPCInfo info = default)
         {
+            if (owner.HasValue && info.sender != owner.Value && !info.sender.isServer)
+            {
+                return;
+            }
             ProcessTorsoInput(inputData);
+        }
+
+        [ServerRpc(Channel.ReliableOrdered, requireOwnership: false)]
+        private void SendTorsoActionServerRpc(bool grab, bool throwTrigger, bool interact, RPCInfo info = default)
+        {
+            if (owner.HasValue && info.sender != owner.Value && !info.sender.isServer)
+            {
+                return;
+            }
+            if (grab) _pendingInput.GrabTriggered = true;
+            if (throwTrigger) _pendingInput.ThrowTriggered = true;
+            if (interact) _pendingInput.InteractTriggered = true;
         }
 
         private void ProcessTorsoInput(TorsoInputData inputData)
@@ -369,10 +458,10 @@ namespace Game.Gameplay.Player.Torso
             }
 
             ApplyAiming();
+            ApplyMechanismInteraction();
             ApplyGrabAndRelease();
             ApplyThrow();
             ApplyMagnet();
-            ApplyMechanismInteraction();
 
             if (!_rigidbody.isKinematic)
             {
@@ -544,9 +633,18 @@ namespace Game.Gameplay.Player.Torso
             {
                 OnObjectGrabbed?.Invoke(_currentHeldObject);
             }
+            else if (isServer)
+            {
+                NetworkIdentity targetId = null;
+                if (target is Component comp)
+                {
+                    targetId = comp.GetComponent<NetworkIdentity>();
+                }
+                NotifyObjectGrabbedObserversRpc(targetId);
+            }
             else
             {
-                NotifyObjectGrabbedObserversRpc();
+                OnObjectGrabbed?.Invoke(_currentHeldObject);
             }
         }
 
@@ -565,9 +663,13 @@ namespace Game.Gameplay.Player.Torso
             {
                 OnObjectReleased?.Invoke(released);
             }
-            else
+            else if (isServer)
             {
                 NotifyObjectReleasedObserversRpc();
+            }
+            else
+            {
+                OnObjectReleased?.Invoke(released);
             }
         }
 
@@ -606,9 +708,13 @@ namespace Game.Gameplay.Player.Torso
             {
                 OnThrow?.Invoke();
             }
-            else
+            else if (isServer)
             {
                 NotifyThrowObserversRpc();
+            }
+            else
+            {
+                OnThrow?.Invoke();
             }
         }
 
@@ -623,9 +729,13 @@ namespace Game.Gameplay.Player.Torso
                 {
                     OnMagnetStateChanged?.Invoke(_isMagnetActive);
                 }
-                else
+                else if (isServer)
                 {
                     NotifyMagnetStateObserversRpc(_isMagnetActive);
+                }
+                else
+                {
+                    OnMagnetStateChanged?.Invoke(_isMagnetActive);
                 }
             }
 
@@ -688,7 +798,7 @@ namespace Game.Gameplay.Player.Torso
             _pendingInput.InteractTriggered = false;
 
             Vector3 center = transform.position + transform.forward * 0.3f;
-            int count = Physics.OverlapSphereNonAlloc(center, _interactRadius, _mechanismColliders, _mechanismLayer);
+            int count = Physics.OverlapSphereNonAlloc(center, _interactRadius, _mechanismColliders, _mechanismLayer, QueryTriggerInteraction.Collide);
 
             for (int i = 0; i < count; i++)
             {
@@ -700,21 +810,40 @@ namespace Game.Gameplay.Player.Torso
                     (col.GetComponentInParent<IInteractableMechanism>() is { } pMech && (mechanism = pMech) != null))
                 {
                     mechanism.Toggle(gameObject);
+                    _pendingInput.GrabTriggered = false;
                     break;
                 }
             }
         }
 
         [ObserversRpc(runLocally: true)]
-        private void NotifyObjectGrabbedObserversRpc()
+        private void NotifyObjectGrabbedObserversRpc(NetworkIdentity targetIdentity)
         {
+            if (isServer)
+            {
+                OnObjectGrabbed?.Invoke(_currentHeldObject);
+                return;
+            }
+
+            if (targetIdentity != null && targetIdentity.TryGetComponent<IGrabbable>(out var grabbable))
+            {
+                _currentHeldObject = grabbable;
+                _currentHeldObject.OnGrabbed(_holdSocket);
+            }
+
             OnObjectGrabbed?.Invoke(_currentHeldObject);
         }
 
         [ObserversRpc(runLocally: true)]
         private void NotifyObjectReleasedObserversRpc()
         {
-            OnObjectReleased?.Invoke(_currentHeldObject);
+            var released = _currentHeldObject;
+            _currentHeldObject = null;
+            if (!isServer && released != null)
+            {
+                released.OnReleased(Vector3.down * 0.1f);
+            }
+            OnObjectReleased?.Invoke(released);
         }
 
         [ObserversRpc(runLocally: true)]
@@ -813,10 +942,12 @@ namespace Game.Gameplay.Player.Torso
 
         private void HandleSyncedFusedRotationChanged(Quaternion newRotation)
         {
-            if (!isServer)
+            if (isOwner)
             {
-                _fusedWorldRotation = newRotation;
+                return;
             }
+
+            _fusedWorldRotation = newRotation;
         }
 
         public void RequestFusion()
@@ -883,10 +1014,6 @@ namespace Game.Gameplay.Player.Torso
                 _tumbleController.TriggerTumble(launchDir * kickForce);
             }
 
-            if (_eventBus == null && GameLifetimeScope.Instance != null && GameLifetimeScope.Instance.Container != null)
-            {
-                try { _eventBus = GameLifetimeScope.Instance.Container.Resolve<IGameEventBus>(); } catch { }
-            }
             _eventBus?.Publish(new Game.Core.Events.AudioCueEvent(Game.Core.Enums.AudioCue.Kick, hitPoint, 1f, 1f));
         }
 

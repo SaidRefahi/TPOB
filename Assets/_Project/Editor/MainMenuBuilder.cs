@@ -136,7 +136,7 @@ namespace Game.Editor
         {
             var canvasGo = CreateCanvasRoot("Canvas_MainMenu", 100);
             var mainView = canvasGo.AddComponent<MainMenuView>();
-            canvasGo.AddComponent<MainMenuPresenter>();
+            var mainPresenter = canvasGo.AddComponent<MainMenuPresenter>();
 
             Material bgMat = UIAssetGenerator.LoadBackdropMaterial(false);
             Sprite panelSprite = UIAssetGenerator.LoadSprite(UIAssetGenerator.PanelFrame);
@@ -229,19 +229,20 @@ namespace Game.Editor
             var copyBtn = CreateSciFiButton(ipBoxGo.transform, "Btn_CopyIP", "COPIAR", 38, UIAssetGenerator.BtnCyan, CyanAccent, 114);
 
             // Main Action Buttons Column
-            var buttonsColGo = CreateUIElement("ButtonsColumn", containerGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(460, 360), new Vector2(0, -38));
+            var buttonsColGo = CreateUIElement("ButtonsColumn", containerGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(460, 410), new Vector2(0, -38));
             var vlg = buttonsColGo.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 14;
+            vlg.spacing = 10;
             vlg.childControlWidth = true;
             vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
             vlg.childForceExpandHeight = false;
 
-            var localBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_LocalPlay", "LOCAL PLAY", 58, UIAssetGenerator.BtnAmber, AmberAccent);
-            var hostBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Host", "HOST GAME", 58, UIAssetGenerator.BtnGreen, GreenAccent);
-            var joinBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Join", "JOIN GAME", 58, UIAssetGenerator.BtnCyan, CyanAccent);
-            var optBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Options", "OPTIONS", 58, UIAssetGenerator.BtnNeutral, SteelAccent);
-            var exitBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Exit", "EXIT GAME", 58, UIAssetGenerator.BtnRed, RedAccent);
+            var localBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_LocalPlay", "LOCAL PLAY", 52, UIAssetGenerator.BtnAmber, AmberAccent);
+            var hostBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Host", "HOST GAME", 52, UIAssetGenerator.BtnGreen, GreenAccent);
+            var lanHostBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_LanHost", "HOST LAN (WIFI)", 52, UIAssetGenerator.BtnGreen, GreenAccent);
+            var joinBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Join", "JOIN GAME", 52, UIAssetGenerator.BtnCyan, CyanAccent);
+            var optBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Options", "OPTIONS", 52, UIAssetGenerator.BtnNeutral, SteelAccent);
+            var exitBtn = CreateSciFiButton(buttonsColGo.transform, "Btn_Exit", "EXIT GAME", 52, UIAssetGenerator.BtnRed, RedAccent);
 
             // Status Feedback Footer
             var statusGo = CreateUIElement("Text_Status", containerGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(500, 38), new Vector2(0, 26));
@@ -252,7 +253,7 @@ namespace Game.Editor
             statusText.raycastTarget = false;
 
             // 3. Modal Connect
-            var modalRootGo = CreateUIElement("Modal_Connect", canvasGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(500, 380), Vector2.zero);
+            var modalRootGo = CreateUIElement("Modal_Connect", canvasGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(500, 420), Vector2.zero);
             var modalBg = modalRootGo.AddComponent<Image>();
             if (panelSprite != null)
             {
@@ -271,12 +272,19 @@ namespace Game.Editor
             modalTitleText.alignment = TextAlignmentOptions.Center;
             modalTitleText.raycastTarget = false;
 
-            var ipInput = CreateInputField(modalRootGo.transform, "Input_IP", "Ingresa Código de Sala (ej. TPOB-7821)", string.Empty, new Vector2(0, 58), new Vector2(420, 48));
+            var lanGameFoundBtn = CreateSciFiButton(modalRootGo.transform, "Btn_LanGameFound", "🟢 PARTIDA ENCONTRADA EN WIFI (CLIC PARA ENTRAR)", 44, UIAssetGenerator.BtnGreen, GreenAccent);
+            var lanGameFoundText = lanGameFoundBtn.GetComponentInChildren<TextMeshProUGUI>();
+            var lanGameFoundRect = lanGameFoundBtn.GetComponent<RectTransform>();
+            lanGameFoundRect.anchoredPosition = new Vector2(0, 115);
+            lanGameFoundRect.sizeDelta = new Vector2(420, 44);
+            lanGameFoundBtn.gameObject.SetActive(false);
+
+            var ipInput = CreateInputField(modalRootGo.transform, "Input_IP", "Ingresa Código de Sala (ej. TPOB-7821) o IP", string.Empty, new Vector2(0, 58), new Vector2(420, 48));
             var portInput = CreateInputField(modalRootGo.transform, "Input_Port", "Puerto (opcional)", "5000", new Vector2(0, 0), new Vector2(420, 46));
 
             var helpTextGo = CreateUIElement("Modal_HelpText", modalRootGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(440, 48), new Vector2(0, 102));
             var helpTmp = helpTextGo.AddComponent<TextMeshProUGUI>();
-            helpTmp.text = "<size=13><color=#88B4D0>Enlace directo mediante Relay PurrNet.\nPega el código que aparece en el menú del Host.</color></size>";
+            helpTmp.text = "<size=13><color=#88B4D0>Ingresa código de sala online o IP local (ej. 192.168.1.15).</color></size>";
             helpTmp.alignment = TextAlignmentOptions.Center;
             helpTmp.raycastTarget = false;
 
@@ -297,6 +305,7 @@ namespace Game.Editor
             var so = new SerializedObject(mainView);
             so.FindProperty("_localPlayButton").objectReferenceValue = localBtn;
             so.FindProperty("_hostButton").objectReferenceValue = hostBtn;
+            so.FindProperty("_lanHostButton").objectReferenceValue = lanHostBtn;
             so.FindProperty("_openJoinModalButton").objectReferenceValue = joinBtn;
             so.FindProperty("_optionsButton").objectReferenceValue = optBtn;
             so.FindProperty("_exitButton").objectReferenceValue = exitBtn;
@@ -311,6 +320,8 @@ namespace Game.Editor
             so.FindProperty("_connectConfirmButton").objectReferenceValue = confirmBtn;
             so.FindProperty("_connectCancelButton").objectReferenceValue = cancelBtn;
             so.FindProperty("_statusFeedbackText").objectReferenceValue = statusText;
+            so.FindProperty("_lanGameItemButton").objectReferenceValue = lanGameFoundBtn;
+            so.FindProperty("_lanGameItemText").objectReferenceValue = lanGameFoundText;
             so.FindProperty("_connectHelpText").objectReferenceValue = helpTmp;
             so.FindProperty("_connectModalRoot").objectReferenceValue = modalRootGo;
             so.FindProperty("_ipInputField").objectReferenceValue = ipInput;
@@ -325,7 +336,14 @@ namespace Game.Editor
                 so.FindProperty("_settingsDialog").objectReferenceValue = settingsViewComp;
             }
 
+            var levelSelectModal = BuildLevelSelectModal(canvasGo.transform);
+            so.FindProperty("_levelSelectModal").objectReferenceValue = levelSelectModal;
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            var soPresenter = new SerializedObject(mainPresenter);
+            soPresenter.FindProperty("_view").objectReferenceValue = mainView;
+            soPresenter.ApplyModifiedPropertiesWithoutUndo();
+
             return canvasGo;
         }
 
@@ -342,8 +360,8 @@ namespace Game.Editor
             var overlayImg = overlayGo.AddComponent<Image>();
             overlayImg.color = new Color(0.01f, 0.02f, 0.04f, 0.85f);
 
-            // Modal Frame (900 x 700)
-            var frameGo = CreateUIElement("Dialog_Frame", overlayGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(900, 700), Vector2.zero);
+            // Modal Frame (980 x 720)
+            var frameGo = CreateUIElement("Dialog_Frame", overlayGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(980, 720), Vector2.zero);
             var frameImg = frameGo.AddComponent<Image>();
             if (panelSprite != null)
             {
@@ -357,14 +375,14 @@ namespace Game.Editor
             }
 
             // Header Title
-            var titleGo = CreateUIElement("Title", frameGo.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(820, 56), new Vector2(0, -34));
+            var titleGo = CreateUIElement("Title", frameGo.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(890, 56), new Vector2(0, -34));
             var titleText = titleGo.AddComponent<TextMeshProUGUI>();
             titleText.text = "<b><size=25><color=#00F0FF>CONFIGURACIÓN DEL SISTEMA</color></size></b>   <size=14><color=#7799B5>// PANEL DE CALIBRACIÓN TÉCNICA</color></size>";
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.raycastTarget = false;
 
             // 3-Tab Navigation Bar
-            var tabsRowGo = CreateUIElement("TabsRow", frameGo.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(820, 48), new Vector2(0, -88));
+            var tabsRowGo = CreateUIElement("TabsRow", frameGo.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(890, 48), new Vector2(0, -88));
             var tabsHlg = tabsRowGo.AddComponent<HorizontalLayoutGroup>();
             tabsHlg.spacing = 14;
             tabsHlg.childControlWidth = true;
@@ -377,7 +395,7 @@ namespace Game.Editor
             var controlsTabBtn = CreateTabButton(tabsRowGo.transform, "Btn_Tab_Controls", "3. CONTROLS", out var controlsTabInd);
 
             // Content Area Root
-            var bodyRoot = CreateUIElement("BodyRoot", frameGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(820, 460), new Vector2(0, -18));
+            var bodyRoot = CreateUIElement("BodyRoot", frameGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(890, 480), new Vector2(0, -18));
 
             // --- TAB 1: GRAPHICS PANEL ---
             var graphicsPanel = CreateTabPanel(bodyRoot.transform, "Panel_Graphics", 16);
@@ -414,31 +432,65 @@ namespace Game.Editor
             rebindHeaderTmp.alignment = TextAlignmentOptions.MidlineLeft;
             rebindHeaderTmp.raycastTarget = false;
 
-            var gridGo = CreateUIElement("RebindGrid", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 320), Vector2.zero);
-            var grid = gridGo.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(394, 52);
-            grid.spacing = new Vector2(14, 10);
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 2;
+            // Player 1 / Player 2 Sub-Tabs
+            var subTabsRowGo = CreateUIElement("SubTabsRow", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 42), Vector2.zero);
+            var subTabsHlg = subTabsRowGo.AddComponent<HorizontalLayoutGroup>();
+            subTabsHlg.spacing = 16;
+            subTabsHlg.childControlWidth = true;
+            subTabsHlg.childControlHeight = true;
+            subTabsHlg.childForceExpandWidth = true;
+            subTabsHlg.childForceExpandHeight = true;
+
+            var p1TabBtn = CreateTabButton(subTabsRowGo.transform, "Btn_ControlsP1", "JUGADOR 1 (PIERNAS / ONLINE)", out var p1TabInd);
+            var p2TabBtn = CreateTabButton(subTabsRowGo.transform, "Btn_ControlsP2", "JUGADOR 2 (TORSO - LOCAL)", out var p2TabInd);
+
+            // Container Grid Player 1
+            var gridP1Go = CreateUIElement("RebindGrid_P1", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 310), Vector2.zero);
+            var gridP1 = gridP1Go.AddComponent<GridLayoutGroup>();
+            gridP1.cellSize = new Vector2(424, 52);
+            gridP1.spacing = new Vector2(16, 8);
+            gridP1.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridP1.constraintCount = 2;
 
             var rebindList = new List<InputRebindRowUI>(10)
             {
-                CreateRebindRow(gridGo.transform, "Rebind_MoveUp", "Mover Adelante", "Player/Move", 2, "W"),
-                CreateRebindRow(gridGo.transform, "Rebind_MoveDown", "Mover Atrás", "Player/Move", 4, "S"),
-                CreateRebindRow(gridGo.transform, "Rebind_MoveLeft", "Mover Izquierda", "Player/Move", 6, "A"),
-                CreateRebindRow(gridGo.transform, "Rebind_MoveRight", "Mover Derecha", "Player/Move", 8, "D"),
-                CreateRebindRow(gridGo.transform, "Rebind_Jump", "Saltar / Doble Salto (Piernas)", "Player/Jump", 0, "SPACE"),
-                CreateRebindRow(gridGo.transform, "Rebind_Sprint", "Sprint Rápido (Piernas)", "Player/Sprint", 0, "LEFT SHIFT"),
-                CreateRebindRow(gridGo.transform, "Rebind_Attack", "Patada / Lanzar Objeto", "Player/Attack", 1, "LEFT BUTTON"),
-                CreateRebindRow(gridGo.transform, "Rebind_Interact", "Agarrar / Interactuar (Torso)", "Player/Interact", 0, "E"),
-                CreateRebindRow(gridGo.transform, "Rebind_Magnet", "Rayo Magnético (Torso)", "Player/Crouch", 1, "C"),
-                CreateRebindRow(gridGo.transform, "Rebind_Fuse", "Acople / Desacople (Fusión)", "Player/Fuse", 0, "R")
+                CreateRebindRow(gridP1Go.transform, "Rebind_MoveUp", "Mover Adelante", "Player/Move", 2, "W"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_MoveDown", "Mover Atrás", "Player/Move", 4, "S"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_MoveLeft", "Mover Izquierda", "Player/Move", 6, "A"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_MoveRight", "Mover Derecha", "Player/Move", 8, "D"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_Jump", "Saltar / Doble Salto (Piernas)", "Player/Jump", 0, "SPACE"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_Sprint", "Sprint Rápido (Piernas)", "Player/Sprint", 0, "LEFT SHIFT"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_Attack", "Patada / Lanzar Objeto", "Player/Attack", 1, "LEFT BUTTON"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_Interact", "Agarrar / Interactuar (Torso)", "Player/Interact", 0, "E"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_Magnet", "Rayo Magnético (Torso)", "Player/Crouch", 1, "C"),
+                CreateRebindRow(gridP1Go.transform, "Rebind_Fuse", "Acople / Desacople (Fusión)", "Player/Fuse", 0, "R")
             };
+
+            // Container Grid Player 2 (Torso Local)
+            var gridP2Go = CreateUIElement("RebindGrid_P2", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 310), Vector2.zero);
+            var gridP2 = gridP2Go.AddComponent<GridLayoutGroup>();
+            gridP2.cellSize = new Vector2(424, 52);
+            gridP2.spacing = new Vector2(16, 8);
+            gridP2.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridP2.constraintCount = 2;
+
+            var rebindP2List = new List<InputRebindRowUI>(8)
+            {
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveUp", "Mover Adelante (J2)", "Torso/Move", 2, "UP ARROW"),
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveDown", "Mover Atrás (J2)", "Torso/Move", 3, "DOWN ARROW"),
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveLeft", "Mover Izquierda (J2)", "Torso/Move", 4, "LEFT ARROW"),
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveRight", "Mover Derecha (J2)", "Torso/Move", 5, "RIGHT ARROW"),
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Interact", "Agarrar / Interactuar (J2)", "Torso/Interact", 0, "E / L"),
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Throw", "Lanzar / Disparar (J2)", "Torso/Throw", 0, "CLICK IZQ / K"),
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Magnet", "Rayo Magnético (J2)", "Torso/Magnet", 0, "C / J"),
+                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Fuse", "Acople / Desacople (J2)", "Player/Fuse", 0, "R / U")
+            };
+            gridP2Go.SetActive(false);
 
             controlsPanel.SetActive(false);
 
             // Footer Buttons (Reset Defaults + Save & Close)
-            var footerGo = CreateUIElement("FooterRow", frameGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(820, 52), new Vector2(0, 34));
+            var footerGo = CreateUIElement("FooterRow", frameGo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(890, 52), new Vector2(0, 34));
             var footerHlg = footerGo.AddComponent<HorizontalLayoutGroup>();
             footerHlg.spacing = 24;
             footerHlg.childControlWidth = true;
@@ -462,6 +514,13 @@ namespace Game.Editor
             so.FindProperty("_graphicsTabIndicator").objectReferenceValue = graphicsTabInd;
             so.FindProperty("_audioTabIndicator").objectReferenceValue = audioTabInd;
             so.FindProperty("_controlsTabIndicator").objectReferenceValue = controlsTabInd;
+
+            so.FindProperty("_player1ControlsTabButton").objectReferenceValue = p1TabBtn;
+            so.FindProperty("_player2ControlsTabButton").objectReferenceValue = p2TabBtn;
+            so.FindProperty("_player1ControlsIndicator").objectReferenceValue = p1TabInd;
+            so.FindProperty("_player2ControlsIndicator").objectReferenceValue = p2TabInd;
+            so.FindProperty("_player1ControlsContainer").objectReferenceValue = gridP1Go;
+            so.FindProperty("_player2ControlsContainer").objectReferenceValue = gridP2Go;
 
             so.FindProperty("_masterVolumeSlider").objectReferenceValue = masterSlider;
             so.FindProperty("_masterVolumeValueText").objectReferenceValue = masterValText;
@@ -487,6 +546,13 @@ namespace Game.Editor
             for (int i = 0; i < rebindList.Count; i++)
             {
                 rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rebindList[i];
+            }
+
+            SerializedProperty p2RowsProp = so.FindProperty("_player2RebindRows");
+            p2RowsProp.arraySize = rebindP2List.Count;
+            for (int i = 0; i < rebindP2List.Count; i++)
+            {
+                p2RowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rebindP2List[i];
             }
 
             so.FindProperty("_resetDefaultsButton").objectReferenceValue = resetBtn;
@@ -586,13 +652,16 @@ namespace Game.Editor
             var textRt = textGo.GetComponent<RectTransform>();
             textRt.anchorMin = Vector2.zero;
             textRt.anchorMax = Vector2.one;
-            textRt.sizeDelta = new Vector2(-28f, 0f);
-            textRt.anchoredPosition = new Vector2(4f, 0f);
+            textRt.sizeDelta = fixedWidth > 0f ? new Vector2(-8f, 0f) : new Vector2(-28f, 0f);
+            textRt.anchoredPosition = fixedWidth > 0f ? Vector2.zero : new Vector2(4f, 0f);
 
             var tmp = textGo.AddComponent<TextMeshProUGUI>();
             tmp.text = $"<b>{label}</b>";
             tmp.alignment = TextAlignmentOptions.Center;
-            tmp.fontSize = height >= 50f ? 18f : 15f;
+            tmp.fontSize = fixedWidth > 0f ? 13f : (height >= 50f ? 18f : 15f);
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 9f;
+            tmp.fontSizeMax = fixedWidth > 0f ? 13f : (height >= 50f ? 18f : 15f);
             tmp.color = Color.white;
             tmp.raycastTarget = false;
 
@@ -616,7 +685,7 @@ namespace Game.Editor
             int bindingIndex,
             string defaultKeyText)
         {
-            var rowGo = CreateUIElement(name, parent, Vector2.zero, Vector2.one, new Vector2(394, 52), Vector2.zero);
+            var rowGo = CreateUIElement(name, parent, Vector2.zero, Vector2.one, new Vector2(424, 52), Vector2.zero);
             var rowImg = rowGo.AddComponent<Image>();
             Sprite panelSpr = UIAssetGenerator.LoadSprite(UIAssetGenerator.PanelFrame);
             if (panelSpr != null)
@@ -627,34 +696,40 @@ namespace Game.Editor
             rowImg.color = new Color(0.05f, 0.09f, 0.14f, 0.92f);
 
             var hlg = rowGo.AddComponent<HorizontalLayoutGroup>();
-            hlg.padding = new RectOffset(12, 10, 6, 6);
+            hlg.padding = new RectOffset(10, 8, 5, 5);
             hlg.spacing = 8;
             hlg.childControlWidth = false;
             hlg.childControlHeight = true;
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = true;
 
-            var actionLblGo = CreateUIElement("ActionLabel", rowGo.transform, Vector2.zero, Vector2.one, new Vector2(178, 0), Vector2.zero);
+            var actionLblGo = CreateUIElement("ActionLabel", rowGo.transform, Vector2.zero, Vector2.one, new Vector2(170, 0), Vector2.zero);
             var actionTmp = actionLblGo.AddComponent<TextMeshProUGUI>();
             actionTmp.text = displayName;
-            actionTmp.fontSize = 13.5f;
+            actionTmp.fontSize = 12.5f;
+            actionTmp.enableAutoSizing = true;
+            actionTmp.fontSizeMin = 9.5f;
+            actionTmp.fontSizeMax = 12.5f;
             actionTmp.color = new Color(0.88f, 0.94f, 1f);
             actionTmp.alignment = TextAlignmentOptions.MidlineLeft;
             actionTmp.raycastTarget = false;
 
-            var keyBadgeGo = CreateUIElement("KeyBadge", rowGo.transform, Vector2.zero, Vector2.one, new Vector2(96, 0), Vector2.zero);
+            var keyBadgeGo = CreateUIElement("KeyBadge", rowGo.transform, Vector2.zero, Vector2.one, new Vector2(116, 0), Vector2.zero);
             var keyBadgeImg = keyBadgeGo.AddComponent<Image>();
             keyBadgeImg.color = new Color(0.02f, 0.05f, 0.08f, 0.95f);
-            var valTxtGo = CreateUIElement("BindingText", keyBadgeGo.transform, Vector2.zero, Vector2.one, new Vector2(-8, 0), Vector2.zero);
+            var valTxtGo = CreateUIElement("BindingText", keyBadgeGo.transform, Vector2.zero, Vector2.one, new Vector2(-4, 0), Vector2.zero);
             var valTmp = valTxtGo.AddComponent<TextMeshProUGUI>();
             valTmp.text = defaultKeyText;
-            valTmp.fontSize = 13f;
+            valTmp.fontSize = 12f;
+            valTmp.enableAutoSizing = true;
+            valTmp.fontSizeMin = 9f;
+            valTmp.fontSizeMax = 12f;
             valTmp.fontStyle = FontStyles.Bold;
             valTmp.color = CyanAccent;
             valTmp.alignment = TextAlignmentOptions.Center;
             valTmp.raycastTarget = false;
 
-            var rebindBtn = CreateSciFiButton(rowGo.transform, "Btn_Rebind", "REBIND", 38, UIAssetGenerator.BtnCyan, CyanAccent, 86);
+            var rebindBtn = CreateSciFiButton(rowGo.transform, "Btn_Rebind", "REBIND", 38, UIAssetGenerator.BtnCyan, CyanAccent, 110);
 
             var rowComp = rowGo.AddComponent<InputRebindRowUI>();
             var so = new SerializedObject(rowComp);
@@ -667,6 +742,66 @@ namespace Game.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
 
             return rowComp;
+        }
+
+        public static LevelSelectModalUI BuildLevelSelectModal(Transform parent)
+        {
+            Sprite panelSprite = UIAssetGenerator.LoadSprite(UIAssetGenerator.PanelFrame);
+
+            var overlayGo = CreateUIElement("Modal_LevelSelect", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var overlayImg = overlayGo.AddComponent<Image>();
+            overlayImg.color = new Color(0.01f, 0.02f, 0.04f, 0.85f);
+
+            var frameGo = CreateUIElement("Frame", overlayGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(520, 360), Vector2.zero);
+            var frameImg = frameGo.AddComponent<Image>();
+            if (panelSprite != null)
+            {
+                frameImg.sprite = panelSprite;
+                frameImg.type = Image.Type.Sliced;
+                frameImg.color = new Color(1f, 1f, 1f, 0.99f);
+            }
+            else
+            {
+                frameImg.color = new Color(0.06f, 0.09f, 0.14f, 0.98f);
+            }
+
+            var titleGo = CreateUIElement("Title", frameGo.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(460, 50), new Vector2(0, -30));
+            var titleText = titleGo.AddComponent<TextMeshProUGUI>();
+            titleText.text = "<b><size=22><color=#00F0FF>SELECCIONAR SALA</color></size></b>";
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.raycastTarget = false;
+
+            var gridGo = CreateUIElement("RoomsGrid", frameGo.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(440, 180), new Vector2(0, 10));
+            var grid = gridGo.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(70, 70);
+            grid.spacing = new Vector2(14, 14);
+            grid.childAlignment = TextAnchor.MiddleCenter;
+
+            // Template room button
+            var templateBtn = CreateSciFiButton(gridGo.transform, "Btn_RoomTemplate", "1", 70, UIAssetGenerator.BtnCyan, CyanAccent, 70);
+            var templateTmp = templateBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (templateTmp != null)
+            {
+                templateTmp.fontSize = 24;
+            }
+
+            var closeBtn = CreateSciFiButton(frameGo.transform, "Btn_Close", "VOLVER", 44, UIAssetGenerator.BtnRed, RedAccent, 200);
+            var closeRt = closeBtn.GetComponent<RectTransform>();
+            closeRt.anchorMin = new Vector2(0.5f, 0f);
+            closeRt.anchorMax = new Vector2(0.5f, 0f);
+            closeRt.anchoredPosition = new Vector2(0, 32);
+
+            var modalUI = overlayGo.AddComponent<LevelSelectModalUI>();
+            var so = new SerializedObject(modalUI);
+            so.FindProperty("_modalRoot").objectReferenceValue = overlayGo;
+            so.FindProperty("_buttonsContainer").objectReferenceValue = gridGo.transform;
+            so.FindProperty("_roomButtonTemplate").objectReferenceValue = templateBtn;
+            so.FindProperty("_closeButton").objectReferenceValue = closeBtn;
+            so.FindProperty("_titleText").objectReferenceValue = titleText;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            overlayGo.SetActive(false);
+            return modalUI;
         }
 
         private static GameObject CreateCanvasRoot(string name, int sortingOrder)

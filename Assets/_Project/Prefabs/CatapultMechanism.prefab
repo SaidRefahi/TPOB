@@ -90,7 +90,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: bf7ad81e32c56f442aaffde22f1055e0, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -204,7 +204,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: bf7ad81e32c56f442aaffde22f1055e0, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -344,11 +344,11 @@ MonoBehaviour:
   _previewArcColor: {r: 0, g: 0.85, b: 1, a: 1}
   _impactDiscRadius: 0.8
   _showSceneLabels: 1
-  _horizontalDistance: 0
-  _maxApexHeight: 0
-  _flightTime: 0
-  _hitSurfaceName: Ninguno (Al infinito)
-  _landingPosition: {x: 0, y: 0, z: 0}
+  _horizontalDistance: 0.47267684
+  _maxApexHeight: 0.2785955
+  _flightTime: 0.04
+  _hitSurfaceName: Checkpoint
+  _landingPosition: {x: 0, y: 0.55941504, z: -0.47267684}
   _targetObjective: {fileID: 0}
   _calculatedRequiredSpeed: 0
 --- !u!114 &5389172001226514948
@@ -859,7 +859,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 9b5a8637b130ced479608aa14a72c8c7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

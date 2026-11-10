@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -22,19 +23,20 @@ namespace Game.Editor
 
         public static string[] GetAllScenePaths()
         {
+            var scenes = EditorBuildSettings.scenes;
+            if (scenes != null && scenes.Length > 0)
+            {
+                var enabledPaths = scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+                if (enabledPaths.Length > 0)
+                {
+                    return enabledPaths;
+                }
+            }
+
             return new string[]
             {
                 BootScenePath,
-                $"{RoomsDirectory}/Room_01.unity",
-                $"{RoomsDirectory}/Room_02.unity",
-                $"{RoomsDirectory}/Room_03.unity",
-                $"{RoomsDirectory}/Room_04.unity",
-                $"{RoomsDirectory}/Room_05.unity",
-                $"{RoomsDirectory}/Room_06.unity",
-                $"{RoomsDirectory}/Room_07.unity",
-                $"{RoomsDirectory}/Room_08.unity",
-                $"{RoomsDirectory}/Room_09.unity",
-                $"{RoomsDirectory}/Room_10.unity"
+                $"{RoomsDirectory}/Room_1.unity"
             };
         }
 

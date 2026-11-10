@@ -11,6 +11,7 @@ namespace Game.Network.Services
         private bool _legsReady;
         private int _torsoPlayerId = -1;
         private bool _torsoReady;
+        private int _selectedRoomIndex;
 
         private LobbyNetworkController _activeController;
 
@@ -19,10 +20,12 @@ namespace Game.Network.Services
         public int TorsoPlayerId => _torsoPlayerId;
         public bool LegsReady => _legsReady;
         public bool TorsoReady => _torsoReady;
+        public int SelectedRoomIndex => _selectedRoomIndex;
         public bool HasActiveSession => _activeController != null && _activeController.isSpawned;
 
         public event Action<int, PlayerRole, bool> OnPlayerLobbyStateChanged;
         public event Action<bool> OnBothPlayersReadyStatusChanged;
+        public event Action<int> OnSelectedRoomChanged;
 
         public void BindNetworkController(LobbyNetworkController controller)
         {
@@ -34,8 +37,10 @@ namespace Game.Network.Services
             _legsReady = controller.LegsReady;
             _torsoPlayerId = controller.TorsoPlayerId;
             _torsoReady = controller.TorsoReady;
+            _selectedRoomIndex = controller.SelectedRoomIndex;
 
             NotifyStateChanged();
+            OnSelectedRoomChanged?.Invoke(_selectedRoomIndex);
         }
 
         public void UnbindNetworkController(LobbyNetworkController controller)
@@ -47,14 +52,28 @@ namespace Game.Network.Services
             }
         }
 
-        public void UpdateLobbyState(int legsId, bool legsReady, int torsoId, bool torsoReady)
+        public void UpdateLobbyState(int legsId, bool legsReady, int torsoId, bool torsoReady, int selectedRoomIndex = 0)
         {
             _legsPlayerId = legsId;
             _legsReady = legsReady;
             _torsoPlayerId = torsoId;
             _torsoReady = torsoReady;
+            bool roomChanged = _selectedRoomIndex != selectedRoomIndex;
+            _selectedRoomIndex = selectedRoomIndex;
 
             NotifyStateChanged();
+            if (roomChanged)
+            {
+                OnSelectedRoomChanged?.Invoke(selectedRoomIndex);
+            }
+        }
+
+        public void SetSelectedRoom(int roomIndex)
+        {
+            if (_activeController != null)
+            {
+                _activeController.RequestSetSelectedRoomServerRpc(roomIndex);
+            }
         }
 
         public void ResetState()
@@ -63,8 +82,10 @@ namespace Game.Network.Services
             _legsReady = false;
             _torsoPlayerId = -1;
             _torsoReady = false;
+            _selectedRoomIndex = 0;
 
             NotifyStateChanged();
+            OnSelectedRoomChanged?.Invoke(0);
         }
 
         private void NotifyStateChanged()

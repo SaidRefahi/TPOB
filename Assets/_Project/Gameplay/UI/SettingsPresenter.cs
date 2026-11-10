@@ -193,12 +193,13 @@ namespace Game.Gameplay.UI
                 LegsInputReader.EnsureFuseActionAndLoadOverrides(asset);
             }
 
-            InputRebindRowUI[] rows = _view.RebindRows;
-            if (rows == null)
-            {
-                return;
-            }
+            BindRowArray(_view.RebindRows, asset);
+            BindRowArray(_view.Player2RebindRows, asset);
+        }
 
+        private void BindRowArray(InputRebindRowUI[] rows, InputActionAsset asset)
+        {
+            if (rows == null) return;
             for (int i = 0; i < rows.Length; i++)
             {
                 InputRebindRowUI row = rows[i];
@@ -215,12 +216,13 @@ namespace Game.Gameplay.UI
 
         private void RefreshAllRebindRows()
         {
-            InputRebindRowUI[] rows = _view.RebindRows;
-            if (rows == null)
-            {
-                return;
-            }
+            RefreshRowArray(_view.RebindRows);
+            RefreshRowArray(_view.Player2RebindRows);
+        }
 
+        private static void RefreshRowArray(InputRebindRowUI[] rows)
+        {
+            if (rows == null) return;
             for (int i = 0; i < rows.Length; i++)
             {
                 if (rows[i] != null)
@@ -357,6 +359,12 @@ namespace Game.Gameplay.UI
 
             if (_view.CloseButton != null)
                 _view.CloseButton.onClick.AddListener(HandleCloseClicked);
+
+            if (_view.Player1ControlsTabButton != null)
+                _view.Player1ControlsTabButton.onClick.AddListener(HandlePlayer1ControlsTabClicked);
+
+            if (_view.Player2ControlsTabButton != null)
+                _view.Player2ControlsTabButton.onClick.AddListener(HandlePlayer2ControlsTabClicked);
         }
 
         private void UnsubscribeEvents()
@@ -374,6 +382,12 @@ namespace Game.Gameplay.UI
 
             if (_view.ControlsTabButton != null)
                 _view.ControlsTabButton.onClick.RemoveListener(HandleControlsTabClicked);
+
+            if (_view.Player1ControlsTabButton != null)
+                _view.Player1ControlsTabButton.onClick.RemoveListener(HandlePlayer1ControlsTabClicked);
+
+            if (_view.Player2ControlsTabButton != null)
+                _view.Player2ControlsTabButton.onClick.RemoveListener(HandlePlayer2ControlsTabClicked);
 
             if (_view.MasterVolumeSlider != null)
                 _view.MasterVolumeSlider.onValueChanged.RemoveListener(HandleMasterVolumeChanged);
@@ -414,15 +428,18 @@ namespace Game.Gameplay.UI
             if (_view.CloseButton != null)
                 _view.CloseButton.onClick.RemoveListener(HandleCloseClicked);
 
-            InputRebindRowUI[] rows = _view.RebindRows;
-            if (rows != null)
+            UnsubscribeRowArray(_view.RebindRows);
+            UnsubscribeRowArray(_view.Player2RebindRows);
+        }
+
+        private void UnsubscribeRowArray(InputRebindRowUI[] rows)
+        {
+            if (rows == null) return;
+            for (int i = 0; i < rows.Length; i++)
             {
-                for (int i = 0; i < rows.Length; i++)
+                if (rows[i] != null)
                 {
-                    if (rows[i] != null)
-                    {
-                        rows[i].OnBindingUpdated -= HandleRowBindingUpdated;
-                    }
+                    rows[i].OnBindingUpdated -= HandleRowBindingUpdated;
                 }
             }
         }
@@ -445,7 +462,30 @@ namespace Game.Gameplay.UI
 
             if (_view.ControlsTabIndicator != null)
                 _view.ControlsTabIndicator.color = tabIndex == 2 ? ActiveTabColor : InactiveTabColor;
+
+            if (tabIndex == 2)
+            {
+                ShowControlsPlayerTab(0);
+            }
         }
+
+        private void ShowControlsPlayerTab(int playerIndex)
+        {
+            if (_view.Player1ControlsContainer != null)
+                _view.Player1ControlsContainer.SetActive(playerIndex == 0);
+
+            if (_view.Player2ControlsContainer != null)
+                _view.Player2ControlsContainer.SetActive(playerIndex == 1);
+
+            if (_view.Player1ControlsIndicator != null)
+                _view.Player1ControlsIndicator.color = playerIndex == 0 ? ActiveTabColor : InactiveTabColor;
+
+            if (_view.Player2ControlsIndicator != null)
+                _view.Player2ControlsIndicator.color = playerIndex == 1 ? ActiveTabColor : InactiveTabColor;
+        }
+
+        private void HandlePlayer1ControlsTabClicked() => ShowControlsPlayerTab(0);
+        private void HandlePlayer2ControlsTabClicked() => ShowControlsPlayerTab(1);
 
         private void HandleRowBindingUpdated()
         {

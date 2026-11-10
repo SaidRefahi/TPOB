@@ -127,14 +127,40 @@ namespace Game.Gameplay.Interactables
             base.OnDespawned();
         }
 
-        private void FixedUpdate()
+        private void LateUpdate()
         {
-            if (_isGrabbed.value && _heldSocket != null)
+            if (!_isGrabbed.value)
+            {
+                return;
+            }
+
+            if (_heldSocket == null)
+            {
+                ResolveHeldSocket();
+            }
+
+            if (_heldSocket != null && _strapHandle != null)
             {
                 _strapHandle.position = _heldSocket.position;
                 UpdateStrapLines();
             }
+        }
 
+        private void ResolveHeldSocket()
+        {
+            if (_heldTorso == null)
+            {
+                _heldTorso = Object.FindFirstObjectByType<Game.Gameplay.Player.Torso.TorsoController>();
+            }
+
+            if (_heldTorso != null)
+            {
+                _heldSocket = _heldTorso.HoldSocket;
+            }
+        }
+
+        private void FixedUpdate()
+        {
             bool canSimulate = !isSpawned || isServer;
             if (!canSimulate) return;
 
@@ -265,8 +291,18 @@ namespace Game.Gameplay.Interactables
         private void HandleGrabbedStateChanged(bool grabbed)
         {
             enabled = grabbed;
-            if (!grabbed)
+            if (grabbed)
             {
+                if (_heldSocket == null)
+                {
+                    ResolveHeldSocket();
+                }
+            }
+            else
+            {
+                _heldSocket = null;
+                _heldTorso = null;
+                _attachedCoordinator = null;
                 ResetStrapVisuals();
             }
         }

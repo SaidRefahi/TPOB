@@ -11,7 +11,10 @@ namespace Game.Network.Services
     public sealed class NetworkService : INetworkService, IDisposable
     {
         private readonly IGameEventBus _eventBus;
+        private readonly LanDiscoveryService _lanDiscovery;
         private NetworkManager _cachedManager;
+
+        public ILanDiscoveryService LanDiscovery => _lanDiscovery;
 
         private NetworkManager Manager
         {
@@ -40,11 +43,17 @@ namespace Game.Network.Services
         public event Action<int> OnPlayerDisconnected;
 
         private readonly GameObject _lobbyPrefab;
+        private readonly Game.Network.Injection.INetworkPrefabInjector _prefabInjector;
 
-        public NetworkService(IGameEventBus eventBus, GameObject lobbyPrefab = null)
+        public NetworkService(
+            IGameEventBus eventBus, 
+            GameObject lobbyPrefab = null,
+            Game.Network.Injection.INetworkPrefabInjector prefabInjector = null)
         {
             _eventBus = eventBus;
             _lobbyPrefab = lobbyPrefab;
+            _prefabInjector = prefabInjector;
+            _lanDiscovery = new LanDiscoveryService();
             InitializeManager();
         }
 
@@ -65,6 +74,11 @@ namespace Game.Network.Services
 
             _cachedManager = manager;
             if (_cachedManager == null) return;
+
+            if (_cachedManager.isOffline)
+            {
+                _cachedManager.cookieScope = PurrNet.Modules.CookieScope.LiveWithProcess;
+            }
 
             _cachedManager.onServerConnectionState += HandleServerConnectionState;
             _cachedManager.onClientConnectionState += HandleClientConnectionState;
@@ -143,12 +157,72 @@ namespace Game.Network.Services
             }
         }
 
+        public int CurrentPing
+        {
+            get
+            {
+                if (_cachedManager == null || !_cachedManager.isClient) return 0;
+                var transport = _cachedManager.currentTransport;
+                if (transport == null) return 0;
+
+                try
+                {
+                    int rtt = transport.GetRoundTripTime(default, false);
+                    return rtt >= 0 ? rtt : 0;
+                }
+                catch
+                {
+                    return 0;
+                }
+            }
+        }
+
+        public string ConnectionQualityText
+        {
+            get
+            {
+                if (_cachedManager == null || !IsConnected) return "Desconectado";
+                if (_cachedManager.transport is UDPTransport)
+                {
+                    int ping = CurrentPing;
+                    return ping > 0 ? $"Red Local (LAN) | {ping}ms" : "Red Local (LAN)";
+                }
+
+                var purr = GetPurrTransport();
+                if (purr != null)
+                {
+                    var link = purr.clientSessionLink;
+                    int ping = CurrentPing;
+                    string pingStr = ping > 0 ? $" | {ping}ms" : "";
+                    switch (link)
+                    {
+                        case PurrTransport.SessionLink.P2P:
+                            return $"P2P Directo{pingStr}";
+                        case PurrTransport.SessionLink.Relay:
+                            string reg = !string.IsNullOrEmpty(purr.region) ? $" ({purr.region})" : "";
+                            return $"Relay{reg}{pingStr}";
+                        case PurrTransport.SessionLink.Resolving:
+                            return $"Negociando P2P{pingStr}";
+                        default:
+                            return $"Conectado{pingStr}";
+                    }
+                }
+
+                return "Conectado";
+            }
+        }
+
         private PurrTransport GetPurrTransport()
         {
             EnsureManager();
             if (_cachedManager == null) return null;
             if (_cachedManager.transport is PurrTransport purr) return purr;
-            return _cachedManager.GetComponent<PurrTransport>();
+            var comp = _cachedManager.GetComponent<PurrTransport>();
+            if (comp == null)
+            {
+                comp = _cachedManager.gameObject.AddComponent<PurrTransport>();
+            }
+            return comp;
         }
 
         private UDPTransport GetUDPTransport()
@@ -156,7 +230,70 @@ namespace Game.Network.Services
             EnsureManager();
             if (_cachedManager == null) return null;
             if (_cachedManager.transport is UDPTransport udp) return udp;
-            return _cachedManager.GetComponent<UDPTransport>();
+            var comp = _cachedManager.GetComponent<UDPTransport>();
+            if (comp == null)
+            {
+                comp = _cachedManager.gameObject.AddComponent<UDPTransport>();
+                comp.serverPort = 5000;
+                comp.address = "127.0.0.1";
+            }
+            return comp;
+        }
+
+        public async UniTask<bool> SwitchTransportAsync(GenericTransport newTransport, System.Threading.CancellationToken ct = default)
+        {
+            EnsureManager();
+            if (_cachedManager == null || newTransport == null) return false;
+            if (_cachedManager.transport == newTransport) return true;
+
+            if (_cachedManager.serverState != ConnectionState.Disconnected ||
+                _cachedManager.clientState != ConnectionState.Disconnected)
+            {
+                Disconnect();
+                await UniTask.WaitUntil(() => 
+                    _cachedManager.serverState == ConnectionState.Disconnected &&
+                    _cachedManager.clientState == ConnectionState.Disconnected, 
+                    cancellationToken: ct);
+            }
+
+            if (_cachedManager.transport != null)
+            {
+                try 
+                { 
+                    _cachedManager.transport.StopServer();
+                    _cachedManager.transport.StopClient();
+                } 
+                catch { }
+                _cachedManager.transport.enabled = false;
+            }
+
+            newTransport.enabled = true;
+            _cachedManager.transport = newTransport;
+            return true;
+        }
+
+        private void SetActiveTransport(GenericTransport targetTransport)
+        {
+            EnsureManager();
+            if (_cachedManager == null || targetTransport == null) return;
+            if (_cachedManager.transport == targetTransport) return;
+
+            if (_cachedManager.serverState == ConnectionState.Disconnected &&
+                _cachedManager.clientState == ConnectionState.Disconnected)
+            {
+                if (_cachedManager.transport != null)
+                {
+                    try 
+                    { 
+                        _cachedManager.transport.StopServer();
+                        _cachedManager.transport.StopClient();
+                    } 
+                    catch { }
+                    _cachedManager.transport.enabled = false;
+                }
+                targetTransport.enabled = true;
+                _cachedManager.transport = targetTransport;
+            }
         }
 
         public void StartHost()
@@ -175,7 +312,7 @@ namespace Game.Network.Services
                 return;
             }
 
-            ExecuteStartHost();
+            ExecuteStartHostAsync().Forget();
         }
 
         private async UniTaskVoid WaitAndStartHostAsync()
@@ -189,21 +326,48 @@ namespace Game.Network.Services
 
             if (_cachedManager != null)
             {
-                ExecuteStartHost();
+                ExecuteStartHostAsync().Forget();
             }
         }
 
-        private void ExecuteStartHost()
+        private async UniTaskVoid ExecuteStartHostAsync()
         {
             var purr = GetPurrTransport();
             if (purr != null)
             {
+                SetActiveTransport(purr);
                 if (string.IsNullOrWhiteSpace(purr.roomName))
                 {
                     purr.roomName = !string.IsNullOrWhiteSpace(_fallbackRoomName) ? _fallbackRoomName : "TPOB-ROOM";
                 }
                 purr.attemptDirectConnection = true;
                 purr.masterServer = "https://purrtransport.purrservers.com/";
+
+                if (string.IsNullOrEmpty(purr.region) || purr.region == "australia")
+                {
+                    try
+                    {
+                        var pingTask = PurrTransportUtils.ActualGetRelayServerAsync(purr.masterServer);
+                        var completedTask = await System.Threading.Tasks.Task.WhenAny(
+                            pingTask, 
+                            System.Threading.Tasks.Task.Delay(1500)
+                        );
+
+                        if (completedTask == pingTask && pingTask.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
+                        {
+                            var bestServer = pingTask.Result;
+                            if (!string.IsNullOrEmpty(bestServer.region))
+                            {
+                                purr.SetServer(bestServer);
+                                Debug.Log($"[NetworkService] Selected lowest-latency relay: {bestServer.region} ({bestServer.host})");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"[NetworkService] Relay auto-ping skipped: {ex.Message}");
+                    }
+                }
             }
 
             _cachedManager.StartServer();
@@ -219,13 +383,41 @@ namespace Game.Network.Services
         public void StartHost(ushort port)
         {
             ServerPort = port;
-            StartHost();
+            StartLanHost(port);
         }
 
         public void StartHostWithRoom(string roomName)
         {
             RoomName = roomName;
             StartHost();
+        }
+
+        public void StartLanHost(ushort port = 5000)
+        {
+            EnsureManager();
+            if (_cachedManager == null)
+            {
+                Debug.LogError("[NetworkService] Cannot StartLanHost: NetworkManager not found!");
+                return;
+            }
+
+            var udp = GetUDPTransport();
+            if (udp != null)
+            {
+                SetActiveTransport(udp);
+                udp.serverPort = port;
+            }
+
+            _cachedManager.StartServer();
+            _cachedManager.StartClient();
+
+            if (_cachedManager.serverState == ConnectionState.Connected || _cachedManager.clientState == ConnectionState.Connected)
+            {
+                EnsureLobbyControllerSpawned();
+                OnConnected?.Invoke();
+            }
+
+            _lanDiscovery.StartBroadcasting(Environment.MachineName, port, "TPOB-LAN");
         }
 
         public void StartClient()
@@ -264,6 +456,7 @@ namespace Game.Network.Services
             var purr = GetPurrTransport();
             if (purr != null)
             {
+                SetActiveTransport(purr);
                 if (string.IsNullOrWhiteSpace(purr.roomName))
                 {
                     purr.roomName = !string.IsNullOrWhiteSpace(_fallbackRoomName) ? _fallbackRoomName : "TPOB-ROOM";
@@ -283,28 +476,70 @@ namespace Game.Network.Services
         public void StartClient(string address, ushort port)
         {
             var purr = GetPurrTransport();
-            if (purr != null)
+            if (purr != null && !IsIpAddress(address))
             {
                 RoomName = address;
+                StartClient();
             }
             else
             {
-                ServerAddress = address;
-                ServerPort = port;
+                StartLanClient(address, port);
             }
-            StartClient();
         }
 
         public void StartClientWithRoom(string roomName)
         {
-            RoomName = roomName;
-            StartClient();
+            if (IsIpAddress(roomName))
+            {
+                StartLanClient(roomName, 5000);
+            }
+            else
+            {
+                RoomName = roomName;
+                StartClient();
+            }
+        }
+
+        public void StartLanClient(string ip, ushort port = 5000)
+        {
+            EnsureManager();
+            if (_cachedManager == null)
+            {
+                Debug.LogError("[NetworkService] Cannot StartLanClient: NetworkManager not found!");
+                return;
+            }
+
+            var udp = GetUDPTransport();
+            if (udp != null)
+            {
+                SetActiveTransport(udp);
+                udp.address = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip.Trim();
+                udp.serverPort = port;
+            }
+
+            _cachedManager.StartClient();
+
+            if (_cachedManager.clientState == ConnectionState.Connected)
+            {
+                OnConnected?.Invoke();
+            }
+        }
+
+        private static bool IsIpAddress(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            string trimmed = text.Trim();
+            if (trimmed.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return true;
+            return System.Net.IPAddress.TryParse(trimmed, out _);
         }
 
         private bool _isDisconnecting;
 
         public void Disconnect()
         {
+            _lanDiscovery?.StopBroadcasting();
+            _lanDiscovery?.StopListening();
+
             EnsureManager();
             if (_cachedManager == null) return;
             if (_isDisconnecting) return;
@@ -370,7 +605,9 @@ namespace Game.Network.Services
             GameObject prefabToSpawn = _lobbyPrefab;
             if (prefabToSpawn != null)
             {
-                var instance = UnityEngine.Object.Instantiate(prefabToSpawn);
+                var instance = _prefabInjector != null
+                    ? _prefabInjector.InstantiateAndInject(prefabToSpawn, Vector3.zero, Quaternion.identity)
+                    : UnityEngine.Object.Instantiate(prefabToSpawn);
                 _cachedManager.Spawn(instance);
             }
             else
@@ -419,6 +656,7 @@ namespace Game.Network.Services
 
         public void Dispose()
         {
+            _lanDiscovery?.Dispose();
             UnbindManager();
         }
     }
