@@ -24,7 +24,7 @@ namespace Game.Editor
         private static readonly Color RedAccent = new Color(1f, 0.24f, 0.35f, 1f);
         private static readonly Color SteelAccent = new Color(0.45f, 0.68f, 0.88f, 1f);
 
-        [MenuItem("TPOB/UI/1. Generar Prefabs de Menú Principal y Opciones")]
+        [MenuItem("TPOB/UI/2. Generar Prefabs de Menú y Opciones", priority = 2)]
         public static void GenerateUIPrefabs()
         {
             EnsureDirectory(PrefabsDirectory);
@@ -124,7 +124,18 @@ namespace Game.Editor
                 inputSystemModule = esGo.AddComponent<InputSystemUIInputModule>();
             }
 
-            inputSystemModule.AssignDefaultActions();
+            if (inputSystemModule.actionsAsset == null)
+            {
+                var inputAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.InputSystem.InputActionAsset>("Assets/InputSystem_Actions.inputactions");
+                if (inputAsset != null)
+                {
+                    inputSystemModule.actionsAsset = inputAsset;
+                }
+                else
+                {
+                    try { inputSystemModule.AssignDefaultActions(); } catch { }
+                }
+            }
 
             if (esGo.GetComponent<UIInputModuleFixer>() == null)
             {
@@ -414,60 +425,27 @@ namespace Game.Editor
             rebindHeaderTmp.alignment = TextAlignmentOptions.MidlineLeft;
             rebindHeaderTmp.raycastTarget = false;
 
-            // Player 1 / Player 2 Sub-Tabs
-            var subTabsRowGo = CreateUIElement("SubTabsRow", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 42), Vector2.zero);
-            var subTabsHlg = subTabsRowGo.AddComponent<HorizontalLayoutGroup>();
-            subTabsHlg.spacing = 16;
-            subTabsHlg.childControlWidth = true;
-            subTabsHlg.childControlHeight = true;
-            subTabsHlg.childForceExpandWidth = true;
-            subTabsHlg.childForceExpandHeight = true;
-
-            var p1TabBtn = CreateTabButton(subTabsRowGo.transform, "Btn_ControlsP1", "JUGADOR 1 (PIERNAS / ONLINE)", out var p1TabInd);
-            var p2TabBtn = CreateTabButton(subTabsRowGo.transform, "Btn_ControlsP2", "JUGADOR 2 (TORSO - LOCAL)", out var p2TabInd);
-
-            // Container Grid Player 1
-            var gridP1Go = CreateUIElement("RebindGrid_P1", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 310), Vector2.zero);
-            var gridP1 = gridP1Go.AddComponent<GridLayoutGroup>();
-            gridP1.cellSize = new Vector2(424, 52);
-            gridP1.spacing = new Vector2(16, 8);
-            gridP1.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            gridP1.constraintCount = 2;
+            // Container Grid (Rebinding Rows)
+            var gridGo = CreateUIElement("RebindGrid", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 320), Vector2.zero);
+            var grid = gridGo.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(394, 52);
+            grid.spacing = new Vector2(14, 10);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 2;
 
             var rebindList = new List<InputRebindRowUI>(10)
             {
-                CreateRebindRow(gridP1Go.transform, "Rebind_MoveUp", "Mover Adelante", "Player/Move", 2, "W"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_MoveDown", "Mover Atrás", "Player/Move", 4, "S"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_MoveLeft", "Mover Izquierda", "Player/Move", 6, "A"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_MoveRight", "Mover Derecha", "Player/Move", 8, "D"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_Jump", "Saltar / Doble Salto (Piernas)", "Player/Jump", 0, "SPACE"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_Sprint", "Sprint Rápido (Piernas)", "Player/Sprint", 0, "LEFT SHIFT"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_Attack", "Patada / Lanzar Objeto", "Player/Attack", 1, "LEFT BUTTON"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_Interact", "Agarrar / Interactuar (Torso)", "Player/Interact", 0, "E"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_Magnet", "Rayo Magnético (Torso)", "Player/Crouch", 1, "C"),
-                CreateRebindRow(gridP1Go.transform, "Rebind_Fuse", "Acople / Desacople (Fusión)", "Player/Fuse", 0, "R")
+                CreateRebindRow(gridGo.transform, "Rebind_MoveUp", "Mover Adelante", "Player/Move", 2, "W"),
+                CreateRebindRow(gridGo.transform, "Rebind_MoveDown", "Mover Atrás", "Player/Move", 4, "S"),
+                CreateRebindRow(gridGo.transform, "Rebind_MoveLeft", "Mover Izquierda", "Player/Move", 6, "A"),
+                CreateRebindRow(gridGo.transform, "Rebind_MoveRight", "Mover Derecha", "Player/Move", 8, "D"),
+                CreateRebindRow(gridGo.transform, "Rebind_Jump", "Saltar / Doble Salto (Piernas)", "Player/Jump", 0, "SPACE"),
+                CreateRebindRow(gridGo.transform, "Rebind_Sprint", "Sprint Rápido (Piernas)", "Player/Sprint", 0, "LEFT SHIFT"),
+                CreateRebindRow(gridGo.transform, "Rebind_Attack", "Patada / Lanzar Objeto", "Player/Attack", 1, "LEFT BUTTON"),
+                CreateRebindRow(gridGo.transform, "Rebind_Interact", "Agarrar / Interactuar (Torso)", "Player/Interact", 0, "E"),
+                CreateRebindRow(gridGo.transform, "Rebind_Magnet", "Rayo Magnético (Torso)", "Player/Crouch", 1, "C"),
+                CreateRebindRow(gridGo.transform, "Rebind_Fuse", "Acople / Desacople (Fusión)", "Player/Fuse", 0, "R")
             };
-
-            // Container Grid Player 2 (Torso Local)
-            var gridP2Go = CreateUIElement("RebindGrid_P2", controlsPanel.transform, Vector2.zero, Vector2.one, new Vector2(0, 310), Vector2.zero);
-            var gridP2 = gridP2Go.AddComponent<GridLayoutGroup>();
-            gridP2.cellSize = new Vector2(424, 52);
-            gridP2.spacing = new Vector2(16, 8);
-            gridP2.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            gridP2.constraintCount = 2;
-
-            var rebindP2List = new List<InputRebindRowUI>(8)
-            {
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveUp", "Mover Adelante (J2)", "Torso/Move", 2, "UP ARROW"),
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveDown", "Mover Atrás (J2)", "Torso/Move", 3, "DOWN ARROW"),
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveLeft", "Mover Izquierda (J2)", "Torso/Move", 4, "LEFT ARROW"),
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_MoveRight", "Mover Derecha (J2)", "Torso/Move", 5, "RIGHT ARROW"),
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Interact", "Agarrar / Interactuar (J2)", "Torso/Interact", 0, "E / L"),
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Throw", "Lanzar / Disparar (J2)", "Torso/Throw", 0, "CLICK IZQ / K"),
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Magnet", "Rayo Magnético (J2)", "Torso/Magnet", 0, "C / J"),
-                CreateRebindRow(gridP2Go.transform, "Rebind_P2_Fuse", "Acople / Desacople (J2)", "Player/Fuse", 0, "R / U")
-            };
-            gridP2Go.SetActive(false);
 
             controlsPanel.SetActive(false);
 
@@ -497,13 +475,6 @@ namespace Game.Editor
             so.FindProperty("_audioTabIndicator").objectReferenceValue = audioTabInd;
             so.FindProperty("_controlsTabIndicator").objectReferenceValue = controlsTabInd;
 
-            so.FindProperty("_player1ControlsTabButton").objectReferenceValue = p1TabBtn;
-            so.FindProperty("_player2ControlsTabButton").objectReferenceValue = p2TabBtn;
-            so.FindProperty("_player1ControlsIndicator").objectReferenceValue = p1TabInd;
-            so.FindProperty("_player2ControlsIndicator").objectReferenceValue = p2TabInd;
-            so.FindProperty("_player1ControlsContainer").objectReferenceValue = gridP1Go;
-            so.FindProperty("_player2ControlsContainer").objectReferenceValue = gridP2Go;
-
             so.FindProperty("_masterVolumeSlider").objectReferenceValue = masterSlider;
             so.FindProperty("_masterVolumeValueText").objectReferenceValue = masterValText;
             so.FindProperty("_sfxVolumeSlider").objectReferenceValue = sfxSlider;
@@ -528,13 +499,6 @@ namespace Game.Editor
             for (int i = 0; i < rebindList.Count; i++)
             {
                 rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rebindList[i];
-            }
-
-            SerializedProperty p2RowsProp = so.FindProperty("_player2RebindRows");
-            p2RowsProp.arraySize = rebindP2List.Count;
-            for (int i = 0; i < rebindP2List.Count; i++)
-            {
-                p2RowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rebindP2List[i];
             }
 
             so.FindProperty("_resetDefaultsButton").objectReferenceValue = resetBtn;

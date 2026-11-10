@@ -17,43 +17,10 @@ namespace Game.Editor
         private static readonly Color GreenAccent = new Color(0f, 0.95f, 0.58f, 1f);
         private static readonly Color RedAccent = new Color(1f, 0.24f, 0.35f, 1f);
 
-        [MenuItem("TPOB/UI/★ Reconstruir e Instanciar UI Completa (Recomendado)", priority = -10)]
+        [MenuItem("TPOB/UI/★ Reconstruir e Instanciar UI Completa (Recomendado)", priority = -90)]
         public static void RebuildAndInstantiateAllUI()
         {
-            MainMenuBuilder.GenerateUIPrefabs();
-            GenerateLobbyPrefab();
-            InstantiateFullUIInScene();
-
-            EnsureNetworkManagerTransports();
-
-            Debug.Log("<color=green><b>[TPOB] UI Completa (Menú Principal, Opciones, Lobby) generada, conectada e instanciada con éxito.</b></color>");
-        }
-
-        private static void EnsureNetworkManagerTransports()
-        {
-            var netManager = Object.FindFirstObjectByType<PurrNet.NetworkManager>();
-            if (netManager != null)
-            {
-                var purr = netManager.GetComponent<PurrNet.Transports.PurrTransport>();
-                if (purr == null)
-                {
-                    purr = Undo.AddComponent<PurrNet.Transports.PurrTransport>(netManager.gameObject);
-                }
-
-                var udp = netManager.GetComponent<PurrNet.Transports.UDPTransport>();
-                if (udp == null)
-                {
-                    udp = Undo.AddComponent<PurrNet.Transports.UDPTransport>(netManager.gameObject);
-                    udp.serverPort = 5000;
-                    udp.address = "127.0.0.1";
-                }
-
-                if (netManager.transport == null && purr != null)
-                {
-                    netManager.transport = purr;
-                    EditorUtility.SetDirty(netManager);
-                }
-            }
+            PauseMenuBuilder.ConfigureCompleteBootScene();
         }
 
         [MenuItem("TPOB/UI/3. Generar Prefab de Lobby")]

@@ -27,57 +27,10 @@ namespace Game.Gameplay.UI
         private Canvas _canvas;
         private GraphicRaycaster _raycaster;
 
-        public Button ResumeButton
-        {
-            get
-            {
-                if (_resumeButton == null)
-                {
-                    var t = transform.Find("PauseRoot/Modal_Pause/ButtonsContainer/Btn_Resume");
-                    if (t != null) _resumeButton = t.GetComponent<Button>();
-                }
-                return _resumeButton;
-            }
-        }
-
-        public Button OptionsButton
-        {
-            get
-            {
-                if (_optionsButton == null)
-                {
-                    var t = transform.Find("PauseRoot/Modal_Pause/ButtonsContainer/Btn_Options");
-                    if (t != null) _optionsButton = t.GetComponent<Button>();
-                }
-                return _optionsButton;
-            }
-        }
-
-        public Button ExitToMenuButton
-        {
-            get
-            {
-                if (_exitToMenuButton == null)
-                {
-                    var t = transform.Find("PauseRoot/Modal_Pause/ButtonsContainer/Btn_ExitToMenu");
-                    if (t != null) _exitToMenuButton = t.GetComponent<Button>();
-                }
-                return _exitToMenuButton;
-            }
-        }
-
-        public Button ExitToDesktopButton
-        {
-            get
-            {
-                if (_exitToDesktopButton == null)
-                {
-                    var t = transform.Find("PauseRoot/Modal_Pause/ButtonsContainer/Btn_ExitToDesktop");
-                    if (t != null) _exitToDesktopButton = t.GetComponent<Button>();
-                }
-                return _exitToDesktopButton;
-            }
-        }
+        public Button ResumeButton => _resumeButton != null ? _resumeButton : (_resumeButton = FindButton("PauseRoot/Modal_Pause/ButtonsContainer/Btn_Resume"));
+        public Button OptionsButton => _optionsButton != null ? _optionsButton : (_optionsButton = FindButton("PauseRoot/Modal_Pause/ButtonsContainer/Btn_Options"));
+        public Button ExitToMenuButton => _exitToMenuButton != null ? _exitToMenuButton : (_exitToMenuButton = FindButton("PauseRoot/Modal_Pause/ButtonsContainer/Btn_ExitToMenu"));
+        public Button ExitToDesktopButton => _exitToDesktopButton != null ? _exitToDesktopButton : (_exitToDesktopButton = FindButton("PauseRoot/Modal_Pause/ButtonsContainer/Btn_ExitToDesktop"));
 
         public TextMeshProUGUI ConnectionQualityText
         {
@@ -165,6 +118,8 @@ namespace Game.Gameplay.UI
             if (_raycaster != null)
             {
                 _raycaster.enabled = active;
+                _raycaster.blockingObjects = GraphicRaycaster.BlockingObjects.None;
+                _raycaster.ignoreReversedGraphics = true;
             }
 
             if (PauseRoot != null)
@@ -185,6 +140,15 @@ namespace Game.Gameplay.UI
             if (_settingsDialog != null)
             {
                 _settingsDialog.SetActive(active);
+                if (active)
+                {
+                    var canvas = _settingsDialog.GetComponent<Canvas>();
+                    if (canvas != null)
+                    {
+                        canvas.overrideSorting = true;
+                        canvas.sortingOrder = 600;
+                    }
+                }
             }
         }
 
@@ -195,6 +159,12 @@ namespace Game.Gameplay.UI
                 _connectionQualityText.text = text;
                 _connectionQualityText.color = color;
             }
+        }
+
+        private Button FindButton(string path)
+        {
+            var t = transform.Find(path);
+            return t != null ? t.GetComponent<Button>() : null;
         }
     }
 }

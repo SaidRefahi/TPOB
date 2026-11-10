@@ -46,6 +46,16 @@ namespace Game.Gameplay.UI
             DontDestroyOnLoad(gameObject);
         }
 
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+        }
+
         private void Start()
         {
             ResolveDependencies();
@@ -62,6 +72,17 @@ namespace Game.Gameplay.UI
 
             UnsubscribeEvents();
             UnbindCoordinator();
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            ResolveDependencies();
+            BindCoordinator();
+
+            if (scene.name == "Boot")
+            {
+                ApplyPauseLocally(false);
+            }
         }
 
         private void ResolveDependencies()
@@ -252,33 +273,30 @@ namespace Game.Gameplay.UI
             _isPaused = paused;
             Time.timeScale = paused ? 0f : 1f;
 
-            if (_view != null)
-            {
-                _view.SetPauseActive(paused);
-                if (!paused)
-                {
-                    _view.SetSettingsActive(false);
-                }
-                else
-                {
-                    UpdateNetworkStatusBadge();
-                }
-            }
-
-            SetPlayerInputEnabled(!paused);
-
             if (paused)
             {
                 UIInputModuleFixer.EnsureUIFocusAndInput();
 
+                if (_view != null)
+                {
+                    _view.SetPauseActive(true);
+                    UpdateNetworkStatusBadge();
+                }
+
                 var eventSystem = UnityEngine.EventSystems.EventSystem.current;
                 if (eventSystem != null && _view != null && _view.ResumeButton != null)
                 {
-                    eventSystem.SetSelectedGameObject(_view.ResumeButton.gameObject);
+                    eventSystem.firstSelectedGameObject = _view.ResumeButton.gameObject;
                 }
             }
             else
             {
+                if (_view != null)
+                {
+                    _view.SetPauseActive(false);
+                    _view.SetSettingsActive(false);
+                }
+
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
 
@@ -289,6 +307,7 @@ namespace Game.Gameplay.UI
                 }
             }
 
+            SetPlayerInputEnabled(!paused);
             _gameManager?.ChangeState(paused ? GameState.Paused : GameState.InGame);
         }
 

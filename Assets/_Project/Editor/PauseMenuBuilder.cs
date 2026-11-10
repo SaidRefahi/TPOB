@@ -23,6 +23,8 @@ namespace Game.Editor
         private const string PrefabsDirectory = "Assets/_Project/Prefabs/UI";
         private const string PauseMenuPrefabPath = PrefabsDirectory + "/Canvas_PauseMenu.prefab";
         private const string SettingsPrefabPath = PrefabsDirectory + "/Dialog_Settings.prefab";
+        private const string MainMenuPrefabPath = PrefabsDirectory + "/Canvas_MainMenu.prefab";
+        private const string LobbyPrefabPath = PrefabsDirectory + "/Canvas_Lobby.prefab";
         private const string TriggerFilePath = "Temp/RebuildUI.trigger";
 
         static PauseMenuBuilder()
@@ -41,72 +43,7 @@ namespace Game.Editor
             ConfigureCompleteBootScene();
         }
 
-        [MenuItem("TPOB/UI/5. Generar Prefab de Menú de Pausa")]
-        public static void GeneratePauseMenuPrefab()
-        {
-            EnsureDirectory(PrefabsDirectory);
-            UIAssetGenerator.EnsureUIAssets();
-
-            var settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
-            if (settingsPrefab == null)
-            {
-                MainMenuBuilder.GenerateUIPrefabs();
-                settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
-            }
-
-            GameObject pauseMenuGo = BuildPauseMenuHierarchy(settingsPrefab);
-            PrefabUtility.SaveAsPrefabAsset(pauseMenuGo, PauseMenuPrefabPath);
-            Object.DestroyImmediate(pauseMenuGo);
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
-            Debug.Log("<color=green>[TPOB] Prefab Sci-Fi Canvas_PauseMenu generado con éxito en " + PauseMenuPrefabPath + "</color>");
-        }
-
-        [MenuItem("TPOB/UI/6. Instanciar Menú de Pausa en Escena Activa")]
-        public static void InstantiatePauseMenuInScene()
-        {
-            EnsureEventSystem();
-
-            var uiRoot = GameObject.Find("--- UI ---");
-            if (uiRoot == null)
-            {
-                uiRoot = new GameObject("--- UI ---");
-                Undo.RegisterCreatedObjectUndo(uiRoot, "Create --- UI ---");
-            }
-
-            var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
-            if (pausePrefab == null)
-            {
-                GeneratePauseMenuPrefab();
-                pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
-            }
-
-            if (Object.FindFirstObjectByType<PauseMenuView>() == null && pausePrefab != null)
-            {
-                var pauseInstance = (GameObject)PrefabUtility.InstantiatePrefab(pausePrefab, uiRoot.transform);
-                Undo.RegisterCreatedObjectUndo(pauseInstance, "Instantiate Canvas_PauseMenu");
-                Debug.Log("<color=cyan>[TPOB] Canvas_PauseMenu instanciado con éxito en escena activa bajo '--- UI ---'.</color>");
-            }
-            else
-            {
-                Debug.Log("<color=yellow>[TPOB] Canvas_PauseMenu ya se encuentra presente en la escena activa.</color>");
-            }
-        }
-
-        [MenuItem("TPOB/UI/7. Generar Todo el Sistema de UI (Todos los Prefabs)")]
-        public static void GenerateAllUIPrefabs()
-        {
-            UIAssetGenerator.EnsureUIAssets();
-            MainMenuBuilder.GenerateUIPrefabs();
-            LobbyBuilder.GenerateLobbyPrefab();
-            GeneratePauseMenuPrefab();
-
-            Debug.Log("<color=green><b>[TPOB] Sistema Completo de UI Sci-Fi Generado (Arte 2D, Menú Principal, Opciones 3-Tabs, Lobby y Pausa).</b></color>");
-        }
-
-        [MenuItem("TPOB/UI/8. Configurar y Actualizar Escena Boot Completa")]
+        [MenuItem("TPOB/UI/★ RECONSTRUIR Y GENERAR TODO EL SISTEMA UI (Prefabs y Boot) ★", priority = -100)]
         public static void ConfigureCompleteBootScene()
         {
             // 1. Asegurar generación de todos los prefabs y arte 2D de UI
@@ -151,6 +88,7 @@ namespace Game.Editor
                 netManagerGo.transform.SetParent(null);
             }
 
+            // Eliminar transportes UDP duplicados o erróneos para garantizar PurrTransport
             var oldUdps = netManagerGo.GetComponents<UDPTransport>();
             for (int i = 0; i < oldUdps.Length; i++)
             {
@@ -284,8 +222,8 @@ namespace Game.Editor
             }
 
             var settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
-            var mainMenuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_MainMenu.prefab");
-            var lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/UI/Canvas_Lobby.prefab");
+            var mainMenuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MainMenuPrefabPath);
+            var lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LobbyPrefabPath);
             var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
 
             GameObject settingsInstance = null;
@@ -334,12 +272,161 @@ namespace Game.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log("<color=green><b>[TPOB] ¡Escena Boot.unity y Prefabs de UI Sci-Fi actualizados y guardados con éxito!</b></color>");
+            Debug.Log("<color=green><b>[TPOB] ¡Sistema UI Completo y Escena Boot.unity actualizados y guardados con éxito!</b></color>");
+        }
+
+        [MenuItem("TPOB/UI/4. Generar Prefab de Menú de Pausa", priority = 4)]
+        public static void GeneratePauseMenuPrefab()
+        {
+            EnsureDirectory(PrefabsDirectory);
+            UIAssetGenerator.EnsureUIAssets();
+
+            var settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
+            if (settingsPrefab == null)
+            {
+                MainMenuBuilder.GenerateUIPrefabs();
+                settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
+            }
+
+            GameObject pauseMenuGo = BuildPauseMenuHierarchy(settingsPrefab);
+            PrefabUtility.SaveAsPrefabAsset(pauseMenuGo, PauseMenuPrefabPath);
+            Object.DestroyImmediate(pauseMenuGo);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log("<color=green>[TPOB] Prefab Sci-Fi Canvas_PauseMenu generado con éxito en " + PauseMenuPrefabPath + "</color>");
+        }
+
+        [MenuItem("TPOB/UI/5. Instanciar Menú de Pausa en Escena Activa", priority = 5)]
+        public static void InstantiatePauseMenuInScene()
+        {
+            EnsureEventSystem();
+
+            var uiRoot = GameObject.Find("--- UI ---");
+            if (uiRoot == null)
+            {
+                uiRoot = new GameObject("--- UI ---");
+                Undo.RegisterCreatedObjectUndo(uiRoot, "Create --- UI ---");
+            }
+
+            var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
+            if (pausePrefab == null)
+            {
+                GeneratePauseMenuPrefab();
+                pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
+            }
+
+            if (Object.FindFirstObjectByType<PauseMenuView>() == null && pausePrefab != null)
+            {
+                var pauseInstance = (GameObject)PrefabUtility.InstantiatePrefab(pausePrefab, uiRoot.transform);
+                Undo.RegisterCreatedObjectUndo(pauseInstance, "Instantiate Canvas_PauseMenu");
+                Debug.Log("<color=cyan>[TPOB] Canvas_PauseMenu instanciado con éxito en escena activa bajo '--- UI ---'.</color>");
+            }
+            else
+            {
+                Debug.Log("<color=yellow>[TPOB] Canvas_PauseMenu ya se encuentra presente en la escena activa.</color>");
+            }
+        }
+
+        [MenuItem("TPOB/UI/6. Instanciar UI Completa en Escena Activa", priority = 6)]
+        public static void InstantiateFullUIInActiveScene()
+        {
+            EnsureEventSystem();
+
+            var uiRoot = GameObject.Find("--- UI ---");
+            if (uiRoot == null)
+            {
+                uiRoot = new GameObject("--- UI ---");
+                Undo.RegisterCreatedObjectUndo(uiRoot, "Create --- UI ---");
+            }
+
+            var settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
+            var mainMenuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MainMenuPrefabPath);
+            var lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LobbyPrefabPath);
+            var pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
+
+            if (settingsPrefab == null || mainMenuPrefab == null || lobbyPrefab == null || pausePrefab == null)
+            {
+                GenerateAllUIPrefabs();
+                settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPrefabPath);
+                mainMenuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MainMenuPrefabPath);
+                lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LobbyPrefabPath);
+                pausePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PauseMenuPrefabPath);
+            }
+
+            // Settings
+            GameObject settingsInstance = null;
+            var existingSettings = Object.FindFirstObjectByType<SettingsView>(FindObjectsInactive.Include);
+            if (existingSettings == null && settingsPrefab != null)
+            {
+                settingsInstance = (GameObject)PrefabUtility.InstantiatePrefab(settingsPrefab, uiRoot.transform);
+                settingsInstance.SetActive(false);
+                Undo.RegisterCreatedObjectUndo(settingsInstance, "Instantiate Dialog_Settings");
+            }
+            else if (existingSettings != null)
+            {
+                settingsInstance = existingSettings.gameObject;
+            }
+
+            // Main Menu
+            var existingMainMenu = Object.FindFirstObjectByType<MainMenuView>(FindObjectsInactive.Include);
+            if (existingMainMenu == null && mainMenuPrefab != null)
+            {
+                var mainMenuInstance = (GameObject)PrefabUtility.InstantiatePrefab(mainMenuPrefab, uiRoot.transform);
+                mainMenuInstance.SetActive(true);
+                Undo.RegisterCreatedObjectUndo(mainMenuInstance, "Instantiate Canvas_MainMenu");
+
+                if (settingsInstance != null)
+                {
+                    var mainView = mainMenuInstance.GetComponent<MainMenuView>();
+                    var setView = settingsInstance.GetComponent<SettingsView>();
+                    var so = new SerializedObject(mainView);
+                    so.FindProperty("_settingsDialog").objectReferenceValue = setView;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+
+            // Lobby
+            var existingLobby = Object.FindFirstObjectByType<LobbyView>(FindObjectsInactive.Include);
+            if (existingLobby == null && lobbyPrefab != null)
+            {
+                var lobbyInstance = (GameObject)PrefabUtility.InstantiatePrefab(lobbyPrefab, uiRoot.transform);
+                lobbyInstance.SetActive(true);
+                var canvas = lobbyInstance.GetComponent<Canvas>();
+                if (canvas != null) canvas.enabled = false;
+                var raycaster = lobbyInstance.GetComponent<GraphicRaycaster>();
+                if (raycaster != null) raycaster.enabled = false;
+                Undo.RegisterCreatedObjectUndo(lobbyInstance, "Instantiate Canvas_Lobby");
+            }
+
+            // Pause Menu
+            var existingPause = Object.FindFirstObjectByType<PauseMenuView>(FindObjectsInactive.Include);
+            if (existingPause == null && pausePrefab != null)
+            {
+                var pauseInstance = (GameObject)PrefabUtility.InstantiatePrefab(pausePrefab, uiRoot.transform);
+                pauseInstance.SetActive(true);
+                var pauseView = pauseInstance.GetComponent<PauseMenuView>();
+                if (pauseView != null) pauseView.SetPauseActive(false);
+                Undo.RegisterCreatedObjectUndo(pauseInstance, "Instantiate Canvas_PauseMenu");
+            }
+
+            Debug.Log("<color=green><b>[TPOB] Jerarquía completa de UI instanciada en escena activa.</b></color>");
+        }
+
+        public static void GenerateAllUIPrefabs()
+        {
+            UIAssetGenerator.EnsureUIAssets();
+            MainMenuBuilder.GenerateUIPrefabs();
+            LobbyBuilder.GenerateLobbyPrefab();
+            GeneratePauseMenuPrefab();
+
+            Debug.Log("<color=green><b>[TPOB] Todos los Prefabs de UI Sci-Fi Generados con éxito.</b></color>");
         }
 
         private static GameObject BuildPauseMenuHierarchy(GameObject settingsPrefab)
         {
-            var canvasGo = CreateCanvasRoot("Canvas_PauseMenu");
+            var canvasGo = CreateCanvasRoot("Canvas_PauseMenu", 500);
             var pauseView = canvasGo.AddComponent<PauseMenuView>();
             canvasGo.AddComponent<PauseMenuPresenter>();
 
@@ -351,9 +438,12 @@ namespace Game.Editor
             var pauseRoot = CreateUIElement("PauseRoot", canvasGo.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var bgImg = pauseRoot.AddComponent<Image>();
             bgImg.color = new Color(0.02f, 0.04f, 0.07f, 0.88f);
+            bgImg.raycastTarget = true; // Bloquea clics al mundo de juego detrás del menú
 
             var modalGo = CreateUIElement("Modal_Pause", pauseRoot.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(540, 520), Vector2.zero);
             var modalImg = modalGo.AddComponent<Image>();
+            modalImg.raycastTarget = false; // Marco estético, nunca intercepta clics a los botones
+
             Sprite panelSpr = UIAssetGenerator.LoadSprite(UIAssetGenerator.PanelFrame);
             if (panelSpr != null)
             {
@@ -392,6 +482,13 @@ namespace Game.Editor
                 settingsInstance = (GameObject)PrefabUtility.InstantiatePrefab(settingsPrefab, canvasGo.transform);
                 settingsInstance.name = "Dialog_Settings";
                 settingsInstance.SetActive(false);
+
+                var sCanvas = settingsInstance.GetComponent<Canvas>();
+                if (sCanvas != null)
+                {
+                    sCanvas.overrideSorting = true;
+                    sCanvas.sortingOrder = 600;
+                }
             }
 
             var so = new SerializedObject(pauseView);
@@ -411,19 +508,21 @@ namespace Game.Editor
             return canvasGo;
         }
 
-        private static GameObject CreateCanvasRoot(string name)
+        private static GameObject CreateCanvasRoot(string name, int sortingOrder = 500)
         {
             var go = new GameObject(name);
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 100;
+            canvas.sortingOrder = sortingOrder;
 
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
 
-            go.AddComponent<GraphicRaycaster>();
+            var raycaster = go.AddComponent<GraphicRaycaster>();
+            raycaster.blockingObjects = GraphicRaycaster.BlockingObjects.None;
+            raycaster.ignoreReversedGraphics = true;
             return go;
         }
 
@@ -439,7 +538,7 @@ namespace Game.Editor
             return go;
         }
 
-        private static void EnsureEventSystem()
+        public static void EnsureEventSystem()
         {
             var eventSystem = Object.FindFirstObjectByType<EventSystem>();
             if (eventSystem == null)
@@ -461,7 +560,18 @@ namespace Game.Editor
                 inputModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
             }
 
-            inputModule.AssignDefaultActions();
+            if (inputModule.actionsAsset == null)
+            {
+                var inputAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.InputSystem.InputActionAsset>("Assets/InputSystem_Actions.inputactions");
+                if (inputAsset != null)
+                {
+                    inputModule.actionsAsset = inputAsset;
+                }
+                else
+                {
+                    try { inputModule.AssignDefaultActions(); } catch { }
+                }
+            }
 
             if (eventSystem.GetComponent<UIInputModuleFixer>() == null)
             {

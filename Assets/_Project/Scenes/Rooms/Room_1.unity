@@ -685,8 +685,6 @@ MonoBehaviour:
   _guiPosition: {x: 20, y: 20}
   _serverAddress: 127.0.0.1
   _serverPort: 5000
-  _roomName: TPOB-ROOM
-  _selectedTransportMode: 0
 --- !u!1001 &15167562
 PrefabInstance:
   m_ObjectHideFlags: 0
