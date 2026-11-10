@@ -77,6 +77,9 @@ namespace Game.Gameplay.Player.Torso
         [SerializeField] private float _magnetForce = 22f;
 
         [Group("Imán")]
+        [SerializeField] private float _magnetRadius = 1.25f;
+
+        [Group("Imán")]
         [SerializeField] private LayerMask _magneticLayer = ~0;
 
         [Group("Mecanismos")]
@@ -86,12 +89,15 @@ namespace Game.Gameplay.Player.Torso
         [SerializeField] private LayerMask _mechanismLayer = ~0;
 
         private readonly Collider[] _grabColliders = new Collider[8];
-        private readonly Collider[] _magnetColliders = new Collider[16];
+        private readonly Collider[] _magnetColliders = new Collider[32];
+        private readonly RaycastHit[] _magnetRaycastHits = new RaycastHit[24];
         private readonly Collider[] _mechanismColliders = new Collider[16];
 
         private TorsoInputData _pendingInput;
         private IGrabbable _currentHeldObject;
         private IHeavyMagneticDraggable _lockedDraggable;
+        private IMagnetic _currentMagneticTarget;
+        private Vector3 _magnetBeamEndPoint;
         private bool _isMagnetActive;
         private bool _isClimbing;
         private Vector2 _climbDirection;
@@ -116,6 +122,8 @@ namespace Game.Gameplay.Player.Torso
         public float CrawlSpeed => _crawlSpeed;
         public float ThrowForce => _throwForce;
         public bool IsMagnetActive => _isMagnetActive;
+        public IMagnetic CurrentMagneticTarget => _currentMagneticTarget;
+        public Vector3 MagnetBeamEndPoint => _magnetBeamEndPoint;
         public Transform AimPivot => _aimPivot;
         public Transform HoldSocket => _holdSocket;
         public Transform MagnetOrigin => _magnetOrigin;
@@ -225,6 +233,11 @@ namespace Game.Gameplay.Player.Torso
             {
                 var xray = gameObject.AddComponent<Game.Gameplay.Player.Robot.PlayerXRaySilhouette>();
                 xray.SetColor(new Color(1f, 0.43f, 0f, 0.85f));
+            }
+
+            if (GetComponent<Game.Gameplay.Player.Juice.MagneticBeamVisualizer>() == null)
+            {
+                gameObject.AddComponent<Game.Gameplay.Player.Juice.MagneticBeamVisualizer>();
             }
         }
 
@@ -363,6 +376,16 @@ namespace Game.Gameplay.Player.Torso
             }
             else
             {
+                _pendingInput.MoveDirection = inputData.MoveDirection;
+                _pendingInput.AimDirection = inputData.AimDirection;
+                _pendingInput.MagnetHeld = inputData.MagnetHeld;
+
+                if (inputData.MagnetHeld != _isMagnetActive)
+                {
+                    _isMagnetActive = inputData.MagnetHeld;
+                    OnMagnetStateChanged?.Invoke(_isMagnetActive);
+                }
+
                 bool actionsTriggered = inputData.GrabTriggered || inputData.ThrowTriggered || inputData.InteractTriggered;
                 if (actionsTriggered)
                 {
@@ -384,6 +407,15 @@ namespace Game.Gameplay.Player.Torso
 
                     SendTorsoInputServerRpc(inputData);
                 }
+            }
+
+            if (_isMagnetActive)
+            {
+                UpdateMagnetTargeting();
+            }
+            else if (_currentMagneticTarget != null)
+            {
+                _currentMagneticTarget = null;
             }
         }
 
@@ -718,6 +750,132 @@ namespace Game.Gameplay.Player.Torso
             }
         }
 
+        private void UpdateMagnetTargeting()
+        {
+            if (!_isMagnetActive)
+            {
+                _currentMagneticTarget = null;
+                _magnetBeamEndPoint = _magnetOrigin != null ? _magnetOrigin.position : transform.position;
+                if (_lockedDraggable != null)
+                {
+                    _lockedDraggable.UnlockMagnet();
+                    _lockedDraggable = null;
+                }
+                return;
+            }
+
+            Vector3 origin = _magnetOrigin != null ? _magnetOrigin.position : transform.position;
+            Vector3 aimDir = _aimPivot != null ? _aimPivot.forward : transform.forward;
+            if (aimDir.sqrMagnitude < 0.001f)
+            {
+                aimDir = transform.forward;
+            }
+            aimDir.Normalize();
+
+            _magnetBeamEndPoint = origin + aimDir * _magnetRange;
+
+            int hitCount = Physics.SphereCastNonAlloc(
+                origin,
+                _magnetRadius,
+                aimDir,
+                _magnetRaycastHits,
+                _magnetRange,
+                _magneticLayer,
+                QueryTriggerInteraction.Collide
+            );
+
+            IMagnetic bestTarget = null;
+            float closestSqrDist = float.MaxValue;
+            RaycastHit closestWallHit = default;
+            bool wallBlocked = false;
+            float wallHitDistance = float.MaxValue;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit = _magnetRaycastHits[i];
+                Collider col = hit.collider;
+                if (col == null || col.transform == transform || col.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                var heavyDraggable = col.GetComponentInParent<IHeavyMagneticDraggable>();
+                var magnetic = heavyDraggable != null ? (IMagnetic)heavyDraggable : col.GetComponentInParent<IMagnetic>();
+
+                if (magnetic == null)
+                {
+                    if (!col.isTrigger && hit.distance > 0.01f && hit.distance < wallHitDistance)
+                    {
+                        wallHitDistance = hit.distance;
+                        closestWallHit = hit;
+                        wallBlocked = true;
+                    }
+                    continue;
+                }
+
+                if (heavyDraggable != null)
+                {
+                    if (heavyDraggable.IsMagnetLocked && heavyDraggable != _lockedDraggable)
+                    {
+                        continue;
+                    }
+                }
+                else if (!magnetic.CanBeAttracted)
+                {
+                    continue;
+                }
+
+                float sqrDist = (hit.point - origin).sqrMagnitude;
+                if (sqrDist < closestSqrDist)
+                {
+                    closestSqrDist = sqrDist;
+                    bestTarget = magnetic;
+                }
+            }
+
+            if (bestTarget != null)
+            {
+                Vector3 targetCenter = bestTarget.Transform != null ? bestTarget.Transform.position : origin;
+                Vector3 toTarget = targetCenter - origin;
+                float targetDist = toTarget.magnitude;
+
+                if (wallBlocked && wallHitDistance < targetDist - 0.2f)
+                {
+                    bestTarget = null;
+                    _magnetBeamEndPoint = closestWallHit.point;
+                }
+                else
+                {
+                    _magnetBeamEndPoint = targetCenter;
+                }
+            }
+            else if (wallBlocked)
+            {
+                _magnetBeamEndPoint = closestWallHit.point;
+            }
+
+            if (bestTarget == null && !wallBlocked)
+            {
+                int closeCount = Physics.OverlapSphereNonAlloc(origin, 1.8f, _magnetColliders, _magneticLayer, QueryTriggerInteraction.Collide);
+                for (int i = 0; i < closeCount; i++)
+                {
+                    Collider col = _magnetColliders[i];
+                    if (col == null || col.transform == transform || col.transform.IsChildOf(transform)) continue;
+
+                    var heavy = col.GetComponentInParent<IHeavyMagneticDraggable>();
+                    var mag = heavy != null ? (IMagnetic)heavy : col.GetComponentInParent<IMagnetic>();
+                    if (mag != null && (heavy != null || mag.CanBeAttracted))
+                    {
+                        bestTarget = mag;
+                        _magnetBeamEndPoint = mag.Transform != null ? mag.Transform.position : origin;
+                        break;
+                    }
+                }
+            }
+
+            _currentMagneticTarget = bestTarget;
+        }
+
         private void ApplyMagnet()
         {
             bool wantsMagnet = _pendingInput.MagnetHeld;
@@ -739,46 +897,45 @@ namespace Game.Gameplay.Player.Torso
                 }
             }
 
+            UpdateMagnetTargeting();
+
             if (!_isMagnetActive)
+            {
+                return;
+            }
+
+            Vector3 origin = _magnetOrigin != null ? _magnetOrigin.position : transform.position;
+
+            if (_currentMagneticTarget is IHeavyMagneticDraggable heavyDraggable)
+            {
+                if (_lockedDraggable == null && !heavyDraggable.IsMagnetLocked)
+                {
+                    heavyDraggable.LockMagnet(_magnetOrigin != null ? _magnetOrigin : transform);
+                    if (heavyDraggable.IsMagnetLocked)
+                    {
+                        _lockedDraggable = heavyDraggable;
+                    }
+                }
+            }
+            else if (_currentMagneticTarget != null)
             {
                 if (_lockedDraggable != null)
                 {
                     _lockedDraggable.UnlockMagnet();
                     _lockedDraggable = null;
                 }
-                return;
+
+                if (_currentMagneticTarget.CanBeAttracted)
+                {
+                    _currentMagneticTarget.ApplyMagneticForce(origin, _magnetForce, Time.fixedDeltaTime);
+                }
             }
-
-            Vector3 origin = _magnetOrigin.position;
-            int count = Physics.OverlapSphereNonAlloc(origin, _magnetRange, _magnetColliders, _magneticLayer, QueryTriggerInteraction.Collide);
-
-            for (int i = 0; i < count; i++)
+            else
             {
-                Collider col = _magnetColliders[i];
-                if (col == null || col.transform == transform || col.transform.IsChildOf(transform))
+                if (_lockedDraggable != null)
                 {
-                    continue;
-                }
-
-                var heavyDraggable = col.GetComponentInParent<IHeavyMagneticDraggable>();
-                if (heavyDraggable != null)
-                {
-                    if (_lockedDraggable == null && !heavyDraggable.IsMagnetLocked)
-                    {
-                        heavyDraggable.LockMagnet(_magnetOrigin);
-                        if (heavyDraggable.IsMagnetLocked)
-                        {
-                            _lockedDraggable = heavyDraggable;
-                        }
-                    }
-                }
-                else
-                {
-                    var magnetic = col.GetComponentInParent<IMagnetic>();
-                    if (magnetic != null && magnetic.CanBeAttracted)
-                    {
-                        magnetic.ApplyMagneticForce(origin, _magnetForce, Time.fixedDeltaTime);
-                    }
+                    _lockedDraggable.UnlockMagnet();
+                    _lockedDraggable = null;
                 }
             }
         }
@@ -855,6 +1012,7 @@ namespace Game.Gameplay.Player.Torso
         [ObserversRpc(runLocally: true)]
         private void NotifyMagnetStateObserversRpc(bool active)
         {
+            if (_isMagnetActive == active) return;
             _isMagnetActive = active;
             OnMagnetStateChanged?.Invoke(active);
         }
@@ -1037,7 +1195,9 @@ namespace Game.Gameplay.Player.Torso
 
             Gizmos.color = Color.cyan;
             Vector3 magPos = _magnetOrigin != null ? _magnetOrigin.position : transform.position;
-            Gizmos.DrawWireSphere(magPos, _magnetRange);
+            Vector3 aimDir = _aimPivot != null ? _aimPivot.forward : transform.forward;
+            Gizmos.DrawRay(magPos, aimDir * _magnetRange);
+            Gizmos.DrawWireSphere(magPos + aimDir * _magnetRange, _magnetRadius);
 
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(transform.position, _interactRadius);

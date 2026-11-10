@@ -138,9 +138,13 @@ namespace Game.Gameplay.Interactables
             }
 
             Vector3 toOrigin = magnetOrigin - transform.position;
-            if (toOrigin.sqrMagnitude > 0.01f)
+            float sqrDist = toOrigin.sqrMagnitude;
+            if (sqrDist > 0.01f)
             {
-                Vector3 targetVelocity = toOrigin.normalized * _magneticAttractSpeed;
+                float dist = Mathf.Sqrt(sqrDist);
+                float speedFactor = Mathf.Clamp01(dist / 1.2f);
+                float currentSpeed = Mathf.Max(2f, _magneticAttractSpeed * speedFactor);
+                Vector3 targetVelocity = (toOrigin / dist) * currentSpeed;
                 _rigidbody.linearVelocity = Vector3.MoveTowards(_rigidbody.linearVelocity, targetVelocity, force * deltaTime);
             }
         }
