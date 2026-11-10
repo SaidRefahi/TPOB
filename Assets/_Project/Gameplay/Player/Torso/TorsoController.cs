@@ -99,6 +99,7 @@ namespace Game.Gameplay.Player.Torso
         private IMagnetic _currentMagneticTarget;
         private Vector3 _magnetBeamEndPoint;
         private bool _isMagnetActive;
+        private float _regrabCooldownTimer;
         private bool _isClimbing;
         private Vector2 _climbDirection;
         private bool _isFused;
@@ -327,6 +328,11 @@ namespace Game.Gameplay.Player.Torso
                 return;
             }
 
+            if (_regrabCooldownTimer > 0f)
+            {
+                _regrabCooldownTimer -= Time.deltaTime;
+            }
+
             bool hasAuthority = !isSpawned ? true : isOwner;
             if (!hasAuthority || _inputReader == null)
             {
@@ -357,15 +363,17 @@ namespace Game.Gameplay.Player.Torso
             if (_isFused)
             {
                 Vector2 aim = inputData.AimDirection;
-                if (aim.sqrMagnitude < 0.04f && inputData.MoveDirection.sqrMagnitude >= 0.04f)
-                {
-                    aim = inputData.MoveDirection;
-                }
-
                 if (aim.sqrMagnitude >= 0.04f)
                 {
                     Vector3 aimDir = new Vector3(aim.x, 0f, aim.y).normalized;
                     Quaternion targetRot = Quaternion.LookRotation(aimDir, Vector3.up);
+                    _fusedWorldRotation = Quaternion.Slerp(_fusedWorldRotation, targetRot, _aimRotationSpeed * Time.deltaTime);
+                }
+                else
+                {
+                    Quaternion targetRot = Coordinator != null && Coordinator.Legs != null
+                        ? Coordinator.Legs.transform.rotation
+                        : (transform.parent != null ? transform.parent.rotation : _fusedWorldRotation);
                     _fusedWorldRotation = Quaternion.Slerp(_fusedWorldRotation, targetRot, _aimRotationSpeed * Time.deltaTime);
                 }
             }
@@ -490,7 +498,10 @@ namespace Game.Gameplay.Player.Torso
             }
 
             ApplyAiming();
-            ApplyMechanismInteraction();
+            if (!IsHoldingObject)
+            {
+                ApplyMechanismInteraction();
+            }
             ApplyGrabAndRelease();
             ApplyThrow();
             ApplyMagnet();
@@ -563,10 +574,6 @@ namespace Game.Gameplay.Player.Torso
         private void ApplyAiming()
         {
             Vector2 aimInput = _pendingInput.AimDirection;
-            if ((_isFused || IsHoldingObject) && aimInput.sqrMagnitude < 0.04f && _pendingInput.MoveDirection.sqrMagnitude >= 0.04f)
-            {
-                aimInput = _pendingInput.MoveDirection;
-            }
 
             if (_isFused)
             {
@@ -575,6 +582,13 @@ namespace Game.Gameplay.Player.Torso
                     Vector3 aimDir = new Vector3(aimInput.x, 0f, aimInput.y).normalized;
                     Quaternion targetRotation = Quaternion.LookRotation(aimDir, Vector3.up);
                     _fusedWorldRotation = Quaternion.Slerp(_fusedWorldRotation, targetRotation, _aimRotationSpeed * Time.fixedDeltaTime);
+                }
+                else
+                {
+                    Quaternion targetRot = Coordinator != null && Coordinator.Legs != null
+                        ? Coordinator.Legs.transform.rotation
+                        : (transform.parent != null ? transform.parent.rotation : _fusedWorldRotation);
+                    _fusedWorldRotation = Quaternion.Slerp(_fusedWorldRotation, targetRot, _aimRotationSpeed * Time.fixedDeltaTime);
                 }
 
                 transform.rotation = _fusedWorldRotation;
@@ -616,17 +630,23 @@ namespace Game.Gameplay.Player.Torso
 
         private void ApplyGrabAndRelease()
         {
-            if (!_pendingInput.GrabTriggered)
+            bool wantsReleaseOrGrab = _pendingInput.GrabTriggered || (IsHoldingObject && _pendingInput.InteractTriggered);
+            if (!wantsReleaseOrGrab)
             {
                 return;
             }
 
             _pendingInput.GrabTriggered = false;
+            _pendingInput.InteractTriggered = false;
 
             if (IsHoldingObject)
             {
                 ReleaseHeldObject();
-                _pendingInput.InteractTriggered = false;
+                return;
+            }
+
+            if (_regrabCooldownTimer > 0f)
+            {
                 return;
             }
 
@@ -645,7 +665,6 @@ namespace Game.Gameplay.Player.Torso
                 if (grabbable != null && !grabbable.IsGrabbed)
                 {
                     Grab(grabbable);
-                    _pendingInput.InteractTriggered = false;
                     break;
                 }
             }
@@ -687,9 +706,12 @@ namespace Game.Gameplay.Player.Torso
                 return;
             }
 
+            _regrabCooldownTimer = 0.35f;
             var released = _currentHeldObject;
             _currentHeldObject = null;
-            released.OnReleased(Vector3.down * 0.1f);
+            Vector3 forward = _aimPivot != null ? _aimPivot.forward : transform.forward;
+            Vector3 releaseVelocity = forward * 1.5f + Vector3.up * 0.5f;
+            released.OnReleased(releaseVelocity);
 
             if (!isSpawned)
             {
@@ -728,6 +750,8 @@ namespace Game.Gameplay.Player.Torso
             {
                 return;
             }
+
+            _regrabCooldownTimer = 0.35f;
 
             Vector3 forward = _aimPivot != null ? _aimPivot.forward : transform.forward;
             Vector3 throwVelocity = (forward + Vector3.up * _upwardThrowArc).normalized * _throwForce;
@@ -998,7 +1022,9 @@ namespace Game.Gameplay.Player.Torso
             _currentHeldObject = null;
             if (!isServer && released != null)
             {
-                released.OnReleased(Vector3.down * 0.1f);
+                Vector3 forward = _aimPivot != null ? _aimPivot.forward : transform.forward;
+                Vector3 releaseVelocity = forward * 1.5f + Vector3.up * 0.5f;
+                released.OnReleased(releaseVelocity);
             }
             OnObjectReleased?.Invoke(released);
         }
@@ -1006,6 +1032,14 @@ namespace Game.Gameplay.Player.Torso
         [ObserversRpc(runLocally: true)]
         private void NotifyThrowObserversRpc()
         {
+            var thrownObject = _currentHeldObject;
+            _currentHeldObject = null;
+            if (!isServer && thrownObject != null)
+            {
+                Vector3 forward = _aimPivot != null ? _aimPivot.forward : transform.forward;
+                Vector3 throwVelocity = (forward + Vector3.up * _upwardThrowArc).normalized * _throwForce;
+                thrownObject.OnReleased(throwVelocity);
+            }
             OnThrow?.Invoke();
         }
 

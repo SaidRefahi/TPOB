@@ -73,12 +73,6 @@ namespace Game.Gameplay.Player.Torso
             {
                 _fuseTriggered = true;
             }
-
-            var gamepad = Gamepad.current;
-            if (gamepad != null && gamepad.buttonNorth.wasPressedThisFrame)
-            {
-                _fuseTriggered = true;
-            }
         }
 
         private void OnEnable()
