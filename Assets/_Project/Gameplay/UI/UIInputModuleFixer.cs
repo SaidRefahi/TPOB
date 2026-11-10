@@ -18,6 +18,23 @@ namespace Game.Gameplay.UI
         {
             if (_instance != null && _instance != this)
             {
+                var es = GetComponent<UnityEngine.EventSystems.EventSystem>();
+                if (es != null)
+                {
+                    es.enabled = false;
+                }
+                Destroy(gameObject);
+                return;
+            }
+
+            var activeEs = UnityEngine.EventSystems.EventSystem.current;
+            if (activeEs != null && activeEs.gameObject != gameObject)
+            {
+                var myEs = GetComponent<UnityEngine.EventSystems.EventSystem>();
+                if (myEs != null)
+                {
+                    myEs.enabled = false;
+                }
                 Destroy(gameObject);
                 return;
             }
@@ -32,6 +49,16 @@ namespace Game.Gameplay.UI
 
         private void OnEnable()
         {
+            if (_instance != null && _instance != this)
+            {
+                var es = GetComponent<UnityEngine.EventSystems.EventSystem>();
+                if (es != null)
+                {
+                    es.enabled = false;
+                }
+                return;
+            }
+
             EnsureValidUIInput();
             EnsureCursorVisible();
         }
